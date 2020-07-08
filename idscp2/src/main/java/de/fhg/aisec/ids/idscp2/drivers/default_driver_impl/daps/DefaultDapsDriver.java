@@ -298,7 +298,7 @@ public class DefaultDapsDriver implements DapsDriver {
 
                 //toDo add further security attribute validation
 
-
+                
                 if(secRequirements.getRequiredSecurityLevel().equals("idsc:BASE_CONNECTOR_SECURITY_PROFILE")) {
                     if (providedSecurityProfile.getRequiredSecurityLevel().equals("idsc:BASE_CONNECTOR_SECURITY_PROFILE") ||
                         providedSecurityProfile.getRequiredSecurityLevel().equals("idsc:TRUSTED_CONNECTOR_SECURITY_PROFILE") ||
