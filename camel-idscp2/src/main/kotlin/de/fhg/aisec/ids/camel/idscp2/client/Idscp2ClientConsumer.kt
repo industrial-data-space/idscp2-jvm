@@ -21,7 +21,7 @@ import de.fhg.aisec.ids.camel.idscp2.UsageControlMaps
 import de.fhg.aisec.ids.idscp2.app_layer.AppLayerConnection
 import de.fhg.aisec.ids.idscp2.app_layer.listeners.GenericMessageListener
 import de.fhg.aisec.ids.idscp2.app_layer.listeners.IdsMessageListener
-import de.fhg.aisec.ids.idscp2.idscp_core.Idscp2ConnectionListener
+import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2ConnectionListener
 import de.fraunhofer.iais.eis.Message
 import org.apache.camel.Processor
 import org.apache.camel.support.DefaultConsumer
