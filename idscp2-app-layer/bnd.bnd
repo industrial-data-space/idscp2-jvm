@@ -1,5 +1,5 @@
-Bundle-Name: IDS :: IDSCP2
-Bundle-Description: IDSCP2 protocol implementation
+Bundle-Name: IDS :: IDSCP2 App Layer
+Bundle-Description: IDSCP2 application layer implementation
 Export-Package: \
   de.fhg.aisec.ids.idscp2.app_layer*
 Import-Package: \
