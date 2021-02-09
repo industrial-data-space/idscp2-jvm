@@ -79,7 +79,9 @@ class Idscp2ClientConsumer(private val endpoint: Idscp2ClientEndpoint, processor
 
     private fun onMessage(connection: AppLayerConnection, header: Any?, payload: ByteArray?) {
         val exchange = endpoint.createExchange()
-        UsageControlMaps.setExchangeConnection(exchange, connection)
+        if (endpoint.useIdsMessages) {
+            UsageControlMaps.setExchangeConnection(exchange, connection)
+        }
         try {
             createUoW(exchange)
             // Set relevant information
