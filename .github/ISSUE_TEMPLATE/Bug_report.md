@@ -22,7 +22,7 @@ If applicable, add screenshots or logs to help explain your problem.
 
 **Environment (please complete the following information):**
  - OS: [e.g. x86, 64bit]
- - Environment [e.g. Docker version, Java version, running on trustme, docker or standalone]
+ - Environment [e.g. Java version]
  - Version [commit hash]
 
 **Additional context**

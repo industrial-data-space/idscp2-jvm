@@ -1,0 +1,29 @@
+# Versions for modules that will be released as libraries
+idscp2: "0.2.0"
+
+# Kotlin library/compiler version
+kotlin: "1.4.20"
+kotlinxCoroutines: "1.4.1"
+
+# The used version of the infomodel from IESE
+infomodel: "4.0.0"
+
+# For javax.xml.bind support in newer java versions
+camel: "3.0.0"
+
+tssJava: "0.3.0"
+
+slf4j: "1.7.30"
+
+guava: "27.0-jre"
+junit4: "4.12"
+mockito: "3.2.0"
+
+protobuf: "3.13.0"
+
+# Needed for token manager to assemble JWTs
+jsonwebtoken: "0.10.5"
+okhttp: "3.11.0"
+orgJson: "20180813"
+jose4j: "0.6.5"
+

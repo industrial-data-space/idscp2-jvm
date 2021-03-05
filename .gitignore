@@ -1,0 +1,48 @@
+# Gradle
+.gradle/
+
+# Eclipse
+.metadata
+.project
+.settings
+.classpath
+*.launch
+/RemoteSystemsTempFiles/
+
+# IDEA
+*.iml
+/.idea
+
+# VSCode
+.vscode
+.factorypath
+
+# Binary
+/target/
+/*/target/
+/build/
+/*/build/
+/*/bin/
+/*/generated/
+
+# Sonar
+/.sonarlint/
+/dist-docker/
+
+# Other
+*.log
+/.recommenders/
+rat-repository/src/main/docker/jar/*
+.DS_Store
+bin
+out
+
+# Karaf Deploy
+/karaf-assembly/src/main/resources/deploy/*.xml
+*.sock
+
+# Lock files
+.lock
+
+# Version file
+/version.txt

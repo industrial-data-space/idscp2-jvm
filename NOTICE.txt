@@ -1,0 +1,5 @@
+Industrial Data Space Communication Protocol Version 2 - IDSCP2
+Copyright 2021 Fraunhofer AISEC
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
