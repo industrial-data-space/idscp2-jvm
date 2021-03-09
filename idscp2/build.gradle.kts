@@ -35,8 +35,6 @@ val testImplementation by configurations
 dependencies {
     api("org.jetbrains.kotlinx", "kotlinx-coroutines-core", libraryVersions["kotlinxCoroutines"])
 
-    api("com.github.microsoft", "TSS.Java", libraryVersions["tssJava"])
-
     api("com.google.protobuf", "protobuf-java", libraryVersions["protobuf"])
 
     api("io.jsonwebtoken", "jjwt-impl", libraryVersions["jsonwebtoken"])

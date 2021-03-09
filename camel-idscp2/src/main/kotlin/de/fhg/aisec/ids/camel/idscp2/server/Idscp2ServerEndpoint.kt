@@ -24,8 +24,6 @@ import de.fhg.aisec.ids.idscp2.default_drivers.daps.DefaultDapsDriver
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.DefaultDapsDriverConfig
 import de.fhg.aisec.ids.idscp2.default_drivers.rat.dummy.RatProverDummy
 import de.fhg.aisec.ids.idscp2.default_drivers.rat.dummy.RatVerifierDummy
-import de.fhg.aisec.ids.idscp2.default_drivers.rat.tpm2d.TPM2dProver
-import de.fhg.aisec.ids.idscp2.default_drivers.rat.tpm2d.TPM2dVerifier
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2ConnectionListener
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.AttestationConfig
@@ -163,8 +161,8 @@ class Idscp2ServerEndpoint(uri: String?, private val remaining: String, componen
 
         // create attestation config
         val localAttestationConfig = AttestationConfig.Builder()
-                .setSupportedRatSuite(arrayOf(RatProverDummy.RAT_PROVER_DUMMY_ID, TPM2dProver.TPM_RAT_PROVER_ID))
-                .setExpectedRatSuite(arrayOf(RatVerifierDummy.RAT_VERIFIER_DUMMY_ID, TPM2dVerifier.TPM_RAT_VERIFIER_ID))
+                .setSupportedRatSuite(arrayOf(RatProverDummy.RAT_PROVER_DUMMY_ID))
+                .setExpectedRatSuite(arrayOf(RatVerifierDummy.RAT_VERIFIER_DUMMY_ID))
                 .setRatTimeoutDelay(dapsRatTimeoutDelay)
                 .build()
 

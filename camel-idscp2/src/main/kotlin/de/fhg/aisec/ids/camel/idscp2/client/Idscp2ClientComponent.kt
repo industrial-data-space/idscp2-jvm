@@ -18,10 +18,6 @@ package de.fhg.aisec.ids.camel.idscp2.client
 
 import de.fhg.aisec.ids.idscp2.default_drivers.rat.dummy.RatProverDummy
 import de.fhg.aisec.ids.idscp2.default_drivers.rat.dummy.RatVerifierDummy
-import de.fhg.aisec.ids.idscp2.default_drivers.rat.tpm2d.TPM2dProver
-import de.fhg.aisec.ids.idscp2.default_drivers.rat.tpm2d.TPM2dProverConfig
-import de.fhg.aisec.ids.idscp2.default_drivers.rat.tpm2d.TPM2dVerifier
-import de.fhg.aisec.ids.idscp2.default_drivers.rat.tpm2d.TPM2dVerifierConfig
 import de.fhg.aisec.ids.idscp2.idscp_core.rat_registry.RatProverDriverRegistry
 import de.fhg.aisec.ids.idscp2.idscp_core.rat_registry.RatVerifierDriverRegistry
 import org.apache.camel.Endpoint
@@ -36,14 +32,6 @@ class Idscp2ClientComponent : DefaultComponent() {
                 RatProverDummy.RAT_PROVER_DUMMY_ID, ::RatProverDummy, null)
         RatVerifierDriverRegistry.registerDriver(
                 RatVerifierDummy.RAT_VERIFIER_DUMMY_ID, ::RatVerifierDummy, null)
-        RatProverDriverRegistry.registerDriver(
-                TPM2dProver.TPM_RAT_PROVER_ID, ::TPM2dProver,
-                TPM2dProverConfig.Builder().build()
-        )
-        RatVerifierDriverRegistry.registerDriver(
-                TPM2dVerifier.TPM_RAT_VERIFIER_ID, ::TPM2dVerifier,
-                TPM2dVerifierConfig.Builder().build()
-        )
     }
 
     override fun createEndpoint(uri: String, remaining: String, parameters: Map<String, Any>): Endpoint {
