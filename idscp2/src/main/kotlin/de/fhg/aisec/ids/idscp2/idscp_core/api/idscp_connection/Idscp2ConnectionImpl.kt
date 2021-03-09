@@ -11,6 +11,7 @@ import de.fhg.aisec.ids.idscp2.idscp_core.secure_channel.SecureChannel
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.locks.ReentrantLock
 
 /**
  * The IDSCP2 Connection class holds connections between connectors
@@ -32,6 +33,8 @@ class Idscp2ConnectionImpl(secureChannel: SecureChannel,
     private val connectionListeners = Collections.synchronizedSet(HashSet<Idscp2ConnectionListener>())
     private val messageListeners = Collections.synchronizedSet(HashSet<Idscp2MessageListener>())
     private val messageLatch = FastLatch()
+    private var closed = false
+    private var closedLock = ReentrantLock(true)
     override fun unlockMessaging() {
         messageLatch.unlock()
     }
@@ -44,11 +47,34 @@ class Idscp2ConnectionImpl(secureChannel: SecureChannel,
             LOG.info("Closing connection {}...", id)
         }
 
-        when (val res = fsm.closeConnection()) {
-            FSM.FsmResultCode.FSM_NOT_STARTED -> throw Idscp2Exception("Handshake not started: " + res.value)
-            else -> if (LOG.isDebugEnabled) {
-                LOG.debug("IDSCP2 connection {} closed", id)
+        /*
+         * When closing the connection, also the secure channel and its sockets
+         * will be closed. This could lead to errors at the socket listener thread, which
+         * should not be passed to the user again. Therefore, we have to remember that
+         * the connection has been closed and check this at the onError function.
+         *
+         * Since the success of the closure depends on weather the connection has been started
+         * or not, we should synchronize this sequence to avoid race conditions on the error
+         * parsing, as well as avoiding error message loss.
+         */
+        try {
+            closedLock.lock()
+
+            when (val res = fsm.closeConnection()) {
+                FSM.FsmResultCode.FSM_NOT_STARTED -> {
+                    // not closed
+                    throw Idscp2Exception("Handshake not started: " + res.value)
+                }
+                else -> {
+                    // closed
+                    closed = true
+                    if (LOG.isDebugEnabled) {
+                        LOG.debug("IDSCP2 connection {} closed", id)
+                    }
+                }
             }
+        } finally {
+            closedLock.unlock()
         }
     }
 
@@ -128,8 +154,18 @@ class Idscp2ConnectionImpl(secureChannel: SecureChannel,
     }
 
     override fun onError(t: Throwable) {
-        connectionListeners.forEach { idscp2ConnectionListener: Idscp2ConnectionListener ->
-            idscp2ConnectionListener.onError(t) }
+        try {
+            closedLock.lock()
+
+            // check if connection has been closed, then we do not want to pass errors to the user
+            if (!closed) {
+                connectionListeners.forEach { idscp2ConnectionListener: Idscp2ConnectionListener ->
+                    idscp2ConnectionListener.onError(t) }
+            }
+
+        } finally {
+            closedLock.unlock()
+        }
     }
 
     override fun onClose() {
