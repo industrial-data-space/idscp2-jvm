@@ -41,6 +41,7 @@ class CommandlineTunnelClient {
 
             connection.addConnectionListener(object : Idscp2ConnectionAdapter() {
                 override fun onError(t: Throwable) {
+
                     LOG.error("Client connection error occurred", t)
                     runningUserJob = false
                 }

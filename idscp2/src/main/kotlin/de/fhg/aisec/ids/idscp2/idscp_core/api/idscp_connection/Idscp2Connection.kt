@@ -3,6 +3,7 @@ package de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection
 import de.fhg.aisec.ids.idscp2.idscp_core.error.Idscp2Exception
 import de.fhg.aisec.ids.idscp2.idscp_core.error.Idscp2TimeoutException
 import de.fhg.aisec.ids.idscp2.idscp_core.error.Idscp2WouldBlockException
+import de.fhg.aisec.ids.idscp2.idscp_core.error.Idscp2NotConnectedException
 import kotlin.jvm.Throws
 
 /**
@@ -30,13 +31,13 @@ interface Idscp2Connection {
      * Send data to the peer IDSCP2 connector without timeout and retry interval when
      * connection is currently not available
      */
-    @Throws(Idscp2Exception::class, Idscp2WouldBlockException::class)
+    @Throws(Idscp2Exception::class, Idscp2WouldBlockException::class, Idscp2NotConnectedException::class)
     fun nonBlockingSend(msg: ByteArray)
 
     /**
      * Send data to the peer IDSCP2 connector and block until done
      */
-    @Throws(Idscp2Exception::class, Idscp2TimeoutException::class)
+    @Throws(Idscp2Exception::class, Idscp2TimeoutException::class, Idscp2NotConnectedException::class)
     fun blockingSend(msg: ByteArray, timeout: Long, retryInterval: Long = 0)
 
     /**

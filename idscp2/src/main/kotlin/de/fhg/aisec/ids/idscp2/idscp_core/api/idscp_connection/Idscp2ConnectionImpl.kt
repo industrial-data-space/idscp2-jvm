@@ -3,6 +3,7 @@ package de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection
 import de.fhg.aisec.ids.idscp2.idscp_core.FastLatch
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
 import de.fhg.aisec.ids.idscp2.idscp_core.error.Idscp2Exception
+import de.fhg.aisec.ids.idscp2.idscp_core.error.Idscp2NotConnectedException
 import de.fhg.aisec.ids.idscp2.idscp_core.error.Idscp2TimeoutException
 import de.fhg.aisec.ids.idscp2.idscp_core.error.Idscp2WouldBlockException
 import de.fhg.aisec.ids.idscp2.idscp_core.fsm.FSM
@@ -65,10 +66,10 @@ class Idscp2ConnectionImpl(secureChannel: SecureChannel,
             FSM.FsmResultCode.WOULD_BLOCK -> throw Idscp2WouldBlockException("Idscp2 connection still waiting for ack")
             FSM.FsmResultCode.IO_ERROR, FSM.FsmResultCode.FSM_LOCKED ->
                 throw Idscp2Exception("Connection aborted: " + res.value)
-            FSM.FsmResultCode.NOT_CONNECTED -> throw Idscp2Exception("Idscp2 connection temporarily not available")
+            FSM.FsmResultCode.NOT_CONNECTED ->
+                throw Idscp2NotConnectedException("Idscp2 connection temporarily not available")
             else -> throw Idscp2Exception("Idscp2 error occurred while sending data: " + res.value)
         }
-
     }
 
     override fun blockingSend(msg: ByteArray, timeout: Long, retryInterval: Long) {
@@ -94,7 +95,8 @@ class Idscp2ConnectionImpl(secureChannel: SecureChannel,
                 }
                 FSM.FsmResultCode.IO_ERROR, FSM.FsmResultCode.FSM_LOCKED ->
                     throw Idscp2Exception("Connection aborted: " + res.value)
-                FSM.FsmResultCode.NOT_CONNECTED -> throw Idscp2Exception("Idscp2 connection temporarily not available")
+                FSM.FsmResultCode.NOT_CONNECTED ->
+                    throw Idscp2NotConnectedException("Idscp2 connection temporarily not available")
                 else -> throw Idscp2Exception("Idscp2 error occurred while sending data: " + res.value)
             }
         }
