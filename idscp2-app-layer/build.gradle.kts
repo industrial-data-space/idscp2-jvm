@@ -6,6 +6,7 @@ import org.gradle.plugins.ide.idea.model.IdeaModel
 
 version = libraryVersions["idscp2"] ?: error("IDSCP2 version not specified")
 
+apply(plugin = "java")
 apply(plugin = "com.google.protobuf")
 apply(plugin = "idea")
 
@@ -28,12 +29,15 @@ configure<IdeaModel> {
     }
 }
 
-dependencies {
-    providedByBundle(project(":idscp2"))
+val api by configurations
+val testImplementation by configurations
 
-    providedByBundle("com.google.protobuf", "protobuf-java", libraryVersions["protobuf"])
+dependencies {
+    api(project(":idscp2"))
+
+    api("com.google.protobuf", "protobuf-java", libraryVersions["protobuf"])
 
     // Supplied by ids-infomodel-manager
-    publishCompile("de.fraunhofer.iais.eis.ids.infomodel", "java", libraryVersions["infomodel"])
-    publishCompile("de.fraunhofer.iais.eis.ids", "infomodel-serializer", libraryVersions["infomodel"])
+    api("de.fraunhofer.iais.eis.ids.infomodel", "java", libraryVersions["infomodel"])
+    api("de.fraunhofer.iais.eis.ids", "infomodel-serializer", libraryVersions["infomodel"])
 }

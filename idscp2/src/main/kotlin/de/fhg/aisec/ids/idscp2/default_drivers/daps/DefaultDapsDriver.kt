@@ -164,12 +164,12 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
                             issuedAt,
                             notBefore,
                             TARGET_AUDIENCE)
-                    throw DatException("Received non-200 http response: " + response.code())
+                    throw DatException("Received non-200 http response: " + response.code)
                 }
                 if (LOG.isDebugEnabled) {
                     LOG.debug("Acquired DAT from {}/v2/token", dapsUrl)
                 }
-                val json = JSONObject(response.body()?.string()
+                val json = JSONObject(response.body?.string()
                     ?: throw DatException("Received empty DAPS response"))
                 if (json.has("access_token")) {
                     token = json.getString("access_token")
@@ -240,7 +240,7 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
                 .setVerificationKeyResolver(jwksKeyResolver) //get decryption key from jwks
                 .setJweAlgorithmConstraints(
                         AlgorithmConstraints(
-                                AlgorithmConstraints.ConstraintType.WHITELIST,
+                                AlgorithmConstraints.ConstraintType.PERMIT,
                                 AlgorithmIdentifiers.RSA_USING_SHA256
                         )
                 )
