@@ -1,5 +1,5 @@
 @Suppress("UNCHECKED_CAST")
-val libraryVersions = rootProject.ext.get("libraryVersions") as Map<String, String>
+val libraryVersions = rootProject.extra.get("libraryVersions") as Map<String, String>
 
 version = libraryVersions["idscp2"] ?: error("IDSCP2 version not specified")
 
