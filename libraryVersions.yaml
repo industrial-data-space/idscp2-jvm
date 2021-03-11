@@ -1,5 +1,5 @@
 # Versions for modules that will be released as libraries
-idscp2: "0.3.1"
+idscp2: "0.3.2"
 
 # Kotlin library/compiler version
 kotlin: "1.4.31"
@@ -9,7 +9,7 @@ kotlinxCoroutines: "1.4.3"
 infomodel: "4.0.0"
 
 # For javax.xml.bind support in newer java versions
-camel: "3.8.0"
+camel: "3.0.1"
 
 slf4j: "1.7.30"
 

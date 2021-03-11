@@ -35,7 +35,7 @@ val testImplementation by configurations
 dependencies {
     api("org.jetbrains.kotlinx", "kotlinx-coroutines-core", libraryVersions["kotlinxCoroutines"])
 
-    api("org.bouncycastle", "bcprov-jdk15on", libraryVersions["bouncycastle"] )
+    api("org.bouncycastle", "bcprov-jdk15on", libraryVersions["bouncycastle"])
 
     api("com.google.protobuf", "protobuf-java", libraryVersions["protobuf"])
 
