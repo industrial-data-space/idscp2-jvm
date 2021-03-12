@@ -54,18 +54,21 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
             )
     private val dapsUrl: String = config.dapsUrl
 
+    private val localPeerCertificate: X509Certificate =
+            PreConfiguration.getCertificate(
+                    config.keyStorePath,
+                    config.keyStorePassword,
+                    config.keyAlias)
+
+    private var remotePeerCertificate: X509Certificate? = null
+
     /**
      * Lookup table for encodeHexString()
      */
     private val hexLookup = HashMap<Byte, CharArray>()
 
     // requires hexLookup to be existent
-    private val connectorUUID: String = createConnectorUUID(
-            PreConfiguration.getCertificate(
-                    config.keyStorePath,
-                    config.keyStorePassword,
-                    config.keyAlias)
-    )
+    private val connectorUUID: String = createConnectorUUID(localPeerCertificate)
 
     init {
         //create ssl socket factory for secure
@@ -197,7 +200,7 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
                 } else {
                     throw DatException("DAPS response does not contain \"access_token\" or \"error\" field.")
                 }
-                verifyTokenSecurityAttributes(token.toByteArray(StandardCharsets.UTF_8), null)
+                verifyTokenSecurityAttributes(token.toByteArray(StandardCharsets.UTF_8), null, localPeerCertificate)
                 token.toByteArray(StandardCharsets.UTF_8)
             } catch (e: IOException) {
                 throw DatException("Error whilst retrieving DAT", e)
@@ -218,7 +221,14 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
      * @throws DatException
      */
     override fun verifyToken(dat: ByteArray): Long {
-        return verifyTokenSecurityAttributes(dat, securityRequirements)
+        return verifyTokenSecurityAttributes(dat, securityRequirements, remotePeerCertificate)
+    }
+
+    /**
+     * Set the remote peer's X509 Certificate, this is done by the FSM when peer cert is available
+     */
+    override fun setPeerX509Certificate(certificate: X509Certificate) {
+        this.remotePeerCertificate = certificate
     }
 
     /**
@@ -232,7 +242,8 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
      * @return The number of seconds this DAT is valid
      * @throws DatException
      */
-    fun verifyTokenSecurityAttributes(dat: ByteArray, securityRequirements: SecurityRequirements?): Long {
+    fun verifyTokenSecurityAttributes(dat: ByteArray, securityRequirements: SecurityRequirements?,
+                                      certificate: X509Certificate?): Long {
         if (LOG.isDebugEnabled) {
             LOG.debug("Verifying dynamic attribute token...")
         }
@@ -247,8 +258,7 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
         val jwksKeyResolver = HttpsJwksVerificationKeyResolver(httpsJwks)
 
         //create validation requirements
-        //TODO check subject == createConnectorUUID(remoteCert) using certificate from peer
-        val jwtConsumer = JwtConsumerBuilder()
+        val jwtConsumerBuilder = JwtConsumerBuilder()
                 .setRequireExpirationTime() // has expiration time
                 .setAllowedClockSkewInSeconds(30) // leeway in validation time
                 .setRequireSubject() // has subject
@@ -261,7 +271,25 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
                                 AlgorithmIdentifiers.RSA_USING_SHA256
                         )
                 )
-                .build()
+
+        //check subject == connectorUUID using the certificate (local or peer)
+        if (certificate == null) {
+            //TODO how do we want to react in this case
+            if (LOG.isWarnEnabled) {
+                LOG.warn("Missing X509Certificate from remote peer. " +
+                        "Cannot check expected JWT subject against peer's connectorUUID")
+            }
+        } else {
+            if (certificate == localPeerCertificate) {
+                // we know the local UUID already
+                jwtConsumerBuilder.setExpectedSubject(connectorUUID)
+            } else {
+                // calculate connector UUID from remote peer's certificate
+                jwtConsumerBuilder.setExpectedSubject(createConnectorUUID(certificate))
+            }
+        }
+
+        val jwtConsumer = jwtConsumerBuilder.build()
         val validityTime: Long
         val claims: JwtClaims
         try {

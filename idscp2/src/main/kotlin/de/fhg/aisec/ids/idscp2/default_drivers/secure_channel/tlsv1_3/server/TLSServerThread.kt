@@ -11,6 +11,7 @@ import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server.ServerConnectionListe
 import org.slf4j.LoggerFactory
 import java.io.*
 import java.net.SocketTimeoutException
+import java.security.cert.X509Certificate
 import java.util.concurrent.CompletableFuture
 import javax.net.ssl.HandshakeCompletedEvent
 import javax.net.ssl.HandshakeCompletedListener
@@ -129,9 +130,18 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
             LOG.trace("TLS Handshake was successful")
         }
 
+        val sslSession = handshakeCompletedEvent.session
+
+        // get peer certificate
+        val certificates = sslSession.peerCertificates
+        if (certificates.isEmpty()) {
+            throw SSLPeerUnverifiedException("Missing peer certificate")
+        }
+        val peerCert = certificates[0] as X509Certificate
+
         // verify tls session on application layer: hostname verification, certificate validity
         try {
-            TLSSessionVerificationHelper.verifyTlsSession(handshakeCompletedEvent.session)
+            TLSSessionVerificationHelper.verifyTlsSession(sslSession.peerHost, sslSession.peerPort, peerCert)
             if (LOG.isTraceEnabled) {
                 LOG.trace("TLS session is valid")
             }
@@ -144,7 +154,7 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
         }
 
         //provide secure channel to IDSCP2 Config and register secure channel as listener
-        val secureChannel = SecureChannel(this)
+        val secureChannel = SecureChannel(this, peerCert)
         channelListenerPromise.complete(secureChannel)
         configCallback.onSecureChannel(secureChannel, serverListenerPromise)
     }

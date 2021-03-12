@@ -1,5 +1,7 @@
 package de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners
 
+import java.security.cert.X509Certificate
+
 /**
  * An FSM Listener Interface for the SecureChannel driver implemented by the FSM to restrict FSM API to
  * the SecureChannel drivers class of the IDSCP2
@@ -22,4 +24,9 @@ interface ScFsmListener {
      * A method for notifying the fsm about closure of the secure channel
      */
     fun onClose()
+
+    /**
+     * A method for providing the peer certificate from the secure channel to the FSM
+     */
+    fun setPeerX509Certificate(certificate: X509Certificate)
 }

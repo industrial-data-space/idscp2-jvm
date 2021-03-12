@@ -15,6 +15,7 @@ import java.io.DataOutputStream
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.security.cert.X509Certificate
 import java.util.concurrent.CompletableFuture
 import javax.net.ssl.*
 
@@ -141,12 +142,21 @@ class TLSClient<CC: Idscp2Connection>(
 
         // verify tls session on application layer: hostname verification, certificate validity
         try {
-            TLSSessionVerificationHelper.verifyTlsSession(handshakeCompletedEvent.session)
+            val sslSession = handshakeCompletedEvent.session
+
+            // get peer certificate
+            val certificates = sslSession.peerCertificates
+            if (certificates.isEmpty()) {
+                throw SSLPeerUnverifiedException("Missing peer certificate")
+            }
+            val peerCert = certificates[0] as X509Certificate
+
+            TLSSessionVerificationHelper.verifyTlsSession(sslSession.peerHost, sslSession.peerPort, peerCert)
             if (LOG.isTraceEnabled) {
                 LOG.trace("TLS session is valid")
             }
-            // Create secure channel, register secure channel as message listener and notify IDSCP2 Configuration.
-            val secureChannel = SecureChannel(this)
+            // Create secure channel, register secure channel as message listener and notify IDSCP2 Configuration
+            val secureChannel = SecureChannel(this, peerCert)
             // Try to complete, won't do anything if promise has been cancelled
             listenerPromise.complete(secureChannel)
             val connection = connectionFactory(secureChannel, clientConfiguration)

@@ -1,6 +1,7 @@
 package de.fhg.aisec.ids.idscp2.default_drivers.daps.null_daps
 
 import de.fhg.aisec.ids.idscp2.idscp_core.drivers.DapsDriver
+import java.security.cert.X509Certificate
 
 /**
  * NullDaps for testing purpose only
@@ -12,5 +13,9 @@ class NullDaps : DapsDriver {
 
     override fun verifyToken(dat: ByteArray): Long {
         return 100 // DA is always valid for 100 seconds
+    }
+
+    override fun setPeerX509Certificate(certificate: X509Certificate) {
+        // nothing to do
     }
 }

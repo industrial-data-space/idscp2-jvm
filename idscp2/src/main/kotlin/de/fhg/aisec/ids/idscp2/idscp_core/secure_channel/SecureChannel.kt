@@ -3,6 +3,7 @@ package de.fhg.aisec.ids.idscp2.idscp_core.secure_channel
 import de.fhg.aisec.ids.idscp2.idscp_core.drivers.SecureChannelEndpoint
 import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.ScFsmListener
 import org.slf4j.LoggerFactory
+import java.security.cert.X509Certificate
 import java.util.concurrent.CompletableFuture
 
 /**
@@ -11,7 +12,8 @@ import java.util.concurrent.CompletableFuture
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
-class SecureChannel(private val endpoint: SecureChannelEndpoint) : SecureChannelListener {
+class SecureChannel(private val endpoint: SecureChannelEndpoint, private val peerCertificate: X509Certificate) :
+        SecureChannelListener {
     private val fsmPromise = CompletableFuture<ScFsmListener>()
 
     /*
@@ -57,10 +59,11 @@ class SecureChannel(private val endpoint: SecureChannelEndpoint) : SecureChannel
         get() = endpoint.isConnected
 
     /*
-     * set the corresponding finite state machine
+     * set the corresponding finite state machine, pass peer certificate to FSM
      */
     fun setFsm(fsm: ScFsmListener) {
         fsmPromise.complete(fsm)
+        fsm.setPeerX509Certificate(peerCertificate)
     }
 
     companion object {

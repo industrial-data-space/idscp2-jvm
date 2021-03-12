@@ -42,10 +42,8 @@ public class DapsDriverTest {
         assertNotEquals(token, "INVALID_TOKEN");
 
 
-        assertTrue(dapsDriver.verifyTokenSecurityAttributes(token.getBytes(), requirements) >= 0);
-
-
-        assertFalse(dapsDriver.verifyTokenSecurityAttributes(token.getBytes(), requirements2) >= 0);
+        assertTrue(dapsDriver.verifyTokenSecurityAttributes(token.getBytes(), requirements, null) >= 0);
+        assertFalse(dapsDriver.verifyTokenSecurityAttributes(token.getBytes(), requirements2, null) >= 0);
     }
 
     /****

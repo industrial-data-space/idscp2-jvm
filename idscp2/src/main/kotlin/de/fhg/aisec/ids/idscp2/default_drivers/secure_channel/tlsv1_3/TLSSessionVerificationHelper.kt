@@ -36,19 +36,11 @@ object TLSSessionVerificationHelper {
      * Throws SSlPeerUnverifiedException if peer certificate is not secure for this peer
      */
     @Throws(SSLPeerUnverifiedException::class)
-    fun verifyTlsSession(sslSession: SSLSession) {
-        val host = sslSession.peerHost
+    fun verifyTlsSession(host: String, port: Int, peerCert: X509Certificate) {
         if (LOG.isTraceEnabled) {
-            LOG.trace("Connected to {}:{}", host, sslSession.peerPort)
+            LOG.trace("Connected to {}:{}", host, port)
         }
         try {
-
-            //get certificate
-            val certificates = sslSession.peerCertificates
-            if (certificates.size != 1) {
-                throw SSLPeerUnverifiedException("Unexpected number of certificates")
-            }
-            val peerCert = certificates[0] as X509Certificate
 
             /*
              * According to RFC6125, hostname verification should be done against the certificate's

@@ -20,10 +20,10 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import java.nio.charset.StandardCharsets
+import java.security.cert.X509Certificate
 import java.util.*
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.NoSuchElementException
-import kotlin.collections.ArrayList
 
 /**
  * The finite state machine FSM of the IDSCP2 protocol
@@ -153,6 +153,11 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
     private val proverHandshakeTimer: StaticTimer
     private val verifierHandshakeTimer: StaticTimer
     private val ackTimer: StaticTimer
+
+    /**
+     * Peer certificate
+     */
+    private var peerCertificate: X509Certificate? = null
 
     private fun checkForFsmCycles() {
         // check if current thread holds already the fsm lock, then we have a circle
@@ -429,6 +434,14 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
      */
     override fun onClose() {
         onUpperEvent(Event(InternalControlMessage.IDSCP_STOP))
+    }
+
+    /**
+     * Set the peer Certificate from the secure channel and pass it to the DAPS driver
+     */
+    override fun setPeerX509Certificate(certificate: X509Certificate) {
+        this.dapsDriver.setPeerX509Certificate(certificate)
+        this.peerCertificate = certificate
     }
 
     /**
