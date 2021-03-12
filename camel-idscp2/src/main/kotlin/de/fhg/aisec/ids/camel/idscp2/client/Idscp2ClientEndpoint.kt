@@ -20,8 +20,8 @@ import de.fhg.aisec.ids.camel.idscp2.RefCountingHashMap
 import de.fhg.aisec.ids.camel.idscp2.UsageControlMaps
 import de.fhg.aisec.ids.camel.idscp2.Utils
 import de.fhg.aisec.ids.idscp2.app_layer.AppLayerConnection
-import de.fhg.aisec.ids.idscp2.default_drivers.daps.DefaultDapsDriver
-import de.fhg.aisec.ids.idscp2.default_drivers.daps.DefaultDapsDriverConfig
+import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.DefaultDapsDriver
+import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.DefaultDapsDriverConfig
 import de.fhg.aisec.ids.idscp2.default_drivers.rat.dummy.RatProverDummy
 import de.fhg.aisec.ids.idscp2.default_drivers.rat.dummy.RatVerifierDummy
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTLSDriver

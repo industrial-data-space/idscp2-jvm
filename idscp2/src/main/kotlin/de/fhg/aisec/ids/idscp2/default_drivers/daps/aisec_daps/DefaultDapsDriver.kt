@@ -1,4 +1,4 @@
-package de.fhg.aisec.ids.idscp2.default_drivers.daps
+package de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps
 
 import de.fhg.aisec.ids.idscp2.default_drivers.keystores.PreConfiguration
 import de.fhg.aisec.ids.idscp2.idscp_core.drivers.DapsDriver
@@ -89,6 +89,7 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
             LOG.info("Retrieving Dynamic Attribute Token from Daps ...")
 
             //Create connectorUUID
+            //TODO move this into constructor
             // Get AKI
             //GET 2.5.29.14	SubjectKeyIdentifier / 2.5.29.35	AuthorityKeyIdentifier
             val akiOid = Extension.authorityKeyIdentifier.id
@@ -216,7 +217,7 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
      * @return The number of seconds this DAT is valid
      * @throws DatException
      */
-    fun verifyTokenSecurityAttributes(dat: ByteArray, securityRequirements: Any?): Long {
+    fun verifyTokenSecurityAttributes(dat: ByteArray, securityRequirements: SecurityRequirements?): Long {
         if (LOG.isDebugEnabled) {
             LOG.debug("Verifying dynamic attribute token...")
         }
@@ -231,6 +232,7 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
         val jwksKeyResolver = HttpsJwksVerificationKeyResolver(httpsJwks)
 
         //create validation requirements
+        //TODO check subject using certificate from peer
         val jwtConsumer = JwtConsumerBuilder()
                 .setRequireExpirationTime() // has expiration time
                 .setAllowedClockSkewInSeconds(30) // leeway in validation time
@@ -260,62 +262,27 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
             if (LOG.isDebugEnabled) {
                 LOG.debug("Validate security attributes")
             }
-            if (securityRequirements !is SecurityRequirements) {
-                throw DatException("Invalid security requirements format. Expected " +
-                        SecurityRequirements::class.java.name)
+            // parse security profile from DAT
+            val asJson = JSONObject(claims.toJson())
+            if (!asJson.has("securityProfile")) {
+                throw DatException("DAT does not contain securityProfile")
             }
-            val securityLevel = parseSecurityRequirements(claims.toJson()).requiredSecurityLevel
-                    ?: throw DatException("No security profile provided")
-            when (securityRequirements.requiredSecurityLevel) {
-                "idsc:BASE_CONNECTOR_SECURITY_PROFILE" -> {
-                    if (securityLevel != "idsc:BASE_CONNECTOR_SECURITY_PROFILE"
-                            && securityLevel != "idsc:TRUSTED_CONNECTOR_SECURITY_PROFILE"
-                            && securityLevel != "idsc:TRUSTED_CONNECTOR_PLUS_SECURITY_PROFILE") {
-                        throw DatException(
-                                "Client does not support any valid trust profile: Required: "
-                                        + securityRequirements.requiredSecurityLevel
-                                        + " given: "
-                                        + securityLevel)
-                    }
-                }
-                "idsc:TRUSTED_CONNECTOR_SECURITY_PROFILE" -> {
-                    if (securityLevel != "idsc:TRUSTED_CONNECTOR_SECURITY_PROFILE"
-                            && securityLevel != "idsc:TRUSTED_CONNECTOR_PLUS_SECURITY_PROFILE") {
-                        throw DatException(
-                                "Client does not support any valid trust profile: Required: "
-                                        + securityRequirements.requiredSecurityLevel
-                                        + " given: "
-                                        + securityLevel)
-                    }
-                }
-                "idsc:TRUSTED_CONNECTOR_PLUS_SECURITY_PROFILE" -> {
-                    if (securityLevel != "idsc:TRUSTED_CONNECTOR_PLUS_SECURITY_PROFILE") {
-                        throw DatException(
-                                "Client does not support any valid trust profile: Required: "
-                                        + securityRequirements.requiredSecurityLevel
-                                        + " given: "
-                                        + securityLevel)
-                    }
-                }
-                else -> throw DatException(
-                        "Client does not support any valid trust profile: Required: "
+            val securityProfilePeer = SecurityProfile.fromString(asJson.getString("securityProfile"))
+            if (securityProfilePeer < securityRequirements.requiredSecurityLevel) {
+                throw DatException(
+                        "Peer does not support any valid trust profile: Required: "
                                 + securityRequirements.requiredSecurityLevel
                                 + " given: "
-                                + securityLevel)
+                                + securityProfilePeer)
+            }
+            if (LOG.isDebugEnabled) {
+                LOG.debug("Peer's supported security profile: {}", securityProfilePeer)
             }
         }
-        LOG.debug("DAT is valid")
-        return validityTime
-    }
-
-    private fun parseSecurityRequirements(dat: String): SecurityRequirements {
-        val asJson = JSONObject(dat)
-        if (!asJson.has("securityProfile")) {
-            throw DatException("DAT does not contain securityProfile")
+        if (LOG.isDebugEnabled) {
+            LOG.debug("DAT is valid for {} seconds", validityTime)
         }
-        return SecurityRequirements.Builder()
-                .setRequiredSecurityLevel(asJson.getString("securityProfile"))
-                .build()
+        return validityTime
     }
 
     /**

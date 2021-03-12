@@ -1,4 +1,4 @@
-package de.fhg.aisec.ids.idscp2.default_drivers.daps
+package de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps
 
 import java.nio.file.Path
 import java.nio.file.Paths

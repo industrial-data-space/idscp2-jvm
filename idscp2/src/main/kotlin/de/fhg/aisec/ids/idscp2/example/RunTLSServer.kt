@@ -1,7 +1,9 @@
 package de.fhg.aisec.ids.idscp2.example
 
-import de.fhg.aisec.ids.idscp2.default_drivers.daps.DefaultDapsDriver
-import de.fhg.aisec.ids.idscp2.default_drivers.daps.DefaultDapsDriverConfig
+import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.DefaultDapsDriver
+import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.DefaultDapsDriverConfig
+import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.SecurityProfile
+import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.SecurityRequirements
 import de.fhg.aisec.ids.idscp2.default_drivers.rat.dummy.RatProverDummy
 import de.fhg.aisec.ids.idscp2.default_drivers.rat.dummy.RatVerifierDummy
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
@@ -28,10 +30,15 @@ object RunTLSServer {
                 .build()
 
         // create daps config
+        val securityRequirements = SecurityRequirements.Builder()
+                .setRequiredSecurityLevel(SecurityProfile.TRUSTED)
+                .build()
+
         val dapsDriver: DapsDriver = DefaultDapsDriver(DefaultDapsDriverConfig.Builder()
                 .setKeyStorePath(keyStorePath)
                 .setTrustStorePath(trustStorePath)
                 .setDapsUrl("https://daps.aisec.fraunhofer.de")
+                .setSecurityRequirements(securityRequirements)
                 .build())
 
         val settings = Idscp2Configuration.Builder()

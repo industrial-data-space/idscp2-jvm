@@ -1,6 +1,7 @@
-import de.fhg.aisec.ids.idscp2.default_drivers.daps.DefaultDapsDriver;
-import de.fhg.aisec.ids.idscp2.default_drivers.daps.DefaultDapsDriverConfig;
-import de.fhg.aisec.ids.idscp2.default_drivers.daps.SecurityRequirements;
+import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.DefaultDapsDriver;
+import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.DefaultDapsDriverConfig;
+import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.SecurityProfile;
+import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.SecurityRequirements;
 import de.fhg.aisec.ids.idscp2.idscp_core.drivers.DapsDriver;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -16,11 +17,11 @@ public class DapsDriverTest {
     public void testValidToken() {
 
         SecurityRequirements requirements = new SecurityRequirements.Builder()
-                .setRequiredSecurityLevel("idsc:TRUSTED_CONNECTOR_SECURITY_PROFILE")
+                .setRequiredSecurityLevel(SecurityProfile.TRUSTED)
                 .build();
 
         SecurityRequirements requirements2 = new SecurityRequirements.Builder()
-                .setRequiredSecurityLevel("idsc:BASE_CONNECTOR_SECURITY_PROFILE")
+                .setRequiredSecurityLevel(SecurityProfile.BASE)
                 .build();
 
         DefaultDapsDriverConfig config =
@@ -165,7 +166,7 @@ public class DapsDriverTest {
     public void testInvalidAuditLogging() {
 
         SecurityRequirements requirements = new SecurityRequirements.Builder()
-                .setRequiredSecurityLevel("idsc:TRUSTED_CONNECTOR_PLUS_SECURITY_PROFILE")
+                .setRequiredSecurityLevel(SecurityProfile.TRUSTED_PLUS)
                 .build();
 
         DefaultDapsDriverConfig config =
@@ -192,7 +193,7 @@ public class DapsDriverTest {
     public static void main(String[] args) {
 
         SecurityRequirements requirements = new SecurityRequirements.Builder()
-                .setRequiredSecurityLevel("idsc:TRUSTED_CONNECTOR_SECURITY_PROFILE")
+                .setRequiredSecurityLevel(SecurityProfile.TRUSTED)
                 .build();
 
         //get token

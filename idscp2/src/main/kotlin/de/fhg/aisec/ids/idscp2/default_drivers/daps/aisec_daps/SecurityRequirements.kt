@@ -1,4 +1,4 @@
-package de.fhg.aisec.ids.idscp2.default_drivers.daps
+package de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps
 
 /**
  * A Security-Requirements class using Builder pattern to store the connectors expected
@@ -7,13 +7,13 @@ package de.fhg.aisec.ids.idscp2.default_drivers.daps
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
 class SecurityRequirements {
-    var requiredSecurityLevel: String? = null
+    lateinit var requiredSecurityLevel: SecurityProfile
         private set
 
     class Builder {
         private val requirements = SecurityRequirements()
-        fun setRequiredSecurityLevel(requiredSecurityLevel: String?): Builder {
-            requirements.requiredSecurityLevel = requiredSecurityLevel
+        fun setRequiredSecurityLevel(securityProfile: SecurityProfile): Builder {
+            requirements.requiredSecurityLevel = securityProfile
             return this
         }
 

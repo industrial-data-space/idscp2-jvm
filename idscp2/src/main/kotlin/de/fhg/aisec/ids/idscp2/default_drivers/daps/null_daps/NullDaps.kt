@@ -1,4 +1,4 @@
-package de.fhg.aisec.ids.idscp2.default_drivers.daps
+package de.fhg.aisec.ids.idscp2.default_drivers.daps.null_daps
 
 import de.fhg.aisec.ids.idscp2.idscp_core.drivers.DapsDriver
 
