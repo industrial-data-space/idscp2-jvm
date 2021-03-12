@@ -53,10 +53,19 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
                     config.keyPassword
             )
     private val dapsUrl: String = config.dapsUrl
-    private val cert: X509Certificate = PreConfiguration.getCertificate(
-            config.keyStorePath,
-            config.keyStorePassword,
-            config.keyAlias)  //get http response from DAPS
+
+    /**
+     * Lookup table for encodeHexString()
+     */
+    private val hexLookup = HashMap<Byte, CharArray>()
+
+    // requires hexLookup to be existent
+    private val connectorUUID: String = createConnectorUUID(
+            PreConfiguration.getCertificate(
+                    config.keyStorePath,
+                    config.keyStorePassword,
+                    config.keyAlias)
+    )
 
     init {
         //create ssl socket factory for secure
@@ -79,6 +88,35 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
     }
 
     /**
+     * Create connector UUID: SKI:keyid:AKI from X509 Certificate
+     */
+    private fun createConnectorUUID(certificate: X509Certificate): String {
+
+        //GET 2.5.29.35 AuthorityKeyIdentifier
+        val akiOid = Extension.authorityKeyIdentifier.id
+        val rawAuthorityKeyIdentifier = certificate.getExtensionValue(akiOid)
+        val akiOc = ASN1OctetString.getInstance(rawAuthorityKeyIdentifier)
+        val aki = AuthorityKeyIdentifier.getInstance(akiOc.octets)
+        val authorityKeyIdentifier = aki.keyIdentifier
+        val akiResult = encodeHexString(authorityKeyIdentifier, true).toUpperCase()
+
+        //GET 2.5.29.14	SubjectKeyIdentifier
+        val skiOid = Extension.subjectKeyIdentifier.id
+        val rawSubjectKeyIdentifier = certificate.getExtensionValue(skiOid)
+        val ski0c = ASN1OctetString.getInstance(rawSubjectKeyIdentifier)
+        val ski = SubjectKeyIdentifier.getInstance(ski0c.octets)
+        val subjectKeyIdentifier = ski.keyIdentifier
+        val skiResult = encodeHexString(subjectKeyIdentifier, true).toUpperCase()
+
+        if (LOG.isDebugEnabled) {
+            LOG.debug("AKI: $akiResult")
+            LOG.debug("SKI: $skiResult")
+        }
+
+        return skiResult + "keyid:" + akiResult.substring(0, akiResult.length - 1)
+    }
+
+    /**
      * Receive the signed and valid dynamic attribute token from the DAPS
      *
      * @throws DatException
@@ -88,29 +126,6 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
             val token: String
             LOG.info("Retrieving Dynamic Attribute Token from Daps ...")
 
-            //Create connectorUUID
-            //TODO move this into constructor
-            // Get AKI
-            //GET 2.5.29.14	SubjectKeyIdentifier / 2.5.29.35	AuthorityKeyIdentifier
-            val akiOid = Extension.authorityKeyIdentifier.id
-            val rawAuthorityKeyIdentifier = cert.getExtensionValue(akiOid)
-            val akiOc = ASN1OctetString.getInstance(rawAuthorityKeyIdentifier)
-            val aki = AuthorityKeyIdentifier.getInstance(akiOc.octets)
-            val authorityKeyIdentifier = aki.keyIdentifier
-
-            //GET SKI
-            val skiOid = Extension.subjectKeyIdentifier.id
-            val rawSubjectKeyIdentifier = cert.getExtensionValue(skiOid)
-            val ski0c = ASN1OctetString.getInstance(rawSubjectKeyIdentifier)
-            val ski = SubjectKeyIdentifier.getInstance(ski0c.octets)
-            val subjectKeyIdentifier = ski.keyIdentifier
-            val akiResult = encodeHexString(authorityKeyIdentifier, true).toUpperCase()
-            val skiResult = encodeHexString(subjectKeyIdentifier, true).toUpperCase()
-            if (LOG.isDebugEnabled) {
-                LOG.debug("AKI: $akiResult")
-                LOG.debug("SKI: $skiResult")
-            }
-            val connectorUUID = skiResult + "keyid:" + akiResult.substring(0, akiResult.length - 1)
             if (LOG.isDebugEnabled) {
                 LOG.debug("ConnectorUUID: $connectorUUID")
                 LOG.debug("Retrieving Dynamic Attribute Token...")
@@ -232,7 +247,7 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
         val jwksKeyResolver = HttpsJwksVerificationKeyResolver(httpsJwks)
 
         //create validation requirements
-        //TODO check subject using certificate from peer
+        //TODO check subject == createConnectorUUID(remoteCert) using certificate from peer
         val jwtConsumer = JwtConsumerBuilder()
                 .setRequireExpirationTime() // has expiration time
                 .setAllowedClockSkewInSeconds(30) // leeway in validation time
@@ -296,11 +311,6 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
         hexDigits[1] = Character.forDigit(num and 0xF, 16)
         return hexDigits
     }
-
-    /**
-     * Lookup table for encodeHexString()
-     */
-    private val hexLookup = HashMap<Byte, CharArray>()
 
     /**
      * Encode a byte array to a hex string
