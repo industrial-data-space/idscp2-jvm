@@ -60,8 +60,6 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
                     config.keyStorePassword,
                     config.keyAlias)
 
-    private var remotePeerCertificate: X509Certificate? = null
-
     /**
      * Lookup table for encodeHexString()
      */
@@ -216,19 +214,13 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
 
     /**
      * Public verifyToken API, used from the IDSCPv2 protocol. Security requirements are used from the DAPS config
+     * Peer certificate is used for verifying DAT subject
      *
      * @return The number of seconds this DAT is valid
      * @throws DatException
      */
-    override fun verifyToken(dat: ByteArray): Long {
-        return verifyTokenSecurityAttributes(dat, securityRequirements, remotePeerCertificate)
-    }
-
-    /**
-     * Set the remote peer's X509 Certificate, this is done by the FSM when peer cert is available
-     */
-    override fun setPeerX509Certificate(certificate: X509Certificate) {
-        this.remotePeerCertificate = certificate
+    override fun verifyToken(dat: ByteArray, peerCertificate: X509Certificate?): Long {
+        return verifyTokenSecurityAttributes(dat, securityRequirements, peerCertificate)
     }
 
     /**

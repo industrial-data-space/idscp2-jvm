@@ -138,7 +138,7 @@ class StateWaitForDatAndRat(fsm: FSM,
             var datValidityPeriod: Long
 
             try {
-                if (0 > dapsDriver.verifyToken(dat).also { datValidityPeriod = it }) {
+                if (0 > dapsDriver.verifyToken(dat, fsm.remotePeerCertificate).also { datValidityPeriod = it }) {
                     if (LOG.isTraceEnabled) {
                         LOG.trace("No valid remote DAT is available. Send IDSCP_CLOSE")
                     }

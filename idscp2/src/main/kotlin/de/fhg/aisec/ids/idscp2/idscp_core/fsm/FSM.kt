@@ -440,9 +440,11 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
      * Set the peer Certificate from the secure channel and pass it to the DAPS driver
      */
     override fun setPeerX509Certificate(certificate: X509Certificate) {
-        this.dapsDriver.setPeerX509Certificate(certificate)
         this.peerCertificate = certificate
     }
+
+    val remotePeerCertificate: X509Certificate?
+            get() = this.peerCertificate
 
     /**
      * Send idscp message from the User via the secure channel

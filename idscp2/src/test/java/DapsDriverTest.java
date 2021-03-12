@@ -185,7 +185,7 @@ public class DapsDriverTest {
         String token = new String(dapsDriver.getToken());
         assertNotEquals(token, "INVALID_TOKEN");
 
-        assertTrue(dapsDriver.verifyToken(token.getBytes()) < 0);
+        assertTrue(dapsDriver.verifyToken(token.getBytes(), null) < 0);
     }
 
     public static void main(String[] args) {
@@ -214,7 +214,7 @@ public class DapsDriverTest {
         System.out.println(token);
 
         long ret;
-        if (0 > (ret = dapsDriver.verifyToken(token.getBytes()))) {
+        if (0 > (ret = dapsDriver.verifyToken(token.getBytes(), null))) {
             System.out.println("failed");
         } else {
             System.out.println("success: " + ret);

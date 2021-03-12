@@ -19,11 +19,5 @@ interface DapsDriver {
      *
      * Return the number of seconds, the DAT is valid
      */
-    fun verifyToken(dat: ByteArray): Long
-
-    /**
-     * Set the remote peer's certificate to verify DAT attributes that depend on the certificate
-     * This will be called from the FSM when the FSM is registered to the secure channel
-     */
-    fun setPeerX509Certificate(certificate: X509Certificate)
+    fun verifyToken(dat: ByteArray, peerCertificate: X509Certificate?): Long
 }
