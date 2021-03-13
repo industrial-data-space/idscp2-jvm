@@ -27,6 +27,7 @@ import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.security.Key
 import java.security.KeyManagementException
+import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import java.security.cert.X509Certificate
 import java.time.Instant
@@ -220,6 +221,11 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
      * @throws DatException
      */
     override fun verifyToken(dat: ByteArray, peerCertificate: X509Certificate?): Long {
+
+        // We expect the peer certificate to validate its fingerprints with the DAT
+        if (peerCertificate == null)
+            throw DatException("Missing peer certificate for fingerprint validation")
+
         return verifyTokenSecurityAttributes(dat, securityRequirements, peerCertificate)
     }
 
@@ -231,11 +237,13 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
      * the method will also check the provided security attributes of the connector that belongs
      * to the provided DAT
      *
+     * The peer certificate is used for validating the fingerprints in the DAT against the peer
+     *
      * @return The number of seconds this DAT is valid
      * @throws DatException
      */
     fun verifyTokenSecurityAttributes(dat: ByteArray, securityRequirements: SecurityRequirements?,
-                                      certificate: X509Certificate?): Long {
+                                      certificate: X509Certificate): Long {
         if (LOG.isDebugEnabled) {
             LOG.debug("Verifying dynamic attribute token...")
         }
@@ -250,7 +258,7 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
         val jwksKeyResolver = HttpsJwksVerificationKeyResolver(httpsJwks)
 
         //create validation requirements
-        val jwtConsumerBuilder = JwtConsumerBuilder()
+        val jwtConsumer = JwtConsumerBuilder()
                 .setRequireExpirationTime() // has expiration time
                 .setAllowedClockSkewInSeconds(30) // leeway in validation time
                 .setRequireSubject() // has subject
@@ -263,25 +271,8 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
                                 AlgorithmIdentifiers.RSA_USING_SHA256
                         )
                 )
+                .build()
 
-        //check subject == connectorUUID using the certificate (local or peer)
-        if (certificate == null) {
-            //TODO how do we want to react in this case
-            if (LOG.isWarnEnabled) {
-                LOG.warn("Missing X509Certificate from remote peer. " +
-                        "Cannot check expected JWT subject against peer's connectorUUID")
-            }
-        } else {
-            if (certificate == localPeerCertificate) {
-                // we know the local UUID already
-                jwtConsumerBuilder.setExpectedSubject(connectorUUID)
-            } else {
-                // calculate connector UUID from remote peer's certificate
-                jwtConsumerBuilder.setExpectedSubject(createConnectorUUID(certificate))
-            }
-        }
-
-        val jwtConsumer = jwtConsumerBuilder.build()
         val validityTime: Long
         val claims: JwtClaims
         try {
@@ -292,17 +283,41 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
             throw DatException("Error during claims processing", e)
         }
 
+        // in case of validating remote DAT check the expected fingerprint from the DAT against the peers cert fingerprint
+        if (certificate != localPeerCertificate) {
+            if (LOG.isDebugEnabled) {
+                LOG.debug("Validate peer certificate fingerprint against expected fingerprint from DAT")
+            }
+            // TODO multiple fingerprints?
+            // get expected fingerprint from DAT
+            val datCertFingerprint = claims.getClaimValue("transportCertsSha256")
+                    ?: throw DatException("DAT does not contain peer certificate fingerprints")
+
+            // calculate peer certificate SHA256 fingerprint
+            val peerCertFingerprint: String
+            try {
+                val sha256 = MessageDigest.getInstance("SHA-256")
+                sha256.update(certificate.encoded)
+                val digest = sha256.digest()
+                peerCertFingerprint = encodeHexString(digest, false).toLowerCase()
+            } catch (e: Exception) {
+                throw DatException("Cannot calculate peer certificate fingerprint", e)
+            }
+
+            if (peerCertFingerprint != datCertFingerprint) {
+                throw DatException("Fingerprint of peer certificate does not match the expected fingerprint from DAT")
+            }
+        }
+
         //check security requirements
         if (securityRequirements != null) {
             if (LOG.isDebugEnabled) {
                 LOG.debug("Validate security attributes")
             }
             // parse security profile from DAT
-            val asJson = JSONObject(claims.toJson())
-            if (!asJson.has("securityProfile")) {
-                throw DatException("DAT does not contain securityProfile")
-            }
-            val securityProfilePeer = SecurityProfile.fromString(asJson.getString("securityProfile"))
+            val securityProfile = claims.getStringClaimValue("securityProfile")
+                    ?: throw DatException("DAT does not contain securityProfile")
+            val securityProfilePeer = SecurityProfile.fromString(securityProfile)
             if (securityProfilePeer < securityRequirements.requiredSecurityLevel) {
                 throw DatException(
                         "Peer does not support any valid trust profile: Required: "
