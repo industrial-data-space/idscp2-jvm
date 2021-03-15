@@ -82,8 +82,11 @@ class StateWaitForRatVerifier(fsm: FSM,
         })
 
         addTransition(InternalControlMessage.DAT_TIMER_EXPIRED.value, Transition {
+            if (LOG.isDebugEnabled) {
+                LOG.debug("DAT expired, request new DAT from peer and trigger a re-attestation")
+            }
             if (LOG.isTraceEnabled) {
-                LOG.trace("DAT timeout occurred. Send IDSCP_DAT_EXPIRED and stop RAT_VERIFIER")
+                LOG.trace("Send IDSCP_DAT_EXPIRED")
             }
             fsm.stopRatVerifierDriver()
             if (!fsm.sendFromFSM(Idscp2MessageHelper.createIdscpDatExpiredMessage())) {
@@ -141,8 +144,8 @@ class StateWaitForRatVerifier(fsm: FSM,
         })
 
         addTransition(IdscpMessage.IDSCPDATEXPIRED_FIELD_NUMBER, Transition {
-            if (LOG.isTraceEnabled) {
-                LOG.trace("Received IDSCP_DAT_EXPIRED. Send new DAT from DAT_DRIVER, start RAT_PROVER")
+            if (LOG.isDebugEnabled) {
+                LOG.debug("Peer is requesting a new DAT, followed by a re-attestation")
             }
             if (!fsm.sendFromFSM(Idscp2MessageHelper.createIdscpDatMessage(fsm.getDynamicAttributeToken))) {
                 LOG.warn("Cannot send DAT message")
@@ -180,8 +183,8 @@ class StateWaitForRatVerifier(fsm: FSM,
         })
 
         addTransition(IdscpMessage.IDSCPRERAT_FIELD_NUMBER, Transition {
-            if (LOG.isTraceEnabled) {
-                LOG.trace("Received IDSCP_RE_RAT. Start RAT_PROVER")
+            if (LOG.isDebugEnabled) {
+                LOG.debug("Peer is requesting a re-attestation")
             }
             if (!fsm.restartRatProverDriver()) {
                 LOG.warn("Cannot run Rat prover, close idscp connection")

@@ -59,6 +59,13 @@ interface Idscp2Connection {
      */
     val isConnected: Boolean
 
+    /**
+     * Check if the idscp connection is locked forever
+     *
+     * @return Connection locked state
+     */
+    val isClosed: Boolean
+
     fun addConnectionListener(listener: Idscp2ConnectionListener)
 
     fun removeConnectionListener(listener: Idscp2ConnectionListener): Boolean

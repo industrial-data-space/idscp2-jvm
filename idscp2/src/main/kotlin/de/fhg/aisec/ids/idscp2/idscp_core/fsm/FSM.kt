@@ -414,11 +414,13 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
      * driver implementations
      */
     override fun onError(t: Throwable) {
-        // Broadcast the error to the respective listeners
+        // Broadcast the error to the respective listeners when the fsm is not yet locked
 
         // run in async fire-and-forget coroutine to avoid cycles cause by protocol misuse
-        GlobalScope.launch {
-            connection.onError(t)
+        if (!isFsmLocked){
+            GlobalScope.launch {
+                connection.onError(t)
+            }
         }
 
         // Check for incorrect usage
@@ -473,7 +475,7 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
             return try {
                 dapsDriver.token
             } catch (e: Exception) {
-                LOG.error("Exception occurred during requesting DAT from DAPS: {}", e)
+                LOG.error("Exception occurred during requesting DAT from DAPS:", e)
                 "INVALID_DAT".toByteArray(StandardCharsets.UTF_8)
             }
         }
@@ -523,7 +525,11 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
                     remoteExpectedVerifier.contentToString())
         }
 
-        return matchRatMechanisms(remoteExpectedVerifier, localSupportedProver)
+        val match = matchRatMechanisms(remoteExpectedVerifier, localSupportedProver)
+        if (LOG.isDebugEnabled) {
+            LOG.debug("RAT prover mechanism: '{}'", match)
+        }
+        return match
     }
 
     /**
@@ -550,16 +556,17 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
                     remoteSupportedProver.contentToString())
         }
 
-        return matchRatMechanisms(localExpectedVerifier, remoteSupportedProver)
+        val match = matchRatMechanisms(localExpectedVerifier, remoteSupportedProver)
+        if (LOG.isDebugEnabled) {
+            LOG.debug("RAT verifier mechanism: '{}'", match)
+        }
+        return match
     }
 
-    fun matchRatMechanisms(primary: Array<String>, secondary: Array<String>): String? {
+    private fun matchRatMechanisms(primary: Array<String>, secondary: Array<String>): String? {
         for (p in primary) {
             for (s in secondary) {
                 if (p == s) {
-                    if (LOG.isDebugEnabled) {
-                        LOG.debug("RAT mechanism is {}", p)
-                    }
                     return p
                 }
             }
@@ -663,6 +670,11 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
             LOG.trace("Running close handlers of connection {}...", connection.id)
         }
 
+        if (LOG.isTraceEnabled) {
+            LOG.trace("Mark FSM as terminated...")
+        }
+        isLocked = true
+
         // run in async fire-and-forget coroutine to avoid cycles caused by protocol misuse
         GlobalScope.launch {
             connection.onClose()
@@ -690,11 +702,6 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
         stopRatProverDriver()
         // Cancels verifierHandshakeTimer
         stopRatVerifierDriver()
-
-        if (LOG.isTraceEnabled) {
-            LOG.trace("Mark FSM as terminated...")
-        }
-        isLocked = true
 
         // Notify upper layer via handshake or closeListener
         if (!handshakeResultAvailable) {

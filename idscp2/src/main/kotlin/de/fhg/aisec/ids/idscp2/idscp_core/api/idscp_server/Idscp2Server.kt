@@ -33,6 +33,8 @@ class Idscp2Server<CC: Idscp2Connection>(private val secureServer: SecureServer)
     }
 
     override fun onConnectionCreated(connection: CC) {
+        if (LOG.isTraceEnabled)
+            LOG.trace("Bind connection with id {} to Idscp2Server {}", connection.id, this.toString())
         connections.add(connection)
     }
 

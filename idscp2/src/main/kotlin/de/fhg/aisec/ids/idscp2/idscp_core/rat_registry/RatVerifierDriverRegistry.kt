@@ -35,17 +35,23 @@ object RatVerifierDriverRegistry {
      * Register Rat Verifier driver and an optional configuration in the registry
      */
     fun <VC> registerDriver(
-            mechanism: String,
+            instance: String,
             driverFactory: (RatVerifierFsmListener) -> RatVerifierDriver<VC>,
             driverConfig: VC?
     ) {
-        drivers[mechanism] = DriverWrapper(driverFactory, driverConfig)
+        if (LOG.isDebugEnabled) {
+            LOG.debug("Register '{}' driver to RAT prover registry", instance)
+        }
+        drivers[instance] = DriverWrapper(driverFactory, driverConfig)
     }
 
     /**
      * Unregister the driver from the registry
      */
     fun unregisterDriver(instance: String) {
+        if (LOG.isDebugEnabled) {
+            LOG.debug("Register '{}' driver from RAT prover registry", instance)
+        }
         drivers.remove(instance)
     }
 

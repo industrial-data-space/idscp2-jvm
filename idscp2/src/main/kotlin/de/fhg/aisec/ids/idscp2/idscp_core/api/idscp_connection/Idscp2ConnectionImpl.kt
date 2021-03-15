@@ -83,8 +83,8 @@ class Idscp2ConnectionImpl(secureChannel: SecureChannel,
      */
 
     override fun nonBlockingSend(msg: ByteArray) {
-        if (LOG.isDebugEnabled) {
-            LOG.debug("Sending data via connection {}...", id)
+        if (LOG.isInfoEnabled) {
+            LOG.info("Sending data via connection {}...", id)
         }
 
         when (val res = fsm.send(msg)) {
@@ -99,8 +99,8 @@ class Idscp2ConnectionImpl(secureChannel: SecureChannel,
     }
 
     override fun blockingSend(msg: ByteArray, timeout: Long, retryInterval: Long) {
-        if (LOG.isDebugEnabled) {
-            LOG.debug("Sending data via connection {}...", id)
+        if (LOG.isInfoEnabled) {
+            LOG.info("Sending data via connection {}...", id)
         }
 
         val start = System.currentTimeMillis()
@@ -182,6 +182,9 @@ class Idscp2ConnectionImpl(secureChannel: SecureChannel,
      */
     override val isConnected: Boolean
         get() = fsm.isConnected
+
+    override val isClosed: Boolean
+        get() = fsm.isFsmLocked
 
     override fun addConnectionListener(listener: Idscp2ConnectionListener) {
         connectionListeners.add(listener)

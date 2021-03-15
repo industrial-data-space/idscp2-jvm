@@ -40,6 +40,9 @@ object RatProverDriverRegistry {
             driverFactory: (RatProverFsmListener) -> RatProverDriver<PC>,
             driverConfig: PC?
     ) {
+        if (LOG.isDebugEnabled) {
+            LOG.debug("Register '{}' driver to RAT prover registry", instance)
+        }
         drivers[instance] = DriverWrapper(driverFactory, driverConfig)
     }
 
@@ -47,6 +50,9 @@ object RatProverDriverRegistry {
      * Unregister the driver from the registry
      */
     fun unregisterDriver(instance: String) {
+        if (LOG.isDebugEnabled) {
+            LOG.debug("Unregister '{}' driver from RAT prover registry", instance)
+        }
         drivers.remove(instance)
     }
 

@@ -1,0 +1,2 @@
+class Idscp2Integration {
+}

@@ -65,8 +65,11 @@ class StateWaitForAck(fsm: FSM,
         })
 
         addTransition(InternalControlMessage.REPEAT_RAT.value, Transition {
+            if (LOG.isDebugEnabled) {
+                LOG.debug("Re-Attestation triggered")
+            }
             if (LOG.isTraceEnabled) {
-                LOG.trace("Request RAT repeat. Send IDSCP_RERAT, start RAT_VERIFIER")
+                LOG.trace("Send IDSCP_RERAT, start RAT_VERIFIER")
             }
             ratTimer.cancelTimeout()
             ackTimer.cancelTimeout()
@@ -89,8 +92,11 @@ class StateWaitForAck(fsm: FSM,
         addTransition(InternalControlMessage.DAT_TIMER_EXPIRED.value, Transition {
             ratTimer.cancelTimeout()
             ackTimer.cancelTimeout()
+            if (LOG.isDebugEnabled) {
+                LOG.debug("DAT expired, request new DAT from peer and trigger a re-attestation")
+            }
             if (LOG.isTraceEnabled) {
-                LOG.trace("Remote DAT expired. Send IDSCP_DAT_EXPIRED")
+                LOG.trace("Send IDSCP_DAT_EXPIRED")
             }
             if (!fsm.sendFromFSM(Idscp2MessageHelper.createIdscpDatExpiredMessage())) {
                 LOG.warn("Cannot send DatExpired message")
@@ -126,8 +132,8 @@ class StateWaitForAck(fsm: FSM,
         })
 
         addTransition(IdscpMessage.IDSCPRERAT_FIELD_NUMBER, Transition {
-            if (LOG.isTraceEnabled) {
-                LOG.trace("Received IDSCP_RERAT. Start RAT_PROVER")
+            if (LOG.isDebugEnabled) {
+                LOG.debug("Peer is requesting a re-attestation")
             }
             if (!fsm.restartRatProverDriver()) {
                 LOG.warn("Cannot run Rat prover, close idscp connection")
@@ -138,8 +144,8 @@ class StateWaitForAck(fsm: FSM,
         })
 
         addTransition(IdscpMessage.IDSCPDATEXPIRED_FIELD_NUMBER, Transition {
-            if (LOG.isTraceEnabled) {
-                LOG.trace("DAT expired. Send new DAT and repeat RAT")
+            if (LOG.isDebugEnabled) {
+                LOG.debug("Peer is requesting a new DAT, followed by a re-attestation")
             }
             if (!fsm.sendFromFSM(Idscp2MessageHelper.createIdscpDatMessage(fsm.getDynamicAttributeToken))) {
                 LOG.warn("Cannot send Dat message")

@@ -177,8 +177,8 @@ class StateWaitForDatAndRat(fsm: FSM,
         })
 
         addTransition(IdscpMessage.IDSCPDATEXPIRED_FIELD_NUMBER, Transition {
-            if (LOG.isTraceEnabled) {
-                LOG.trace("Received IDSCP_DAT_EXPIRED. Send new DAT from DAT_DRIVER, restart RAT_PROVER")
+            if (LOG.isDebugEnabled) {
+                LOG.debug("Peer is requesting a new DAT, followed by a re-attestation")
             }
             if (!fsm.sendFromFSM(Idscp2MessageHelper.createIdscpDatMessage(fsm.getDynamicAttributeToken))) {
                 LOG.warn("Cannot send Dat message")
@@ -216,8 +216,8 @@ class StateWaitForDatAndRat(fsm: FSM,
         })
 
         addTransition(IdscpMessage.IDSCPRERAT_FIELD_NUMBER, Transition {
-            if (LOG.isTraceEnabled) {
-                LOG.trace("Received IDSCP_RE_RAT. Restart RAT_PROVER")
+            if (LOG.isDebugEnabled) {
+                LOG.debug("Peer is requesting a re-attestation")
             }
             if (!fsm.restartRatProverDriver()) {
                 LOG.warn("Cannot run Rat prover, close idscp connection")

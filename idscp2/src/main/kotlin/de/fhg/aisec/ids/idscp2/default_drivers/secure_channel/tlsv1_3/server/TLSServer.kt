@@ -149,7 +149,7 @@ class TLSServer<CC: Idscp2Connection>(nativeTlsConfiguration: NativeTlsConfigura
         val socketFactory = sslContext.serverSocketFactory
         serverSocket = socketFactory.createServerSocket(nativeTlsConfiguration.serverPort)
         // Set timeout for serverSocket.accept()
-        serverSocket.soTimeout = 5000
+        serverSocket.soTimeout = nativeTlsConfiguration.serverSocketTimeout
         val sslServerSocket = serverSocket as SSLServerSocket
 
         // Set TLS constraints

@@ -47,11 +47,17 @@ class SecureChannel(private val endpoint: SecureChannelEndpoint, private val pee
 
     override fun onError(t: Throwable) {
         // Tell fsm an error occurred in secure channel
+        if (LOG.isTraceEnabled) {
+            LOG.trace("Error occurred in secure channel")
+        }
         fsmPromise.thenAccept { fsmListener: ScFsmListener -> fsmListener.onError(t) }
     }
 
     override fun onClose() {
         // Tell fsm secure channel received EOF
+        if (LOG.isTraceEnabled) {
+            LOG.trace("Secure channel received EOF")
+        }
         fsmPromise.thenAccept { obj: ScFsmListener -> obj.onClose() }
     }
 
@@ -62,6 +68,9 @@ class SecureChannel(private val endpoint: SecureChannelEndpoint, private val pee
      * set the corresponding finite state machine, pass peer certificate to FSM
      */
     fun setFsm(fsm: ScFsmListener) {
+        if (LOG.isTraceEnabled) {
+            LOG.trace("Bind FSM to secure channel and pass peer certificate to FSM")
+        }
         fsmPromise.complete(fsm)
         fsm.setPeerX509Certificate(peerCertificate)
     }

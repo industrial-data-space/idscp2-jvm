@@ -27,6 +27,7 @@ class NativeTlsConfiguration {
         private set
     var keyStoreKeyType = "RSA"
         private set
+    var serverSocketTimeout: Int = DEFAULT_SERVER_SOCKET_TIMEOUT
 
     class Builder {
         private val config = NativeTlsConfiguration()
@@ -75,6 +76,11 @@ class NativeTlsConfiguration {
             return this
         }
 
+        fun setServerSocketTimeout(timeout: Int): Builder {
+            config.serverSocketTimeout = timeout
+            return this
+        }
+
         fun build(): NativeTlsConfiguration {
             return config
         }
@@ -95,6 +101,7 @@ class NativeTlsConfiguration {
         if (!keyStorePassword.contentEquals(other.keyStorePassword)) return false
         if (certificateAlias != other.certificateAlias) return false
         if (keyStoreKeyType != other.keyStoreKeyType) return false
+        if (serverSocketTimeout != other.serverSocketTimeout) return false
 
         return true
     }
@@ -109,6 +116,7 @@ class NativeTlsConfiguration {
         result = 31 * result + keyStorePassword.contentHashCode()
         result = 31 * result + certificateAlias.hashCode()
         result = 31 * result + keyStoreKeyType.hashCode()
+        result = 31 * result + serverSocketTimeout.hashCode()
         return result
     }
 
@@ -117,10 +125,11 @@ class NativeTlsConfiguration {
                 "trustStorePassword=${trustStorePassword.contentToString()}, " +
                 "keyStorePath=$keyStorePath, keyStorePassword=${keyStorePassword.contentToString()}, " +
                 "certificateAlias='$certificateAlias', " +
-                "keyStoreKeyType='$keyStoreKeyType'"
+                "keyStoreKeyType='$keyStoreKeyType', " + "serverSocketTimeout='$serverSocketTimeout'"
     }
 
     companion object {
         const val DEFAULT_SERVER_PORT = 29292
+        const val DEFAULT_SERVER_SOCKET_TIMEOUT: Int = 5000
     }
 }
