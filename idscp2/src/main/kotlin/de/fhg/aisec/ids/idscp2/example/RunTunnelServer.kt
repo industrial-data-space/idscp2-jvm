@@ -28,11 +28,11 @@ object RunTunnelServer {
                 .build()
 
         val nativeTlsConfiguration = NativeTlsConfiguration.Builder()
-                .setKeyStorePath(Paths.get(Objects.requireNonNull(RunTLSServer::class.java.classLoader.getResource("ssl/provider-keystore.p12")).path))
+                .setKeyStorePath(Paths.get(Objects.requireNonNull(RunTLSServer::class.java.classLoader.getResource("ssl/provider-keystore-localhost.p12")).path))
                 .setTrustStorePath(Paths.get(Objects.requireNonNull(RunTLSServer::class.java.classLoader.getResource("ssl/truststore.p12")).path))
                 .setCertificateAlias("1.0.1")
                 .setServerPort(12345)
-                .setHost("consumer-core")
+                .setHost("localhost")
                 .build()
 
         val initiator = CommandlineTunnelServer()

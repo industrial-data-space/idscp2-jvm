@@ -34,7 +34,6 @@ import java.util.concurrent.LinkedBlockingQueue
  */
 private const val VALID_DAT: String = "TEST_TOKEN"
 
-@Ignore
 class Idscp2Integration {
 
     private lateinit var idscpServer: Idscp2Server<Idscp2Connection>
@@ -207,7 +206,7 @@ class Idscp2Integration {
                 .getResource("ssl/truststore.p12")).path)
 
         return NativeTlsConfiguration.Builder()
-                .setHost("provider-core")
+                .setHost("localhost")
                 .setServerPort(5678)
                 .setKeyStorePath(keyStorePath)
                 .setTrustStorePath(trustStorePath)
