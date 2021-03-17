@@ -1,3 +1,24 @@
+/*-
+ * ========================LICENSE_START=================================
+ * idscp2
+ * %%
+ * Copyright (C) 2021 Fraunhofer AISEC
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * =========================LICENSE_END==================================
+ */
+package de.fhg.aisec.ids.idscp2.tests
+
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTLSDriver
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.Idscp2EndpointListener
@@ -17,11 +38,13 @@ import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RatProverFsmListener
 import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RatVerifierFsmListener
 import de.fhg.aisec.ids.idscp2.idscp_core.rat_registry.RatProverDriverRegistry
 import de.fhg.aisec.ids.idscp2.idscp_core.rat_registry.RatVerifierDriverRegistry
-import org.junit.*
+import org.junit.After
+import org.junit.Assert
+import org.junit.Test
 import java.nio.charset.StandardCharsets
 import java.nio.file.Paths
 import java.security.cert.X509Certificate
-import java.util.*
+import java.util.Objects
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
@@ -37,6 +60,7 @@ private const val VALID_DAT: String = "TEST_TOKEN"
 class Idscp2Integration {
 
     private lateinit var idscpServer: Idscp2Server<Idscp2Connection>
+
     /**
      * Some custom DAPS driver classes to test the general behavior
      */
@@ -82,7 +106,7 @@ class Idscp2Integration {
      */
     class RatVerifierAcceptor(fsmListener: RatVerifierFsmListener) : RatVerifierDriver<CustomRatConfig>(fsmListener) {
         private val queue: BlockingQueue<ByteArray> = LinkedBlockingQueue()
-        private var delay : Long = 0
+        private var delay: Long = 0
         override fun delegate(message: ByteArray) {
             queue.add(message)
         }
@@ -126,6 +150,7 @@ class Idscp2Integration {
             fsmListener.onRatVerifierMessage(InternalControlMessage.RAT_VERIFIER_MSG, "".toByteArray())
             fsmListener.onRatVerifierMessage(InternalControlMessage.RAT_VERIFIER_FAILED)
         }
+
         override fun setConfig(config: CustomRatConfig) {
             delay = config.delay
         }
@@ -136,8 +161,8 @@ class Idscp2Integration {
         private var delay: Long = 0
         override fun delegate(message: ByteArray) {
             queue.add(message)
-
         }
+
         override fun run() {
             fsmListener.onRatProverMessage(InternalControlMessage.RAT_PROVER_MSG, "".toByteArray())
             try {
@@ -151,6 +176,7 @@ class Idscp2Integration {
             }
             fsmListener.onRatProverMessage(InternalControlMessage.RAT_PROVER_OK)
         }
+
         override fun setConfig(config: CustomRatConfig) {
             delay = config.delay
         }
@@ -161,8 +187,8 @@ class Idscp2Integration {
         private var delay: Long = 0
         override fun delegate(message: ByteArray) {
             queue.add(message)
-
         }
+
         override fun run() {
             fsmListener.onRatProverMessage(InternalControlMessage.RAT_PROVER_MSG, "".toByteArray())
             try {
@@ -176,42 +202,57 @@ class Idscp2Integration {
             }
             fsmListener.onRatProverMessage(InternalControlMessage.RAT_PROVER_FAILED)
         }
+
         override fun setConfig(config: CustomRatConfig) {
             delay = config.delay
         }
     }
 
-    private fun createIdscp2Config(dapsDriver: DapsDriver, ackDelay: Long, handshakeDelay: Long, ratDelay: Long,
-                    proverSuite: Array<String>, verifierSuite: Array<String>) : Idscp2Configuration {
+    private fun createIdscp2Config(
+        dapsDriver: DapsDriver,
+        ackDelay: Long,
+        handshakeDelay: Long,
+        ratDelay: Long,
+        proverSuite: Array<String>,
+        verifierSuite: Array<String>
+    ): Idscp2Configuration {
 
         val attestationConfig = AttestationConfig.Builder()
-                .setRatTimeoutDelay(ratDelay)
-                .setExpectedRatSuite(verifierSuite)
-                .setSupportedRatSuite(proverSuite)
-                .build()
+            .setRatTimeoutDelay(ratDelay)
+            .setExpectedRatSuite(verifierSuite)
+            .setSupportedRatSuite(proverSuite)
+            .build()
 
         return Idscp2Configuration.Builder()
-                .setAttestationConfig(attestationConfig)
-                .setAckTimeoutDelay(ackDelay)
-                .setHandshakeTimeoutDelay(handshakeDelay)
-                .setDapsDriver(dapsDriver)
-                .build()
+            .setAttestationConfig(attestationConfig)
+            .setAckTimeoutDelay(ackDelay)
+            .setHandshakeTimeoutDelay(handshakeDelay)
+            .setDapsDriver(dapsDriver)
+            .build()
     }
 
-    private fun createTlsConfig(keystore: String) : NativeTlsConfiguration {
+    private fun createTlsConfig(keystore: String): NativeTlsConfiguration {
 
-        val keyStorePath = Paths.get(Objects.requireNonNull(Idscp2Integration::class.java.classLoader
-                .getResource("ssl/$keystore")).path)
-        val trustStorePath = Paths.get(Objects.requireNonNull(Idscp2Integration::class.java.classLoader
-                .getResource("ssl/truststore.p12")).path)
+        val keyStorePath = Paths.get(
+            Objects.requireNonNull(
+                Idscp2Integration::class.java.classLoader
+                    .getResource("ssl/$keystore")
+            ).path
+        )
+        val trustStorePath = Paths.get(
+            Objects.requireNonNull(
+                Idscp2Integration::class.java.classLoader
+                    .getResource("ssl/truststore.p12")
+            ).path
+        )
 
         return NativeTlsConfiguration.Builder()
-                .setHost("localhost")
-                .setServerPort(5678)
-                .setKeyStorePath(keyStorePath)
-                .setTrustStorePath(trustStorePath)
-                .setServerSocketTimeout(1000)
-                .build()
+            .setHost("localhost")
+            .setServerPort(5678)
+            .setKeyStorePath(keyStorePath)
+            .setTrustStorePath(trustStorePath)
+            .setServerSocketTimeout(1000)
+            .build()
     }
 
     /**
@@ -230,8 +271,12 @@ class Idscp2Integration {
      * Expected Result: Idscp2Connection is created after successful TLS handshake but never reach the
      * established state. Instead, the connection will be closed again.
      */
-    private fun expectHandshakeFailure(clientConfig: Idscp2Configuration, serverConfig: Idscp2Configuration,
-                clientTlsConfig: NativeTlsConfiguration, serverTlsConfig: NativeTlsConfiguration) {
+    private fun expectHandshakeFailure(
+        clientConfig: Idscp2Configuration,
+        serverConfig: Idscp2Configuration,
+        clientTlsConfig: NativeTlsConfiguration,
+        serverTlsConfig: NativeTlsConfiguration
+    ) {
 
         val closeLatch = CountDownLatch(2)
         var clientConnection: Idscp2Connection? = null
@@ -239,28 +284,28 @@ class Idscp2Integration {
 
         // start server
         val serverFactory = Idscp2ServerFactory(
-                ::Idscp2ConnectionImpl,
-                object : Idscp2EndpointListener<Idscp2Connection> {
-                    override fun onConnection(connection: Idscp2Connection) {
-                        serverConnection = connection
-                        connection.addConnectionListener(object : Idscp2ConnectionAdapter() {
-                            override fun onError(t: Throwable) {
-                                Assert.fail(t.stackTraceToString())
-                            }
+            ::Idscp2ConnectionImpl,
+            object : Idscp2EndpointListener<Idscp2Connection> {
+                override fun onConnection(connection: Idscp2Connection) {
+                    serverConnection = connection
+                    connection.addConnectionListener(object : Idscp2ConnectionAdapter() {
+                        override fun onError(t: Throwable) {
+                            Assert.fail(t.stackTraceToString())
+                        }
 
-                            override fun onClose() {
-                                closeLatch.countDown()
-                            }
-                        })
-                    }
+                        override fun onClose() {
+                            closeLatch.countDown()
+                        }
+                    })
+                }
 
-                    override fun onError(t: Throwable) {
-                        Assert.fail(t.stackTraceToString())
-                    }
-                },
-                serverConfig,
-                NativeTLSDriver(),
-                serverTlsConfig,
+                override fun onError(t: Throwable) {
+                    Assert.fail(t.stackTraceToString())
+                }
+            },
+            serverConfig,
+            NativeTLSDriver(),
+            serverTlsConfig,
         )
         idscpServer = serverFactory.listen()
         Thread.sleep(100)
@@ -295,41 +340,46 @@ class Idscp2Integration {
     /**
      * Test successful connection
      */
-    private fun expectHandshakeSuccess(clientConfig: Idscp2Configuration, serverConfig: Idscp2Configuration,
-                                       clientTlsConfig: NativeTlsConfiguration, serverTlsConfig: NativeTlsConfiguration,
-                                       reRatOrDat: Boolean) {
+    private fun expectHandshakeSuccess(
+        clientConfig: Idscp2Configuration,
+        serverConfig: Idscp2Configuration,
+        clientTlsConfig: NativeTlsConfiguration,
+        serverTlsConfig: NativeTlsConfiguration,
+        reRatOrDat: Boolean
+    ) {
 
         val connectionLatch = CountDownLatch(2)
         val messageLatchServer = CountDownLatch(3)
         val messageLatchClient = CountDownLatch(2)
-        var cc : Idscp2Connection? = null
+        var cc: Idscp2Connection? = null
 
         // start server
         val serverFactory = Idscp2ServerFactory(
-                ::Idscp2ConnectionImpl,
-                object : Idscp2EndpointListener<Idscp2Connection> {
-                    override fun onConnection(connection: Idscp2Connection) {
-                        // register listeners
-                        connection.addConnectionListener(object : Idscp2ConnectionAdapter() {
-                            override fun onError(t: Throwable) {
-                                Assert.fail(t.stackTraceToString())
-                            }
-                            override fun onClose() {}
-                        })
-                        connection.addMessageListener { _: Idscp2Connection, _: ByteArray ->
-                            messageLatchServer.countDown()
+            ::Idscp2ConnectionImpl,
+            object : Idscp2EndpointListener<Idscp2Connection> {
+                override fun onConnection(connection: Idscp2Connection) {
+                    // register listeners
+                    connection.addConnectionListener(object : Idscp2ConnectionAdapter() {
+                        override fun onError(t: Throwable) {
+                            Assert.fail(t.stackTraceToString())
                         }
-                        connection.unlockMessaging()
-                        connectionLatch.countDown()
-                    }
 
-                    override fun onError(t: Throwable) {
-                        Assert.fail(t.stackTraceToString())
+                        override fun onClose() {}
+                    })
+                    connection.addMessageListener { _: Idscp2Connection, _: ByteArray ->
+                        messageLatchServer.countDown()
                     }
-                },
-                serverConfig,
-                NativeTLSDriver(),
-                serverTlsConfig,
+                    connection.unlockMessaging()
+                    connectionLatch.countDown()
+                }
+
+                override fun onError(t: Throwable) {
+                    Assert.fail(t.stackTraceToString())
+                }
+            },
+            serverConfig,
+            NativeTLSDriver(),
+            serverTlsConfig,
         )
         idscpServer = serverFactory.listen()
         Thread.sleep(100)
@@ -366,22 +416,21 @@ class Idscp2Integration {
         val clientConnection = cc!!
 
         // wait until connected
-        while(!clientConnection.isConnected || !serverConnection.isConnected) {
+        while (!clientConnection.isConnected || !serverConnection.isConnected) {
             Thread.sleep(100)
         }
 
         if (reRatOrDat) {
 
             // ensure re-attestation takes place
-            while(clientConnection.isConnected || serverConnection.isConnected) {
+            while (clientConnection.isConnected || serverConnection.isConnected) {
                 Thread.sleep(100)
             }
 
             // wait until re-attestation was successful
-            while(!clientConnection.isConnected || !serverConnection.isConnected) {
+            while (!clientConnection.isConnected || !serverConnection.isConnected) {
                 Thread.sleep(100)
             }
-
         } else {
 
             // send two message from the client to the server via blocking send
@@ -436,13 +485,17 @@ class Idscp2Integration {
     fun testIdscp2Valid() {
 
         // create client config
-        val clientIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val clientIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
-        val serverIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val serverIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
         // register RAT drivers in shared Registry
@@ -461,13 +514,17 @@ class Idscp2Integration {
     fun testIdscp2HandshakeTimeoutClient() {
 
         // create client config
-        val clientIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val clientIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
-        val serverIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val serverIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
         RatProverDriverRegistry.registerDriver("NullRat", ::RatProverAcceptor, CustomRatConfig(100))
@@ -485,13 +542,17 @@ class Idscp2Integration {
     fun testIdscp2HandshakeTimeoutServer() {
 
         // create client config
-        val clientIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, 3600,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val clientIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, 3600,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
-        val serverIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5, 3600,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val serverIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5, 3600,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
         RatProverDriverRegistry.registerDriver("NullRat", ::RatProverAcceptor, CustomRatConfig(100))
@@ -507,13 +568,17 @@ class Idscp2Integration {
     fun testIdscp2AckTimeout() {
 
         // create client config
-        val clientIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 1, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val clientIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 1, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
-        val serverIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val serverIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
         // register RAT drivers in shared Registry
@@ -521,26 +586,29 @@ class Idscp2Integration {
         RatVerifierDriverRegistry.registerDriver("NullRat", ::RatVerifierAcceptor, CustomRatConfig(500))
 
         expectHandshakeSuccess(clientIdscpConfig, serverIdscpConfig, clientTlsConfig, serverTlsConfig, false)
-
     }
 
     /**
-    * Test re-rat triggered by timeout on client side
-    */
+     * Test re-rat triggered by timeout on client side
+     */
     @Test(timeout = 30000)
     fun testIdscp2RatTimeoutClient() {
 
-        val ratTimeout : Long = 1500
+        val ratTimeout: Long = 1500
         val ratDriverDelay: Long = 1000
 
         // create client config
-        val clientIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, ratTimeout,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val clientIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, ratTimeout,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
-        val serverIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, 3600,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val serverIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, 3600,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
         // register RAT drivers in shared Registry
@@ -556,17 +624,21 @@ class Idscp2Integration {
     @Test(timeout = 30000)
     fun testIdscp2RatTimeoutServer() {
 
-        val ratTimeout : Long = 1500
+        val ratTimeout: Long = 1500
         val ratDriverDelay: Long = 1000
 
         // create client config
-        val clientIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, 3600,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val clientIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, 3600,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
-        val serverIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, ratTimeout,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val serverIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, ratTimeout,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
         // register RAT drivers in shared Registry
@@ -583,13 +655,17 @@ class Idscp2Integration {
     fun testIdscp2RatMismatch() {
 
         // create client config
-        val clientIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, 3600000,
-                arrayOf("NullRat"), arrayOf("NullRat"))
+        val clientIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, 3600000,
+            arrayOf("NullRat"), arrayOf("NullRat")
+        )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
-        val serverIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, 3600000,
-                arrayOf("NoNullRat"), arrayOf("NoNullRat"))
+        val serverIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, 3600000,
+            arrayOf("NoNullRat"), arrayOf("NoNullRat")
+        )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
         // register RAT drivers in shared Registry
@@ -606,32 +682,40 @@ class Idscp2Integration {
     fun testIdscp2EmptyRatRegistry() {
 
         // create client config
-        val clientIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val clientIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
-        val serverIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val serverIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
         expectHandshakeFailure(clientIdscpConfig, serverIdscpConfig, clientTlsConfig, serverTlsConfig)
     }
 
     /**
-    * Test connection failure due to DAT rejection on client side
-    */
+     * Test connection failure due to DAT rejection on client side
+     */
     @Test(timeout = 20000)
     fun testIdscp2DapsRejectorClient() {
 
         // create client config
-        val clientIdscpConfig = createIdscp2Config(DapsRejector(), 500, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val clientIdscpConfig = createIdscp2Config(
+            DapsRejector(), 500, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
-        val serverIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val serverIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
         RatProverDriverRegistry.registerDriver("NullRat", ::RatProverAcceptor, null)
@@ -646,13 +730,17 @@ class Idscp2Integration {
     @Test(timeout = 20000)
     fun testIdscp2DapsRejectorServer() {
         // create client config
-        val clientIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val clientIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
-        val serverIdscpConfig = createIdscp2Config(DapsRejector(), 500, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val serverIdscpConfig = createIdscp2Config(
+            DapsRejector(), 500, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
         RatProverDriverRegistry.registerDriver("NullRat", ::RatProverAcceptor, null)
@@ -668,13 +756,17 @@ class Idscp2Integration {
     fun testIdscp2DapsInvalidTokenClient() {
 
         // create client config
-        val clientIdscpConfig = createIdscp2Config(InvalidDaps(), 500, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val clientIdscpConfig = createIdscp2Config(
+            InvalidDaps(), 500, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
-        val serverIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val serverIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
         RatProverDriverRegistry.registerDriver("NullRat", ::RatProverAcceptor, null)
@@ -690,13 +782,17 @@ class Idscp2Integration {
     fun testIdscp2DapsInvalidTokenServer() {
 
         // create client config
-        val clientIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val clientIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
-        val serverIdscpConfig = createIdscp2Config(InvalidDaps(), 500, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val serverIdscpConfig = createIdscp2Config(
+            InvalidDaps(), 500, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
         RatProverDriverRegistry.registerDriver("NullRat", ::RatProverAcceptor, null)
@@ -712,13 +808,17 @@ class Idscp2Integration {
     fun testIdscp2DapsShortLifetimeClient() {
 
         // create client config
-        val clientIdscpConfig = createIdscp2Config(DapsAcceptor(2), 500, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val clientIdscpConfig = createIdscp2Config(
+            DapsAcceptor(2), 500, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
-        val serverIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val serverIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
         // register RAT drivers in shared Registry
@@ -735,13 +835,17 @@ class Idscp2Integration {
     fun testIdscp2DapsShortLifetimeServer() {
 
         // create client config
-        val clientIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val clientIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
-        val serverIdscpConfig = createIdscp2Config(DapsAcceptor(2), 500, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val serverIdscpConfig = createIdscp2Config(
+            DapsAcceptor(2), 500, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
         // register RAT drivers in shared Registry
@@ -757,13 +861,17 @@ class Idscp2Integration {
     @Test(timeout = 20000)
     fun testIdscp2RatVerifierRejector() {
         // create client config
-        val clientIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val clientIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
-        val serverIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val serverIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
         RatProverDriverRegistry.registerDriver("NullRat", ::RatProverAcceptor, null)
@@ -778,13 +886,17 @@ class Idscp2Integration {
     @Test(timeout = 20000)
     fun testIdscp2RatProverRejector() {
         // create client config
-        val clientIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val clientIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
-        val serverIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val serverIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
         RatProverDriverRegistry.registerDriver("NullRat", ::RatProverRejector, null)
@@ -799,13 +911,17 @@ class Idscp2Integration {
     @Test(timeout = 20000)
     fun testIdscp2RatRejectors() {
         // create client config
-        val clientIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val clientIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
-        val serverIdscpConfig = createIdscp2Config(DapsAcceptor(3600), 500, 5000, 3600000,
-                arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed"))
+        val serverIdscpConfig = createIdscp2Config(
+            DapsAcceptor(3600), 500, 5000, 3600000,
+            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+        )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
         RatProverDriverRegistry.registerDriver("NullRat", ::RatProverRejector, null)

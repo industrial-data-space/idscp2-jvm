@@ -1,11 +1,30 @@
+/*-
+ * ========================LICENSE_START=================================
+ * idscp2
+ * %%
+ * Copyright (C) 2021 Fraunhofer AISEC
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * =========================LICENSE_END==================================
+ */
 package de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server
 
 import de.fhg.aisec.ids.idscp2.idscp_core.api.Idscp2EndpointListener
-import de.fhg.aisec.ids.idscp2.idscp_core.drivers.SecureChannelDriver
-import de.fhg.aisec.ids.idscp2.idscp_core.error.Idscp2Exception
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2Connection
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2ConnectionAdapter
+import de.fhg.aisec.ids.idscp2.idscp_core.drivers.SecureChannelDriver
+import de.fhg.aisec.ids.idscp2.idscp_core.error.Idscp2Exception
 import de.fhg.aisec.ids.idscp2.idscp_core.secure_channel.SecureChannel
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
@@ -15,12 +34,12 @@ import java.util.concurrent.CompletableFuture
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
-class Idscp2ServerFactory<CC: Idscp2Connection, SecureChannelConfiguration>(
-        private val connectionFactory: (SecureChannel, Idscp2Configuration) -> CC,
-        private val endpointListener: Idscp2EndpointListener<CC>,
-        private val configuration: Idscp2Configuration,
-        private val secureChannelDriver: SecureChannelDriver<CC, SecureChannelConfiguration>,
-        private val secureChannelConfig: SecureChannelConfiguration
+class Idscp2ServerFactory<CC : Idscp2Connection, SecureChannelConfiguration>(
+    private val connectionFactory: (SecureChannel, Idscp2Configuration) -> CC,
+    private val endpointListener: Idscp2EndpointListener<CC>,
+    private val configuration: Idscp2Configuration,
+    private val secureChannelDriver: SecureChannelDriver<CC, SecureChannelConfiguration>,
+    private val secureChannelConfig: SecureChannelConfiguration
 ) : SecureChannelInitListener<CC> {
 
     /**
@@ -50,8 +69,10 @@ class Idscp2ServerFactory<CC: Idscp2Connection, SecureChannelConfiguration>(
      * created and provided to the user (and the IDSCP2 server).
      */
     @Synchronized
-    override fun onSecureChannel(secureChannel: SecureChannel,
-                                 serverListenerPromise: CompletableFuture<ServerConnectionListener<CC>>) {
+    override fun onSecureChannel(
+        secureChannel: SecureChannel,
+        serverListenerPromise: CompletableFuture<ServerConnectionListener<CC>>
+    ) {
         if (LOG.isTraceEnabled) {
             LOG.trace("A new secure channel for an IDSCP2 connection was established")
         }

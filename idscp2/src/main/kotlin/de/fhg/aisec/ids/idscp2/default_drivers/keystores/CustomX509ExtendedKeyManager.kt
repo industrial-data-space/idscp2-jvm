@@ -1,3 +1,22 @@
+/*-
+ * ========================LICENSE_START=================================
+ * idscp2
+ * %%
+ * Copyright (C) 2021 Fraunhofer AISEC
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * =========================LICENSE_END==================================
+ */
 package de.fhg.aisec.ids.idscp2.default_drivers.keystores
 
 import org.slf4j.LoggerFactory
@@ -5,7 +24,7 @@ import java.net.Socket
 import java.security.Principal
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
-import java.util.*
+import java.util.HashMap
 import javax.net.ssl.SSLEngine
 import javax.net.ssl.X509ExtendedKeyManager
 
@@ -16,9 +35,10 @@ import javax.net.ssl.X509ExtendedKeyManager
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
 class CustomX509ExtendedKeyManager internal constructor(
-        private val certAlias: String,
-        private val keyType: String,
-        private val delegate: X509ExtendedKeyManager) : X509ExtendedKeyManager() {
+    private val certAlias: String,
+    private val keyType: String,
+    private val delegate: X509ExtendedKeyManager
+) : X509ExtendedKeyManager() {
     // server and client aliases are cached in a private context (in entryCacheMap) by the X509ExtendedKeyManager
     // implementation. Therefore, getServerAliases() / getClientAliases() returns only uncached aliases since the
     // update on java 11. As we have to check in chooseClientAliases() and chooseServerAlias() if the alias exists in
@@ -36,11 +56,12 @@ class CustomX509ExtendedKeyManager internal constructor(
     }
 
     /** returns an existing certAlias that matches one of the given KeyTypes, or null;
-    called only by client in TLS handshake */
+     called only by client in TLS handshake */
     override fun chooseClientAlias(keyTypes: Array<String>, issuers: Array<Principal>?, socket: Socket): String? {
         if (listOf(*keyTypes).contains(keyType)) {
-            if (cachedAliases[certAlias]?.match(keyType, issuers) == true
-                    || listOf(*getClientAliases(keyType, issuers)).contains(certAlias)) {
+            if (cachedAliases[certAlias]?.match(keyType, issuers) == true ||
+                listOf(*getClientAliases(keyType, issuers)).contains(certAlias)
+            ) {
                 if (LOG.isTraceEnabled) {
                     LOG.trace("CertificateAlias is {}", certAlias)
                 }
@@ -52,8 +73,10 @@ class CustomX509ExtendedKeyManager internal constructor(
             }
         } else if (LOG.isTraceEnabled) {
             if (LOG.isTraceEnabled) {
-                LOG.trace("Different keyType '{}' in chooseClientAlias() in CustomX509ExtendedKeyManager, expected '{}'",
-                        keyType, this.keyType)
+                LOG.trace(
+                    "Different keyType '{}' in chooseClientAlias() in CustomX509ExtendedKeyManager, expected '{}'",
+                    keyType, this.keyType
+                )
             }
         }
         return null
@@ -74,8 +97,9 @@ class CustomX509ExtendedKeyManager internal constructor(
      */
     override fun chooseServerAlias(keyType: String, issuers: Array<Principal>?, socket: Socket): String? {
         if (keyType == this.keyType) {
-            if (cachedAliases[certAlias]?.match(keyType, issuers) == true
-                    || listOf(*getServerAliases(keyType, issuers)).contains(certAlias)) {
+            if (cachedAliases[certAlias]?.match(keyType, issuers) == true ||
+                listOf(*getServerAliases(keyType, issuers)).contains(certAlias)
+            ) {
                 if (LOG.isTraceEnabled) {
                     LOG.trace("CertificateAlias is {}", certAlias)
                 }
@@ -87,8 +111,10 @@ class CustomX509ExtendedKeyManager internal constructor(
             }
         } else if (LOG.isTraceEnabled) {
             if (LOG.isTraceEnabled) {
-                LOG.trace("Different keyType '{}' in chooseServerAlias() in CustomX509ExtendedKeyManager, expected '{}'",
-                        keyType, this.keyType)
+                LOG.trace(
+                    "Different keyType '{}' in chooseServerAlias() in CustomX509ExtendedKeyManager, expected '{}'",
+                    keyType, this.keyType
+                )
             }
         }
         return null
@@ -101,8 +127,11 @@ class CustomX509ExtendedKeyManager internal constructor(
         return if (certAlias == this.certAlias) {
             delegate.getCertificateChain(certAlias)
         } else {
-                LOG.warn("Different certAlias '{}' in getCertificateChain() in class X509ExtendedKeyManager, " +
-                        "expected: '{}'", certAlias, this.certAlias)
+            LOG.warn(
+                "Different certAlias '{}' in getCertificateChain() in class X509ExtendedKeyManager, " +
+                    "expected: '{}'",
+                certAlias, this.certAlias
+            )
             null
         }
     }
@@ -113,14 +142,20 @@ class CustomX509ExtendedKeyManager internal constructor(
         return if (certAlias == this.certAlias) {
             delegate.getPrivateKey(certAlias)
         } else {
-                LOG.warn("Different certAlias '{}' in getPrivateKey() in class X509ExtendedKeyManager, expected '{}'",
-                        certAlias, this.certAlias)
+            LOG.warn(
+                "Different certAlias '{}' in getPrivateKey() in class X509ExtendedKeyManager, expected '{}'",
+                certAlias, this.certAlias
+            )
 
             null
         }
     }
 
-    override fun chooseEngineClientAlias(keyType: Array<String>, issuers: Array<Principal>, sslEngine: SSLEngine): String {
+    override fun chooseEngineClientAlias(
+        keyType: Array<String>,
+        issuers: Array<Principal>,
+        sslEngine: SSLEngine
+    ): String {
         return delegate.chooseEngineClientAlias(keyType, issuers, sslEngine)
     }
 
@@ -133,8 +168,9 @@ class CustomX509ExtendedKeyManager internal constructor(
      * @param issuer The certificate issuer
      */
     private class CachedAliasValue(
-            private val keyType: String,
-            private val issuer: Principal?) {
+        private val keyType: String,
+        private val issuer: Principal?
+    ) {
         /**
          * This method is called for a given certificate alias and checks if the corresponding
          * cached alias entry (contains keytype for certAlias and issuer of thee certificate)
@@ -148,7 +184,7 @@ class CustomX509ExtendedKeyManager internal constructor(
          */
         // FIXME currently all issuers are allowed
         fun match(keyType: String, issuers: Array<Principal>?) =
-                this.keyType == keyType && (issuers == null || listOf(*issuers).contains(issuer))
+            this.keyType == keyType && (issuers == null || listOf(*issuers).contains(issuer))
     }
 
     companion object {

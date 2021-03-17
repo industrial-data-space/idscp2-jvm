@@ -1,3 +1,22 @@
+/*-
+ * ========================LICENSE_START=================================
+ * idscp2-app-layer
+ * %%
+ * Copyright (C) 2021 Fraunhofer AISEC
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * =========================LICENSE_END==================================
+ */
 package de.fhg.aisec.ids.idscp2.app_layer
 
 import com.google.protobuf.ByteString
@@ -11,10 +30,11 @@ import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2MessageList
 import de.fhg.aisec.ids.idscp2.idscp_core.secure_channel.SecureChannel
 import de.fraunhofer.iais.eis.Message
 import org.slf4j.LoggerFactory
-import java.util.*
+import java.util.Collections
+import java.util.WeakHashMap
 
 class AppLayerConnection private constructor(private val idscp2Connection: Idscp2Connection) :
-        Idscp2Connection by idscp2Connection {
+    Idscp2Connection by idscp2Connection {
     private val idscp2MessageListener: Idscp2MessageListener = Idscp2MessageListener { _, data ->
         try {
             val appLayerMessage = AppLayer.AppLayerMessage.parseFrom(data)
@@ -26,20 +46,22 @@ class AppLayerConnection private constructor(private val idscp2Connection: Idscp
                     genericMessageListeners.forEach { listener ->
                         val genericMessage = appLayerMessage.genericMessage
                         listener.onMessage(
-                                this,
-                                genericMessage.header,
-                                genericMessage.payload?.toByteArray())
+                            this,
+                            genericMessage.header,
+                            genericMessage.payload?.toByteArray()
+                        )
                     }
                 }
                 AppLayer.AppLayerMessage.MessageCase.IDSMESSAGE -> {
                     idsMessageListeners.forEach { listener ->
                         val idsMessage = appLayerMessage.idsMessage
                         listener.onMessage(
-                                this,
-                                idsMessage.header?.let {
-                                    Utils.SERIALIZER.deserialize(it, Message::class.java)
-                                },
-                                idsMessage.payload?.toByteArray())
+                            this,
+                            idsMessage.header?.let {
+                                Utils.SERIALIZER.deserialize(it, Message::class.java)
+                            },
+                            idsMessage.payload?.toByteArray()
+                        )
                     }
                 }
                 else -> LOG.warn("Unknown IDSCP2 app layer message type encountered.")
@@ -49,28 +71,30 @@ class AppLayerConnection private constructor(private val idscp2Connection: Idscp
         }
     }
     private val genericMessageListeners: MutableSet<GenericMessageListener> =
-            Collections.synchronizedSet(LinkedHashSet())
+        Collections.synchronizedSet(LinkedHashSet())
     private val idsMessageListeners: MutableSet<IdsMessageListener> =
-            Collections.synchronizedSet(LinkedHashSet())
+        Collections.synchronizedSet(LinkedHashSet())
 
     constructor(secureChannel: SecureChannel, settings: Idscp2Configuration) :
-            this(Idscp2ConnectionImpl(secureChannel, settings)) {
-        idscp2Connection.addMessageListener(idscp2MessageListener)
-    }
+        this(Idscp2ConnectionImpl(secureChannel, settings)) {
+            idscp2Connection.addMessageListener(idscp2MessageListener)
+        }
 
     fun sendGenericMessage(header: String?, payload: ByteArray?) {
         val message = AppLayer.AppLayerMessage.newBuilder()
-                .setGenericMessage(AppLayer.GenericMessage.newBuilder()
-                        .also {
-                            if (header != null) {
-                                it.header = header
-                            }
-                            if (payload != null) {
-                                it.payload = ByteString.copyFrom(payload)
-                            }
+            .setGenericMessage(
+                AppLayer.GenericMessage.newBuilder()
+                    .also {
+                        if (header != null) {
+                            it.header = header
                         }
-                        .build())
-                .build()
+                        if (payload != null) {
+                            it.payload = ByteString.copyFrom(payload)
+                        }
+                    }
+                    .build()
+            )
+            .build()
         idscp2Connection.nonBlockingSend(message.toByteArray())
     }
 
@@ -85,17 +109,19 @@ class AppLayerConnection private constructor(private val idscp2Connection: Idscp
 
     fun sendIdsMessage(header: Message?, payload: ByteArray?, sendTimeout: Long = DEFAULT_TIMEOUT) {
         val message = AppLayer.AppLayerMessage.newBuilder()
-                .setIdsMessage(AppLayer.IdsMessage.newBuilder()
-                        .also {
-                            if (header != null) {
-                                it.header = Utils.SERIALIZER.serialize(header)
-                            }
-                            if (payload != null) {
-                                it.payload = ByteString.copyFrom(payload)
-                            }
+            .setIdsMessage(
+                AppLayer.IdsMessage.newBuilder()
+                    .also {
+                        if (header != null) {
+                            it.header = Utils.SERIALIZER.serialize(header)
                         }
-                        .build())
-                .build()
+                        if (payload != null) {
+                            it.payload = ByteString.copyFrom(payload)
+                        }
+                    }
+                    .build()
+            )
+            .build()
         idscp2Connection.blockingSend(message.toByteArray(), sendTimeout)
     }
 
@@ -115,7 +141,8 @@ class AppLayerConnection private constructor(private val idscp2Connection: Idscp
     companion object {
         private val LOG = LoggerFactory.getLogger(AppLayerConnection::class.java)
         private val appLayerConnections = Collections.synchronizedMap(
-                WeakHashMap<Idscp2Connection, AppLayerConnection>())
+            WeakHashMap<Idscp2Connection, AppLayerConnection>()
+        )
         private const val DEFAULT_TIMEOUT = 10000L
 
         fun from(idscp2Connection: Idscp2Connection): AppLayerConnection {

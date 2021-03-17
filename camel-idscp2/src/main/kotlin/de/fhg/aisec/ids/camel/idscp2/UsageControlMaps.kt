@@ -1,6 +1,6 @@
 /*-
  * ========================LICENSE_START=================================
- * camel-ids
+ * camel-idscp2
  * %%
  * Copyright (C) 2019 Fraunhofer AISEC
  * %%
@@ -30,13 +30,13 @@ object UsageControlMaps {
     private val LOG = LoggerFactory.getLogger(Utils::class.java)
 
     private val contractMap: MutableMap<URI, ContractAgreement> =
-            MapMaker().makeMap()
+        MapMaker().makeMap()
     private val exchangeConnectionMap: MutableMap<Exchange, AppLayerConnection> =
-            MapMaker().weakKeys().makeMap()
+        MapMaker().weakKeys().makeMap()
     private val connectionContracts: MutableMap<AppLayerConnection, URI> =
-            MapMaker().weakKeys().makeMap()
+        MapMaker().weakKeys().makeMap()
     private val protectedBodies: MutableMap<Exchange, Any> =
-            MapMaker().weakKeys().makeMap()
+        MapMaker().weakKeys().makeMap()
 
     fun getExchangeContract(exchange: Exchange): ContractAgreement? {
         return exchangeConnectionMap[exchange]?.let { connection ->

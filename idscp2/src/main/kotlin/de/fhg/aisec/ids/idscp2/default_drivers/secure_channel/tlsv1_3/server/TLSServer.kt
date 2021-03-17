@@ -1,3 +1,22 @@
+/*-
+ * ========================LICENSE_START=================================
+ * idscp2
+ * %%
+ * Copyright (C) 2021 Fraunhofer AISEC
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * =========================LICENSE_END==================================
+ */
 package de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.server
 
 import de.fhg.aisec.ids.idscp2.default_drivers.keystores.PreConfiguration
@@ -23,10 +42,12 @@ import javax.net.ssl.SSLSocket
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
-class TLSServer<CC: Idscp2Connection>(nativeTlsConfiguration: NativeTlsConfiguration,
-                                      private val secureChannelInitListener: SecureChannelInitListener<CC>,
-                                      private val serverListenerPromise: CompletableFuture<ServerConnectionListener<CC>>):
-        Runnable, SecureServer {
+class TLSServer<CC : Idscp2Connection>(
+    nativeTlsConfiguration: NativeTlsConfiguration,
+    private val secureChannelInitListener: SecureChannelInitListener<CC>,
+    private val serverListenerPromise: CompletableFuture<ServerConnectionListener<CC>>
+) :
+    Runnable, SecureServer {
     @Volatile
     override var isRunning = false
         private set
@@ -60,10 +81,10 @@ class TLSServer<CC: Idscp2Connection>(nativeTlsConfiguration: NativeTlsConfigura
                     LOG.warn("Error whilst creating/starting TLSServerThread", serverThreadException)
                 }
             } catch (e: SocketTimeoutException) {
-                //timeout on serverSocket blocking functions was reached
-                //in this way we can catch safeStop() function, that makes isRunning false
-                //without closing the serverSocket, so we can stop and restart the server
-                //alternative: close serverSocket. But then we cannot reuse it
+                // timeout on serverSocket blocking functions was reached
+                // in this way we can catch safeStop() function, that makes isRunning false
+                // without closing the serverSocket, so we can stop and restart the server
+                // alternative: close serverSocket. But then we cannot reuse it
             } catch (e: SocketException) {
                 if (LOG.isTraceEnabled) {
                     LOG.trace("Server socket has been closed.")
@@ -123,8 +144,8 @@ class TLSServer<CC: Idscp2Connection>(nativeTlsConfiguration: NativeTlsConfigura
             LOG.trace("Creating trust manager for TLS server...")
         }
         val myTrustManager = PreConfiguration.getX509ExtTrustManager(
-                nativeTlsConfiguration.trustStorePath,
-                nativeTlsConfiguration.trustStorePassword
+            nativeTlsConfiguration.trustStorePath,
+            nativeTlsConfiguration.trustStorePassword
         )
 
         // Get array of KeyManagers, that contains only one instance of X509ExtendedKeyManager,
@@ -133,11 +154,11 @@ class TLSServer<CC: Idscp2Connection>(nativeTlsConfiguration: NativeTlsConfigura
             LOG.trace("Creating key manager for TLS server...")
         }
         val myKeyManager = PreConfiguration.getX509ExtKeyManager(
-                nativeTlsConfiguration.keyPassword,
-                nativeTlsConfiguration.keyStorePath,
-                nativeTlsConfiguration.keyStorePassword,
-                nativeTlsConfiguration.certificateAlias,
-                nativeTlsConfiguration.keyStoreKeyType
+            nativeTlsConfiguration.keyPassword,
+            nativeTlsConfiguration.keyStorePath,
+            nativeTlsConfiguration.keyStorePassword,
+            nativeTlsConfiguration.certificateAlias,
+            nativeTlsConfiguration.keyStoreKeyType
         )
 
         if (LOG.isTraceEnabled) {
@@ -154,17 +175,20 @@ class TLSServer<CC: Idscp2Connection>(nativeTlsConfiguration: NativeTlsConfigura
 
         // Set TLS constraints
         val sslParameters = sslServerSocket.sslParameters
-        sslParameters.useCipherSuitesOrder = true //server determines priority-order of algorithms in CipherSuite
-        sslParameters.needClientAuth = true //client must authenticate
-        sslParameters.protocols = TLSConstants.TLS_ENABLED_PROTOCOLS //only TLSv1.3
-        sslParameters.cipherSuites = TLSConstants.TLS_ENABLED_CIPHERS //only allow strong cipher suite
+        sslParameters.useCipherSuitesOrder = true // server determines priority-order of algorithms in CipherSuite
+        sslParameters.needClientAuth = true // client must authenticate
+        sslParameters.protocols = TLSConstants.TLS_ENABLED_PROTOCOLS // only TLSv1.3
+        sslParameters.cipherSuites = TLSConstants.TLS_ENABLED_CIPHERS // only allow strong cipher suite
         sslServerSocket.sslParameters = sslParameters
 
         if (LOG.isTraceEnabled) {
             LOG.trace("Starting TLS server...")
         }
-        serverThread = Thread(this, "TLS Server Thread "
-                + nativeTlsConfiguration.host + ":" + nativeTlsConfiguration.serverPort)
+        serverThread = Thread(
+            this,
+            "TLS Server Thread " +
+                nativeTlsConfiguration.host + ":" + nativeTlsConfiguration.serverPort
+        )
         serverThread.start()
     }
 }

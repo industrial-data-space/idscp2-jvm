@@ -1,15 +1,38 @@
+/*-
+ * ========================LICENSE_START=================================
+ * idscp2
+ * %%
+ * Copyright (C) 2021 Fraunhofer AISEC
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * =========================LICENSE_END==================================
+ */
 package de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.server
 
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.TLSSessionVerificationHelper
 import de.fhg.aisec.ids.idscp2.idscp_core.FastLatch
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2Connection
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server.SecureChannelInitListener
-import de.fhg.aisec.ids.idscp2.idscp_core.secure_channel.SecureChannel
-import de.fhg.aisec.ids.idscp2.idscp_core.drivers.SecureChannelEndpoint
-import de.fhg.aisec.ids.idscp2.idscp_core.secure_channel.SecureChannelListener
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server.ServerConnectionListener
+import de.fhg.aisec.ids.idscp2.idscp_core.drivers.SecureChannelEndpoint
+import de.fhg.aisec.ids.idscp2.idscp_core.secure_channel.SecureChannel
+import de.fhg.aisec.ids.idscp2.idscp_core.secure_channel.SecureChannelListener
 import org.slf4j.LoggerFactory
-import java.io.*
+import java.io.Closeable
+import java.io.DataInputStream
+import java.io.DataOutputStream
+import java.io.EOFException
+import java.io.IOException
 import java.net.SocketTimeoutException
 import java.security.cert.X509Certificate
 import java.util.concurrent.CompletableFuture
@@ -28,11 +51,11 @@ import javax.net.ssl.SSLSocket
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
 class TLSServerThread<CC : Idscp2Connection> internal constructor(
-        private val sslSocket: SSLSocket,
-        private val configCallback: SecureChannelInitListener<CC>,
-        private val serverListenerPromise: CompletableFuture<ServerConnectionListener<CC>>) :
-        Thread(), HandshakeCompletedListener, SecureChannelEndpoint, Closeable
-{
+    private val sslSocket: SSLSocket,
+    private val configCallback: SecureChannelInitListener<CC>,
+    private val serverListenerPromise: CompletableFuture<ServerConnectionListener<CC>>
+) :
+    Thread(), HandshakeCompletedListener, SecureChannelEndpoint, Closeable {
     @Volatile
     private var running = true
     private val `in`: DataInputStream
@@ -53,7 +76,7 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
             running = false
         }
 
-        //wait for new data while running
+        // wait for new data while running
         var buf: ByteArray
         while (running) {
             try {
@@ -107,7 +130,11 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
     }
 
     private fun onError(t: Throwable) {
-        channelListenerPromise.thenAccept { secureChannelListener: SecureChannelListener -> secureChannelListener.onError(t) }
+        channelListenerPromise.thenAccept { secureChannelListener: SecureChannelListener ->
+            secureChannelListener.onError(
+                t
+            )
+        }
     }
 
     override fun close() {
@@ -153,7 +180,7 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
             tlsVerificationLatch.unlock()
         }
 
-        //provide secure channel to IDSCP2 Config and register secure channel as listener
+        // provide secure channel to IDSCP2 Config and register secure channel as listener
         val secureChannel = SecureChannel(this, peerCert)
         channelListenerPromise.complete(secureChannel)
         configCallback.onSecureChannel(secureChannel, serverListenerPromise)

@@ -1,3 +1,22 @@
+/*-
+ * ========================LICENSE_START=================================
+ * idscp2
+ * %%
+ * Copyright (C) 2021 Fraunhofer AISEC
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * =========================LICENSE_END==================================
+ */
 package de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps
 
 import de.fhg.aisec.ids.idscp2.default_drivers.keystores.PreConfiguration
@@ -31,7 +50,8 @@ import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import java.security.cert.X509Certificate
 import java.time.Instant
-import java.util.*
+import java.util.Date
+import java.util.HashMap
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocketFactory
@@ -48,18 +68,19 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
     private var securityRequirements: SecurityRequirements? = config.securityRequirements
     private val trustManager: X509ExtendedTrustManager
     private val privateKey: Key = PreConfiguration.getKey(
-                    config.keyStorePath,
-                    config.keyStorePassword,
-                    config.keyAlias,
-                    config.keyPassword
-            )
+        config.keyStorePath,
+        config.keyStorePassword,
+        config.keyAlias,
+        config.keyPassword
+    )
     private val dapsUrl: String = config.dapsUrl
 
     private val localPeerCertificate: X509Certificate =
-            PreConfiguration.getCertificate(
-                    config.keyStorePath,
-                    config.keyStorePassword,
-                    config.keyAlias)
+        PreConfiguration.getCertificate(
+            config.keyStorePath,
+            config.keyStorePassword,
+            config.keyAlias
+        )
 
     /**
      * Lookup table for encodeHexString()
@@ -70,10 +91,10 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
     private val connectorUUID: String = createConnectorUUID(localPeerCertificate)
 
     init {
-        //create ssl socket factory for secure
+        // create ssl socket factory for secure
         val trustManagers = PreConfiguration.getX509ExtTrustManager(
-                config.trustStorePath,
-                config.trustStorePassword
+            config.trustStorePath,
+            config.trustStorePassword
         )
         trustManager = trustManagers[0] as X509ExtendedTrustManager
         sslSocketFactory = try {
@@ -94,7 +115,7 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
      */
     private fun createConnectorUUID(certificate: X509Certificate): String {
 
-        //GET 2.5.29.35 AuthorityKeyIdentifier
+        // GET 2.5.29.35 AuthorityKeyIdentifier
         val akiOid = Extension.authorityKeyIdentifier.id
         val rawAuthorityKeyIdentifier = certificate.getExtensionValue(akiOid)
         val akiOc = ASN1OctetString.getInstance(rawAuthorityKeyIdentifier)
@@ -102,7 +123,7 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
         val authorityKeyIdentifier = aki.keyIdentifier
         val akiResult = encodeHexString(authorityKeyIdentifier, true).toUpperCase()
 
-        //GET 2.5.29.14	SubjectKeyIdentifier
+        // GET 2.5.29.14	SubjectKeyIdentifier
         val skiOid = Extension.subjectKeyIdentifier.id
         val rawSubjectKeyIdentifier = certificate.getExtensionValue(skiOid)
         val ski0c = ASN1OctetString.getInstance(rawSubjectKeyIdentifier)
@@ -133,62 +154,67 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
                 LOG.debug("Retrieving Dynamic Attribute Token...")
             }
 
-            //create signed JWT
+            // create signed JWT
             val expiration = Date.from(Instant.now().plusSeconds(86400))
             val issuedAt = Date.from(Instant.now())
             val notBefore = Date.from(Instant.now())
 
             val jwt = Jwts.builder()
-                    .setIssuer(connectorUUID)
-                    .setSubject(connectorUUID)
-                    .claim("@context", "https://w3id.org/idsa/contexts/context.jsonld")
-                    .claim("@type", "ids:DatRequestToken")
-                    .setExpiration(expiration)
-                    .setIssuedAt(issuedAt)
-                    .setNotBefore(notBefore)
-                    .setAudience(TARGET_AUDIENCE)
-                    .signWith(privateKey, SignatureAlgorithm.RS256)
-                    .compact()
+                .setIssuer(connectorUUID)
+                .setSubject(connectorUUID)
+                .claim("@context", "https://w3id.org/idsa/contexts/context.jsonld")
+                .claim("@type", "ids:DatRequestToken")
+                .setExpiration(expiration)
+                .setIssuedAt(issuedAt)
+                .setNotBefore(notBefore)
+                .setAudience(TARGET_AUDIENCE)
+                .signWith(privateKey, SignatureAlgorithm.RS256)
+                .compact()
 
-            //build http client and request for DAPS
+            // build http client and request for DAPS
             val formBody: RequestBody = FormBody.Builder()
-                    .add("grant_type", "client_credentials")
-                    .add(
-                            "client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
-                    .add("client_assertion", jwt)
-                    .add("scope", "idsc:IDS_CONNECTOR_ATTRIBUTES_ALL")
-                    .build()
+                .add("grant_type", "client_credentials")
+                .add(
+                    "client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+                )
+                .add("client_assertion", jwt)
+                .add("scope", "idsc:IDS_CONNECTOR_ATTRIBUTES_ALL")
+                .build()
             val client = OkHttpClient.Builder()
-                    .sslSocketFactory(sslSocketFactory, trustManager)
-                    .connectTimeout(15, TimeUnit.SECONDS)
-                    .writeTimeout(15, TimeUnit.SECONDS)
-                    .readTimeout(15, TimeUnit.SECONDS)
-                    .build()
+                .sslSocketFactory(sslSocketFactory, trustManager)
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .writeTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(15, TimeUnit.SECONDS)
+                .build()
             val request = Request.Builder()
-                    .url("$dapsUrl/v2/token")
-                    .post(formBody)
-                    .build()
+                .url("$dapsUrl/v2/token")
+                .post(formBody)
+                .build()
             return try {
-                //get http response from DAPS
+                // get http response from DAPS
                 val response = client.newCall(request).execute()
 
-                //check for valid response
+                // check for valid response
                 if (!response.isSuccessful) {
-                    LOG.error("Failed to request token issued with parameters: Issuer: {}, Subject: {}, " +
+                    LOG.error(
+                        "Failed to request token issued with parameters: Issuer: {}, Subject: {}, " +
                             "Expiration: {}, IssuedAt: {}, NotBefore: {}, Audience: {}",
-                            connectorUUID,
-                            connectorUUID,
-                            expiration,
-                            issuedAt,
-                            notBefore,
-                            TARGET_AUDIENCE)
+                        connectorUUID,
+                        connectorUUID,
+                        expiration,
+                        issuedAt,
+                        notBefore,
+                        TARGET_AUDIENCE
+                    )
                     throw DatException("Received non-200 http response: " + response.code)
                 }
                 if (LOG.isDebugEnabled) {
                     LOG.debug("Acquired DAT from {}/v2/token", dapsUrl)
                 }
-                val json = JSONObject(response.body?.string()
-                    ?: throw DatException("Received empty DAPS response"))
+                val json = JSONObject(
+                    response.body?.string()
+                        ?: throw DatException("Received empty DAPS response")
+                )
                 if (json.has("access_token")) {
                     token = json.getString("access_token")
                     if (LOG.isDebugEnabled) {
@@ -242,8 +268,11 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
      * @return The number of seconds this DAT is valid
      * @throws DatException
      */
-    fun verifyTokenSecurityAttributes(dat: ByteArray, securityRequirements: SecurityRequirements?,
-                                      certificate: X509Certificate): Long {
+    fun verifyTokenSecurityAttributes(
+        dat: ByteArray,
+        securityRequirements: SecurityRequirements?,
+        certificate: X509Certificate
+    ): Long {
         if (LOG.isDebugEnabled) {
             LOG.debug("Verifying dynamic attribute token...")
         }
@@ -257,21 +286,21 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
         // create new jwks key resolver, selects jwk based on key ID in jwt header
         val jwksKeyResolver = HttpsJwksVerificationKeyResolver(httpsJwks)
 
-        //create validation requirements
+        // create validation requirements
         val jwtConsumer = JwtConsumerBuilder()
-                .setRequireExpirationTime() // has expiration time
-                .setAllowedClockSkewInSeconds(30) // leeway in validation time
-                .setRequireSubject() // has subject
-                .setExpectedAudience(true, "IDS_Connector", TARGET_AUDIENCE)
-                .setExpectedIssuer(dapsUrl) // e.g. https://daps.aisec.fraunhofer.de
-                .setVerificationKeyResolver(jwksKeyResolver) //get decryption key from jwks
-                .setJweAlgorithmConstraints(
-                        AlgorithmConstraints(
-                                AlgorithmConstraints.ConstraintType.PERMIT,
-                                AlgorithmIdentifiers.RSA_USING_SHA256
-                        )
+            .setRequireExpirationTime() // has expiration time
+            .setAllowedClockSkewInSeconds(30) // leeway in validation time
+            .setRequireSubject() // has subject
+            .setExpectedAudience(true, "IDS_Connector", TARGET_AUDIENCE)
+            .setExpectedIssuer(dapsUrl) // e.g. https://daps.aisec.fraunhofer.de
+            .setVerificationKeyResolver(jwksKeyResolver) // get decryption key from jwks
+            .setJweAlgorithmConstraints(
+                AlgorithmConstraints(
+                    AlgorithmConstraints.ConstraintType.PERMIT,
+                    AlgorithmIdentifiers.RSA_USING_SHA256
                 )
-                .build()
+            )
+            .build()
 
         val validityTime: Long
         val claims: JwtClaims
@@ -291,7 +320,7 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
             // TODO multiple fingerprints?
             // get expected fingerprint from DAT
             val datCertFingerprint = claims.getClaimValue("transportCertsSha256")
-                    ?: throw DatException("DAT does not contain peer certificate fingerprints")
+                ?: throw DatException("DAT does not contain peer certificate fingerprints")
 
             // calculate peer certificate SHA256 fingerprint
             val peerCertFingerprint: String
@@ -309,21 +338,22 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
             }
         }
 
-        //check security requirements
+        // check security requirements
         if (securityRequirements != null) {
             if (LOG.isDebugEnabled) {
                 LOG.debug("Validate security attributes")
             }
             // parse security profile from DAT
             val securityProfile = claims.getStringClaimValue("securityProfile")
-                    ?: throw DatException("DAT does not contain securityProfile")
+                ?: throw DatException("DAT does not contain securityProfile")
             val securityProfilePeer = SecurityProfile.fromString(securityProfile)
             if (securityProfilePeer < securityRequirements.requiredSecurityLevel) {
                 throw DatException(
-                        "Peer does not support any valid trust profile: Required: "
-                                + securityRequirements.requiredSecurityLevel
-                                + " given: "
-                                + securityProfilePeer)
+                    "Peer does not support any valid trust profile: Required: " +
+                        securityRequirements.requiredSecurityLevel +
+                        " given: " +
+                        securityProfilePeer
+                )
             }
             if (LOG.isDebugEnabled) {
                 LOG.debug("Peer's supported security profile: {}", securityProfilePeer)

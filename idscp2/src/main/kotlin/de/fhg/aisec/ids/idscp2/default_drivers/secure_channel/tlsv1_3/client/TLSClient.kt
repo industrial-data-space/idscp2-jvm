@@ -1,3 +1,22 @@
+/*-
+ * ========================LICENSE_START=================================
+ * idscp2
+ * %%
+ * Copyright (C) 2021 Fraunhofer AISEC
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * =========================LICENSE_END==================================
+ */
 package de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.client
 
 import de.fhg.aisec.ids.idscp2.default_drivers.keystores.PreConfiguration
@@ -17,7 +36,13 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.security.cert.X509Certificate
 import java.util.concurrent.CompletableFuture
-import javax.net.ssl.*
+import javax.net.ssl.HandshakeCompletedEvent
+import javax.net.ssl.HandshakeCompletedListener
+import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLHandshakeException
+import javax.net.ssl.SSLPeerUnverifiedException
+import javax.net.ssl.SSLProtocolException
+import javax.net.ssl.SSLSocket
 
 /**
  * A TLS Client that notifies an Idscp2ServerFactory when a secure channel was created and the
@@ -26,11 +51,11 @@ import javax.net.ssl.*
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
-class TLSClient<CC: Idscp2Connection>(
-        private val connectionFactory: (SecureChannel, Idscp2Configuration) -> CC,
-        private val clientConfiguration: Idscp2Configuration,
-        nativeTlsConfiguration: NativeTlsConfiguration,
-        private val connectionFuture: CompletableFuture<CC>
+class TLSClient<CC : Idscp2Connection>(
+    private val connectionFactory: (SecureChannel, Idscp2Configuration) -> CC,
+    private val clientConfiguration: Idscp2Configuration,
+    nativeTlsConfiguration: NativeTlsConfiguration,
+    private val connectionFuture: CompletableFuture<CC>
 ) : HandshakeCompletedListener, DataAvailableListener, SecureChannelEndpoint {
     private val clientSocket: Socket
     private var dataOutputStream: DataOutputStream? = null
@@ -51,7 +76,7 @@ class TLSClient<CC: Idscp2Connection>(
                 LOG.trace("Client is connected to server {}:{}", hostname, port)
             }
 
-            //set clientSocket timeout to allow safeStop()
+            // set clientSocket timeout to allow safeStop()
             clientSocket.soTimeout = 5000
             dataOutputStream = DataOutputStream(clientSocket.getOutputStream())
 
@@ -130,7 +155,7 @@ class TLSClient<CC: Idscp2Connection>(
         get() = clientSocket.isConnected
 
     override fun handshakeCompleted(handshakeCompletedEvent: HandshakeCompletedEvent) {
-        //start receiving listener after TLS Handshake was successful
+        // start receiving listener after TLS Handshake was successful
         if (LOG.isTraceEnabled) {
             LOG.trace("TLS Handshake was successful")
         }
@@ -170,7 +195,8 @@ class TLSClient<CC: Idscp2Connection>(
             // FIXME: Any such disconnect makes the server maintain a broken connection
             disconnect()
             connectionFuture.completeExceptionally(
-                    Idscp2Exception("TLS session is not valid. Close TLS connection", e))
+                Idscp2Exception("TLS session is not valid. Close TLS connection", e)
+            )
         }
     }
 
@@ -188,18 +214,18 @@ class TLSClient<CC: Idscp2Connection>(
         // get array of TrustManagers, that contains only one instance of X509ExtendedTrustManager, which enables
         // hostVerification and algorithm constraints
         val myTrustManager = PreConfiguration.getX509ExtTrustManager(
-                nativeTlsConfiguration.trustStorePath,
-                nativeTlsConfiguration.trustStorePassword
+            nativeTlsConfiguration.trustStorePath,
+            nativeTlsConfiguration.trustStorePassword
         )
 
         // get array of KeyManagers, that contains only one instance of X509ExtendedKeyManager, which enables
         // connection specific key selection via key alias
         val myKeyManager = PreConfiguration.getX509ExtKeyManager(
-                nativeTlsConfiguration.keyPassword,
-                nativeTlsConfiguration.keyStorePath,
-                nativeTlsConfiguration.keyStorePassword,
-                nativeTlsConfiguration.certificateAlias,
-                nativeTlsConfiguration.keyStoreKeyType
+            nativeTlsConfiguration.keyPassword,
+            nativeTlsConfiguration.keyStorePath,
+            nativeTlsConfiguration.keyStorePassword,
+            nativeTlsConfiguration.certificateAlias,
+            nativeTlsConfiguration.keyStoreKeyType
         )
         val sslContext = SSLContext.getInstance(TLSConstants.TLS_INSTANCE)
         sslContext.init(myKeyManager, myTrustManager, null)

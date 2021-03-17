@@ -1,3 +1,22 @@
+/*-
+ * ========================LICENSE_START=================================
+ * idscp2
+ * %%
+ * Copyright (C) 2021 Fraunhofer AISEC
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * =========================LICENSE_END==================================
+ */
 package de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection
 
 import de.fhg.aisec.ids.idscp2.idscp_core.FastLatch
@@ -9,7 +28,9 @@ import de.fhg.aisec.ids.idscp2.idscp_core.error.Idscp2WouldBlockException
 import de.fhg.aisec.ids.idscp2.idscp_core.fsm.FSM
 import de.fhg.aisec.ids.idscp2.idscp_core.secure_channel.SecureChannel
 import org.slf4j.LoggerFactory
-import java.util.*
+import java.util.Collections
+import java.util.HashSet
+import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.locks.ReentrantLock
 
@@ -19,15 +40,17 @@ import java.util.concurrent.locks.ReentrantLock
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  * @author Michael Lux (michael.lux@aisec.fraunhofer.de)
  */
-class Idscp2ConnectionImpl(secureChannel: SecureChannel,
-                           configuration: Idscp2Configuration): Idscp2Connection {
+class Idscp2ConnectionImpl(
+    secureChannel: SecureChannel,
+    configuration: Idscp2Configuration
+) : Idscp2Connection {
     private val fsm: FSM = FSM(
-            this,
-            secureChannel,
-            configuration.dapsDriver,
-            configuration.attestationConfig,
-            configuration.ackTimeoutDelay,
-            configuration.handshakeTimeoutDelay
+        this,
+        secureChannel,
+        configuration.dapsDriver,
+        configuration.attestationConfig,
+        configuration.ackTimeoutDelay,
+        configuration.handshakeTimeoutDelay
     )
     override val id: String = UUID.randomUUID().toString()
     private val connectionListeners = Collections.synchronizedSet(HashSet<Idscp2ConnectionListener>())
@@ -134,7 +157,7 @@ class Idscp2ConnectionImpl(secureChannel: SecureChannel,
         }
 
         // match result
-        when(val res = fsm.repeatRat()) {
+        when (val res = fsm.repeatRat()) {
             FSM.FsmResultCode.OK -> return
             FSM.FsmResultCode.FSM_LOCKED, FSM.FsmResultCode.IO_ERROR ->
                 throw Idscp2Exception("Connection aborted: " + res.value)
@@ -160,9 +183,9 @@ class Idscp2ConnectionImpl(secureChannel: SecureChannel,
             // check if connection has been closed, then we do not want to pass errors to the user
             if (!closed) {
                 connectionListeners.forEach { idscp2ConnectionListener: Idscp2ConnectionListener ->
-                    idscp2ConnectionListener.onError(t) }
+                    idscp2ConnectionListener.onError(t)
+                }
             }
-
         } finally {
             closedLock.unlock()
         }

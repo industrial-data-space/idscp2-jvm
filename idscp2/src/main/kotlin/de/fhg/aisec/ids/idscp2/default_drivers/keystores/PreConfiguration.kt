@@ -1,13 +1,41 @@
+/*-
+ * ========================LICENSE_START=================================
+ * idscp2
+ * %%
+ * Copyright (C) 2021 Fraunhofer AISEC
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * =========================LICENSE_END==================================
+ */
 package de.fhg.aisec.ids.idscp2.default_drivers.keystores
 
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
-import java.security.*
+import java.security.Key
+import java.security.KeyStore
+import java.security.KeyStoreException
+import java.security.NoSuchAlgorithmException
+import java.security.UnrecoverableKeyException
 import java.security.cert.CertificateException
 import java.security.cert.X509Certificate
-import javax.net.ssl.*
+import javax.net.ssl.KeyManager
+import javax.net.ssl.KeyManagerFactory
+import javax.net.ssl.TrustManager
+import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.X509ExtendedKeyManager
+import javax.net.ssl.X509ExtendedTrustManager
 
 /**
  * A class for creating pre-configured TrustManagers and KeyManagers for TLS Server and TLS Client
@@ -16,6 +44,7 @@ import javax.net.ssl.*
  */
 object PreConfiguration {
     private val LOG = LoggerFactory.getLogger(PreConfiguration::class.java)
+
     @Throws(KeyStoreException::class, IOException::class, CertificateException::class, NoSuchAlgorithmException::class)
     fun loadKeyStore(keyStorePath: Path, keyStorePassword: CharArray): KeyStore {
         val ks: KeyStore
@@ -28,9 +57,11 @@ object PreConfiguration {
                 KeyStore.getInstance("PKCS12")
             }
             else -> {
-                throw KeyStoreException("Unknown file extension \"" +
+                throw KeyStoreException(
+                    "Unknown file extension \"" +
                         pathString.substring(pathString.lastIndexOf('.')) +
-                        "\", only JKS (.jks) and PKCS12 (.p12) are supported.")
+                        "\", only JKS (.jks) and PKCS12 (.p12) are supported."
+                )
             }
         }
         Files.newInputStream(keyStorePath).use { keyStoreInputStream ->
@@ -49,21 +80,21 @@ object PreConfiguration {
      * throws RuntimeException of creating TrustManager fails
      */
     fun getX509ExtTrustManager(
-            trustStorePath: Path,
-            trustStorePassword: CharArray
+        trustStorePath: Path,
+        trustStorePassword: CharArray
     ): Array<TrustManager> {
         return try {
             /* create TrustManager */
             val myTrustManager: Array<TrustManager>
             val trustStore = loadKeyStore(trustStorePath, trustStorePassword)
-            val trustManagerFactory = TrustManagerFactory.getInstance("PKIX") //PKIX from SunJSSE
+            val trustManagerFactory = TrustManagerFactory.getInstance("PKIX") // PKIX from SunJSSE
             trustManagerFactory.init(trustStore)
             myTrustManager = trustManagerFactory.trustManagers
 
             /* set up TrustManager config */
-            //allow only X509 Authentication
+            // allow only X509 Authentication
             if (myTrustManager.size == 1 && myTrustManager[0] is X509ExtendedTrustManager) {
-                //toDo algorithm constraints
+                // toDo algorithm constraints
                 myTrustManager
             } else {
                 throw IllegalStateException("Unexpected default trust managers:" + myTrustManager.contentToString())
@@ -86,30 +117,31 @@ object PreConfiguration {
      * throws RuntimeException of creating KeyManager fails
      */
     fun getX509ExtKeyManager(
-            keyPassword: CharArray,
-            keyStorePath: Path,
-            keyStorePassword: CharArray,
-            certAlias: String,
-            keyType: String
+        keyPassword: CharArray,
+        keyStorePath: Path,
+        keyStorePassword: CharArray,
+        certAlias: String,
+        keyType: String
     ): Array<KeyManager> {
         return try {
             /* create KeyManager for remote authentication */
             val myKeyManager: Array<KeyManager>
             val keystore = loadKeyStore(keyStorePath, keyStorePassword)
-            val keyManagerFactory = KeyManagerFactory.getInstance("PKIX") //PKIX from SunJSSE
+            val keyManagerFactory = KeyManagerFactory.getInstance("PKIX") // PKIX from SunJSSE
             keyManagerFactory.init(keystore, keyPassword)
             myKeyManager = keyManagerFactory.keyManagers
 
-
             /* set up keyManager config */
-            //allow only X509 Authentication
+            // allow only X509 Authentication
             if (myKeyManager.size == 1 && myKeyManager[0] is X509ExtendedKeyManager) {
-                //select certificate alias
-                myKeyManager[0] = CustomX509ExtendedKeyManager(certAlias, keyType, myKeyManager[0] as X509ExtendedKeyManager)
+                // select certificate alias
+                myKeyManager[0] =
+                    CustomX509ExtendedKeyManager(certAlias, keyType, myKeyManager[0] as X509ExtendedKeyManager)
                 myKeyManager
             } else {
                 throw IllegalStateException(
-                        "Unexpected default key managers:" + myKeyManager.contentToString())
+                    "Unexpected default key managers:" + myKeyManager.contentToString()
+                )
             }
         } catch (e: IOException) {
             throw RuntimeException(e)
@@ -130,10 +162,10 @@ object PreConfiguration {
      * throws RuntimeException if key is not available or key access was not permitted
      */
     fun getKey(
-            keyStorePath: Path,
-            keyStorePassword: CharArray,
-            keyAlias: String,
-            keyPassword: CharArray
+        keyStorePath: Path,
+        keyStorePassword: CharArray,
+        keyAlias: String,
+        keyPassword: CharArray
     ): Key {
         return try {
             val keyStore = loadKeyStore(keyStorePath, keyStorePassword)
@@ -160,9 +192,9 @@ object PreConfiguration {
      * throws RuntimeException if key is not available or key access was not permitted
      */
     fun getCertificate(
-            keyStorePath: Path,
-            keyStorePassword: CharArray,
-            keyAlias: String
+        keyStorePath: Path,
+        keyStorePassword: CharArray,
+        keyAlias: String
     ): X509Certificate {
         return try {
             val keystore = loadKeyStore(keyStorePath, keyStorePassword)

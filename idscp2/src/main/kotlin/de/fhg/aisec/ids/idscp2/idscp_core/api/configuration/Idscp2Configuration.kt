@@ -1,8 +1,25 @@
+/*-
+ * ========================LICENSE_START=================================
+ * idscp2
+ * %%
+ * Copyright (C) 2021 Fraunhofer AISEC
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * =========================LICENSE_END==================================
+ */
 package de.fhg.aisec.ids.idscp2.idscp_core.api.configuration
 
 import de.fhg.aisec.ids.idscp2.idscp_core.drivers.DapsDriver
-import java.nio.file.Path
-import java.nio.file.Paths
 
 /**
  * IDSCP2 configuration class, contains information about Attestation Types, DAPS, Timeouts,
@@ -14,9 +31,9 @@ class Idscp2Configuration {
         private set
     lateinit var dapsDriver: DapsDriver
         private set
-    var handshakeTimeoutDelay = DEFAULT_HANDSHAKE_TIMEOUT_DELAY.toInt().toLong() //in ms
+    var handshakeTimeoutDelay = DEFAULT_HANDSHAKE_TIMEOUT_DELAY.toInt().toLong() // in ms
         private set
-    var ackTimeoutDelay = DEFAULT_ACK_TIMEOUT_DELAY.toInt().toLong() //in ms
+    var ackTimeoutDelay = DEFAULT_ACK_TIMEOUT_DELAY.toInt().toLong() // in ms
         private set
 
     class Builder {
@@ -63,7 +80,7 @@ class Idscp2Configuration {
 
     override fun hashCode(): Int {
         var result = attestationConfig.hashCode()
-        result = 31 *  result + dapsDriver.hashCode()
+        result = 31 * result + dapsDriver.hashCode()
         result = 31 * result + handshakeTimeoutDelay.hashCode()
         result = 31 * result + ackTimeoutDelay.hashCode()
         return result
@@ -71,8 +88,8 @@ class Idscp2Configuration {
 
     override fun toString(): String {
         return "Idscp2Configuration(attestationConfig=$attestationConfig, " +
-                "dapsDriver=$dapsDriver, handshakeTimeoutDelay=$handshakeTimeoutDelay, " +
-                "ackTimeoutDelay=$ackTimeoutDelay)"
+            "dapsDriver=$dapsDriver, handshakeTimeoutDelay=$handshakeTimeoutDelay, " +
+            "ackTimeoutDelay=$ackTimeoutDelay)"
     }
 
     companion object {

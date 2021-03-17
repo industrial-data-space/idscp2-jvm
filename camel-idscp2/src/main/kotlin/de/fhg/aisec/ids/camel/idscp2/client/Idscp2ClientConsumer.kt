@@ -1,18 +1,21 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
+/*-
+ * ========================LICENSE_START=================================
+ * camel-idscp2
+ * %%
+ * Copyright (C) 2021 Fraunhofer AISEC
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
  *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ * =========================LICENSE_END==================================
  */
 package de.fhg.aisec.ids.camel.idscp2.client
 
@@ -32,7 +35,7 @@ import java.util.concurrent.CompletableFuture
  * The IDSCP2 client consumer.
  */
 class Idscp2ClientConsumer(private val endpoint: Idscp2ClientEndpoint, processor: Processor) :
-        DefaultConsumer(endpoint, processor), GenericMessageListener, IdsMessageListener {
+    DefaultConsumer(endpoint, processor), GenericMessageListener, IdsMessageListener {
     private lateinit var connectionFuture: CompletableFuture<AppLayerConnection>
 
     override fun doStart() {
@@ -49,6 +52,7 @@ class Idscp2ClientConsumer(private val endpoint: Idscp2ClientEndpoint, processor
                 override fun onError(t: Throwable) {
                     LOG.error("Error in Idscp2ClientConsumer connection", t)
                 }
+
                 override fun onClose() {
                     stop()
                 }
@@ -58,8 +62,10 @@ class Idscp2ClientConsumer(private val endpoint: Idscp2ClientEndpoint, processor
     }
 
     public override fun doStop() {
-        LOG.debug("Stopping/releasing IDSCP2 client consumer connection {}...",
-                if (connectionFuture.isDone) connectionFuture.get().id else "<pending>")
+        LOG.debug(
+            "Stopping/releasing IDSCP2 client consumer connection {}...",
+            if (connectionFuture.isDone) connectionFuture.get().id else "<pending>"
+        )
         endpoint.releaseConnection(connectionFuture)
     }
 
@@ -111,5 +117,4 @@ class Idscp2ClientConsumer(private val endpoint: Idscp2ClientEndpoint, processor
     companion object {
         private val LOG = LoggerFactory.getLogger(Idscp2ClientConsumer::class.java)
     }
-
 }

@@ -1,16 +1,38 @@
+/*-
+ * ========================LICENSE_START=================================
+ * camel-idscp2
+ * %%
+ * Copyright (C) 2021 Fraunhofer AISEC
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * =========================LICENSE_END==================================
+ */
 package de.fhg.aisec.ids.camel.idscp2.processors
 
 import de.fhg.aisec.ids.camel.idscp2.Constants.IDSCP2_HEADER
 import de.fhg.aisec.ids.camel.idscp2.ProviderDB
 import de.fhg.aisec.ids.camel.idscp2.Utils
 import de.fhg.aisec.ids.camel.idscp2.Utils.SERIALIZER
-import de.fraunhofer.iais.eis.*
+import de.fraunhofer.iais.eis.ArtifactBuilder
+import de.fraunhofer.iais.eis.ArtifactRequestMessage
+import de.fraunhofer.iais.eis.ArtifactResponseMessageBuilder
+import de.fraunhofer.iais.eis.RejectionMessageBuilder
+import de.fraunhofer.iais.eis.RejectionReason
 import org.apache.camel.Exchange
 import org.apache.camel.Processor
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
 import java.math.BigInteger
-
 
 class ArtifactRequestProcessor : Processor {
 
@@ -20,7 +42,8 @@ class ArtifactRequestProcessor : Processor {
         }
 
         val artifactRequestMessage = exchange.message.getHeader(
-                IDSCP2_HEADER, ArtifactRequestMessage::class.java)
+            IDSCP2_HEADER, ArtifactRequestMessage::class.java
+        )
         val requestedArtifact = artifactRequestMessage.requestedArtifact
 //        val transferContract = artifactRequestMessage.transferContract
 
@@ -52,12 +75,12 @@ class ArtifactRequestProcessor : Processor {
             // create sample artifact
             val artifactDate = Utils.createGregorianCalendarTimestamp(System.currentTimeMillis())
             val artifact = ArtifactBuilder()
-                    ._byteSize_(BigInteger.valueOf(50000))
-                    ._checkSum_("ABCDEFG-CHECKSUM")
-                    ._creationDate_(artifactDate)
-                    ._duration_(BigDecimal(5000))
-                    ._fileName_("testArtifactFilename.dat")
-                    .build()
+                ._byteSize_(BigInteger.valueOf(50000))
+                ._checkSum_("ABCDEFG-CHECKSUM")
+                ._creationDate_(artifactDate)
+                ._duration_(BigDecimal(5000))
+                ._fileName_("testArtifactFilename.dat")
+                .build()
 
             SERIALIZER.serialize(artifact).let {
                 if (LOG.isDebugEnabled) {
@@ -68,16 +91,19 @@ class ArtifactRequestProcessor : Processor {
         }
     }
 
-    private fun createRejectionMessage(exchange: Exchange, artifactRequestMessage: ArtifactRequestMessage,
-                                       rejectionReason: RejectionReason) {
+    private fun createRejectionMessage(
+        exchange: Exchange,
+        artifactRequestMessage: ArtifactRequestMessage,
+        rejectionReason: RejectionReason
+    ) {
         if (LOG.isDebugEnabled) {
             LOG.debug("Constructing RejectionMessage for requested artifact: {}", rejectionReason)
         }
         val rejectionMessageBuilder = RejectionMessageBuilder()
         Utils.initMessageBuilder(rejectionMessageBuilder)
         rejectionMessageBuilder
-                ._correlationMessage_(artifactRequestMessage.correlationMessage)
-                ._rejectionReason_(rejectionReason)
+            ._correlationMessage_(artifactRequestMessage.correlationMessage)
+            ._rejectionReason_(rejectionReason)
         rejectionMessageBuilder.build().let {
             if (LOG.isDebugEnabled) {
                 LOG.debug("Serialisation header: {}", SERIALIZER.serialize(it))
@@ -89,5 +115,4 @@ class ArtifactRequestProcessor : Processor {
     companion object {
         private val LOG = LoggerFactory.getLogger(ArtifactRequestProcessor::class.java)
     }
-
 }

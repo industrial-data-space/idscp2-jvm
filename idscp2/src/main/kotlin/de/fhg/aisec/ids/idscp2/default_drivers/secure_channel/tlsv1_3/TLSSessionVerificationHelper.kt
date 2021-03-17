@@ -1,3 +1,22 @@
+/*-
+ * ========================LICENSE_START=================================
+ * idscp2
+ * %%
+ * Copyright (C) 2021 Fraunhofer AISEC
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * =========================LICENSE_END==================================
+ */
 package de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3
 
 import org.slf4j.LoggerFactory
@@ -6,10 +25,10 @@ import java.security.cert.CertificateExpiredException
 import java.security.cert.CertificateNotYetValidException
 import java.security.cert.CertificateParsingException
 import java.security.cert.X509Certificate
-import java.util.*
+import java.util.ArrayList
+import java.util.Date
 import java.util.regex.Pattern
 import javax.net.ssl.SSLPeerUnverifiedException
-import javax.net.ssl.SSLSession
 
 /**
  * A class for verifying an established TLS Session on application layer
@@ -49,8 +68,10 @@ object TLSSessionVerificationHelper {
              * deprecated for quite a while and is therefore not supported anymore in the IDSCP2 protocol.
              */
             val sans = peerCert.subjectAlternativeNames
-                    ?: throw SSLPeerUnverifiedException("No Subject alternative names for hostname "
-                            + "verification provided")
+                ?: throw SSLPeerUnverifiedException(
+                    "No Subject alternative names for hostname " +
+                        "verification provided"
+                )
             val acceptedDnsNames = ArrayList<String>()
             val acceptedIpAddresses = ArrayList<String>()
             for (subjectAltName in sans) {
@@ -93,8 +114,10 @@ object TLSSessionVerificationHelper {
                         LOG.trace("Resolved IPs: {}", resolvedIps.toSet().joinToString())
                     }
                     if (!resolvedIps.contains(host)) {
-                        throw SSLPeerUnverifiedException("Hostname verification failed. Peer certificate does "
-                                + "not belong to peer host")
+                        throw SSLPeerUnverifiedException(
+                            "Hostname verification failed. Peer certificate does " +
+                                "not belong to peer host"
+                        )
                     }
                 }
             } else {
@@ -108,13 +131,14 @@ object TLSSessionVerificationHelper {
                     }
                 }
                 if (!found) {
-                    throw SSLPeerUnverifiedException("Hostname verification failed. Peer certificate does "
-                            + "not belong to peer host")
+                    throw SSLPeerUnverifiedException(
+                        "Hostname verification failed. Peer certificate does " +
+                            "not belong to peer host"
+                    )
                 }
             }
 
-
-            //check certificate validity for now and at least one day
+            // check certificate validity for now and at least one day
             val oneDay = Date()
             oneDay.time = oneDay.time + 86400000
             peerCert.checkValidity()
@@ -165,15 +189,15 @@ object TLSSessionVerificationHelper {
          * presented identifier where the wildcard character is embedded within an A-label or
          * U-label of an internationalized domain name.
          */
-        if (dnsNameLabels.size == hostNameLabels.size) { //include rule 2
-            //all labels without the first one must match completely (rule 1)
+        if (dnsNameLabels.size == hostNameLabels.size) { // include rule 2
+            // all labels without the first one must match completely (rule 1)
             for (i in 1 until dnsNameLabels.size) {
                 if (dnsNameLabels[i] != hostNameLabels[i]) {
                     return false
                 }
             }
 
-            //first label could include wildcard character '*' (rule 1+3)
+            // first label could include wildcard character '*' (rule 1+3)
             return hostNameLabels[0].matches(Regex(dnsNameLabels[0].replace("*", ".*")))
         }
         return false

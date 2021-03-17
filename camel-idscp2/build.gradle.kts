@@ -15,7 +15,7 @@ dependencies {
     api("com.google.protobuf", "protobuf-java", libraryVersions["protobuf"])
 
     api("com.google.guava", "guava", libraryVersions["guava"]) {
-        isTransitive = false  // Avoid pulling in of checker framework and other annotation stuff
+        isTransitive = false // Avoid pulling in of checker framework and other annotation stuff
     }
 
     testImplementation("junit", "junit", libraryVersions["junit4"])

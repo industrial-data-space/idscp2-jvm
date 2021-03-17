@@ -1,11 +1,30 @@
+/*-
+ * ========================LICENSE_START=================================
+ * idscp2
+ * %%
+ * Copyright (C) 2021 Fraunhofer AISEC
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * =========================LICENSE_END==================================
+ */
 package de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3
 
+import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.client.TLSClient
+import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.server.TLSServer
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2Connection
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server.SecureChannelInitListener
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server.ServerConnectionListener
-import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.client.TLSClient
-import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.server.TLSServer
 import de.fhg.aisec.ids.idscp2.idscp_core.drivers.SecureChannelDriver
 import de.fhg.aisec.ids.idscp2.idscp_core.drivers.SecureServer
 import de.fhg.aisec.ids.idscp2.idscp_core.error.Idscp2Exception
@@ -17,13 +36,15 @@ import java.util.concurrent.CompletableFuture
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
-class NativeTLSDriver<CC: Idscp2Connection> : SecureChannelDriver<CC, NativeTlsConfiguration> {
+class NativeTLSDriver<CC : Idscp2Connection> : SecureChannelDriver<CC, NativeTlsConfiguration> {
     /**
      * Performs an asynchronous client connect to a TLS server.
      */
-    override fun connect(connectionFactory: (SecureChannel, Idscp2Configuration) -> CC,
-                         configuration: Idscp2Configuration,
-                         secureChannelConfig: NativeTlsConfiguration): CompletableFuture<CC> {
+    override fun connect(
+        connectionFactory: (SecureChannel, Idscp2Configuration) -> CC,
+        configuration: Idscp2Configuration,
+        secureChannelConfig: NativeTlsConfiguration
+    ): CompletableFuture<CC> {
         val connectionFuture = CompletableFuture<CC>()
         try {
             val tlsClient = TLSClient(connectionFactory, configuration, secureChannelConfig, connectionFuture)
@@ -40,9 +61,11 @@ class NativeTLSDriver<CC: Idscp2Connection> : SecureChannelDriver<CC, NativeTlsC
      * @return The SecureServer instance
      * @throws Idscp2Exception If any error occurred during server creation/start
      */
-    override fun listen(channelInitListener: SecureChannelInitListener<CC>,
-                        serverListenerPromise: CompletableFuture<ServerConnectionListener<CC>>,
-                        secureChannelConfig: NativeTlsConfiguration): SecureServer {
+    override fun listen(
+        channelInitListener: SecureChannelInitListener<CC>,
+        serverListenerPromise: CompletableFuture<ServerConnectionListener<CC>>,
+        secureChannelConfig: NativeTlsConfiguration
+    ): SecureServer {
         return try {
             TLSServer(secureChannelConfig, channelInitListener, serverListenerPromise)
         } catch (e: Exception) {

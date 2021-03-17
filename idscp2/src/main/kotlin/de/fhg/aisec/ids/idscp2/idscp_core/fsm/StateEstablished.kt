@@ -1,3 +1,22 @@
+/*-
+ * ========================LICENSE_START=================================
+ * idscp2
+ * %%
+ * Copyright (C) 2021 Fraunhofer AISEC
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * =========================LICENSE_END==================================
+ */
 package de.fhg.aisec.ids.idscp2.idscp_core.fsm
 
 import de.fhg.aisec.ids.idscp2.idscp_core.fsm.FSM.FsmState
@@ -33,7 +52,6 @@ class StateEstablished(
 
     init {
 
-
         /*---------------------------------------------------
          * STATE_ESTABLISHED - Transition Description
          * ---------------------------------------------------
@@ -48,117 +66,144 @@ class StateEstablished(
          * onMessage: IDSCP_CLOSE ---> {timeouts.cancel()} ---> STATE_CLOSED
          * ALL_OTHER_MESSAGES ---> {} ---> STATE_ESTABLISHED
          * --------------------------------------------------- */
-        addTransition(InternalControlMessage.ERROR.value, Transition {
-            LOG.warn("Error occurred, close idscp connection")
-            FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_CLOSED))
-        })
-
-        addTransition(InternalControlMessage.IDSCP_STOP.value, Transition {
-            if (LOG.isTraceEnabled) {
-                LOG.trace("Send IDSCP_CLOSE")
+        addTransition(
+            InternalControlMessage.ERROR.value,
+            Transition {
+                LOG.warn("Error occurred, close idscp connection")
+                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_CLOSED))
             }
-            fsm.sendFromFSM(
-                Idscp2MessageHelper.createIdscpCloseMessage(
-                    "User close",
-                    CloseCause.USER_SHUTDOWN
+        )
+
+        addTransition(
+            InternalControlMessage.IDSCP_STOP.value,
+            Transition {
+                if (LOG.isTraceEnabled) {
+                    LOG.trace("Send IDSCP_CLOSE")
+                }
+                fsm.sendFromFSM(
+                    Idscp2MessageHelper.createIdscpCloseMessage(
+                        "User close",
+                        CloseCause.USER_SHUTDOWN
+                    )
                 )
-            )
-            FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_CLOSED))
-        })
+                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_CLOSED))
+            }
+        )
 
-        addTransition(InternalControlMessage.SEND_DATA.value, Transition {
-            // repack data, include alternating bit
-            val idscpMessage = Idscp2MessageHelper.createIdscpDataMessageWithAltBit(
-                it.idscpMessage.idscpData.data.toByteArray(), alternatingBit
-            )
+        addTransition(
+            InternalControlMessage.SEND_DATA.value,
+            Transition {
+                // repack data, include alternating bit
+                val idscpMessage = Idscp2MessageHelper.createIdscpDataMessageWithAltBit(
+                    it.idscpMessage.idscpData.data.toByteArray(), alternatingBit
+                )
 
-            // send repacked data
-            if (LOG.isTraceEnabled) {
-                LOG.trace("Send IdscpData")
+                // send repacked data
+                if (LOG.isTraceEnabled) {
+                    LOG.trace("Send IdscpData")
+                }
+                if (fsm.sendFromFSM(idscpMessage)) {
+                    // Set Ack Flag
+                    fsm.ackFlag = true
+                    fsm.setBufferedIdscpData(idscpMessage)
+                    ackTimer.start()
+                    return@Transition FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_ACK))
+                } else {
+                    LOG.warn("Cannot send IdscpData, shutdown FSM")
+                    return@Transition FSM.FsmResult(FSM.FsmResultCode.IO_ERROR, fsm.getState(FsmState.STATE_CLOSED))
+                }
             }
-            if (fsm.sendFromFSM(idscpMessage)) {
-                //Set Ack Flag
-                fsm.ackFlag = true
-                fsm.setBufferedIdscpData(idscpMessage)
-                ackTimer.start()
-                return@Transition FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_ACK))
-            } else {
-                LOG.warn("Cannot send IdscpData, shutdown FSM")
-                return@Transition FSM.FsmResult(FSM.FsmResultCode.IO_ERROR, fsm.getState(FsmState.STATE_CLOSED))
+        )
+        addTransition(
+            InternalControlMessage.REPEAT_RAT.value,
+            Transition {
+                if (LOG.isDebugEnabled) {
+                    LOG.debug("Re-Attestation triggered")
+                }
+                if (LOG.isTraceEnabled) {
+                    LOG.trace("Send IDSCP_RERAT, start RAT_VERIFIER")
+                }
+                ratTimer.cancelTimeout()
+                if (!fsm.sendFromFSM(Idscp2MessageHelper.createIdscpReRatMessage(""))) {
+                    LOG.warn("Cannot send ReRat message")
+                    return@Transition FSM.FsmResult(FSM.FsmResultCode.IO_ERROR, fsm.getState(FsmState.STATE_CLOSED))
+                }
+                if (!fsm.restartRatVerifierDriver()) {
+                    LOG.warn("Cannot run Rat verifier, close idscp connection")
+                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RAT_ERROR, fsm.getState(FsmState.STATE_CLOSED))
+                }
+                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_RAT_VERIFIER))
             }
-        })
-        addTransition(InternalControlMessage.REPEAT_RAT.value, Transition {
-            if (LOG.isDebugEnabled) {
-                LOG.debug("Re-Attestation triggered")
+        )
+        addTransition(
+            InternalControlMessage.DAT_TIMER_EXPIRED.value,
+            Transition {
+                ratTimer.cancelTimeout()
+                if (LOG.isDebugEnabled) {
+                    LOG.debug("DAT expired, request new DAT from peer and trigger a re-attestation")
+                }
+                if (LOG.isTraceEnabled) {
+                    LOG.trace("Send IDSCP_DAT_EXPIRED")
+                }
+                if (!fsm.sendFromFSM(Idscp2MessageHelper.createIdscpDatExpiredMessage())) {
+                    LOG.warn("Cannot send DatExpired message")
+                    return@Transition FSM.FsmResult(FSM.FsmResultCode.IO_ERROR, fsm.getState(FsmState.STATE_CLOSED))
+                }
+                if (LOG.isTraceEnabled) {
+                    LOG.trace("Set handshake timeout")
+                }
+                handshakeTimer.resetTimeout()
+                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_DAT_AND_RAT_VERIFIER))
             }
-            if (LOG.isTraceEnabled) {
-                LOG.trace("Send IDSCP_RERAT, start RAT_VERIFIER")
+        )
+        addTransition(
+            IdscpMessage.IDSCPRERAT_FIELD_NUMBER,
+            Transition {
+                if (LOG.isDebugEnabled) {
+                    LOG.debug("Peer is requesting a re-attestation")
+                }
+                if (!fsm.restartRatProverDriver()) {
+                    LOG.warn("Cannot run Rat prover, close idscp connection")
+                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RAT_ERROR, fsm.getState(FsmState.STATE_CLOSED))
+                }
+                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_RAT_PROVER))
             }
-            ratTimer.cancelTimeout()
-            if (!fsm.sendFromFSM(Idscp2MessageHelper.createIdscpReRatMessage(""))) {
-                LOG.warn("Cannot send ReRat message")
-                return@Transition FSM.FsmResult(FSM.FsmResultCode.IO_ERROR, fsm.getState(FsmState.STATE_CLOSED))
+        )
+        addTransition(
+            IdscpMessage.IDSCPDATEXPIRED_FIELD_NUMBER,
+            Transition {
+                if (LOG.isDebugEnabled) {
+                    LOG.debug("Peer is requesting a new DAT, followed by a re-attestation")
+                }
+                if (!fsm.sendFromFSM(Idscp2MessageHelper.createIdscpDatMessage(fsm.getDynamicAttributeToken))) {
+                    LOG.warn("Cannot send Dat message")
+                    return@Transition FSM.FsmResult(FSM.FsmResultCode.IO_ERROR, fsm.getState(FsmState.STATE_CLOSED))
+                }
+                if (!fsm.restartRatProverDriver()) {
+                    LOG.warn("Cannot run Rat prover, close idscp connection")
+                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RAT_ERROR, fsm.getState(FsmState.STATE_CLOSED))
+                }
+                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_RAT_PROVER))
             }
-            if (!fsm.restartRatVerifierDriver()) {
-                LOG.warn("Cannot run Rat verifier, close idscp connection")
-                return@Transition FSM.FsmResult(FSM.FsmResultCode.RAT_ERROR, fsm.getState(FsmState.STATE_CLOSED))
-            }
-            FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_RAT_VERIFIER))
-        })
-        addTransition(InternalControlMessage.DAT_TIMER_EXPIRED.value, Transition {
-            ratTimer.cancelTimeout()
-            if (LOG.isDebugEnabled) {
-                LOG.debug("DAT expired, request new DAT from peer and trigger a re-attestation")
-            }
-            if (LOG.isTraceEnabled) {
-                LOG.trace("Send IDSCP_DAT_EXPIRED")
-            }
-            if (!fsm.sendFromFSM(Idscp2MessageHelper.createIdscpDatExpiredMessage())) {
-                LOG.warn("Cannot send DatExpired message")
-                return@Transition FSM.FsmResult(FSM.FsmResultCode.IO_ERROR, fsm.getState(FsmState.STATE_CLOSED))
-            }
-            if (LOG.isTraceEnabled) {
-                LOG.trace("Set handshake timeout")
-            }
-            handshakeTimer.resetTimeout()
-            FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_DAT_AND_RAT_VERIFIER))
-        })
-        addTransition(IdscpMessage.IDSCPRERAT_FIELD_NUMBER, Transition {
-            if (LOG.isDebugEnabled) {
-                LOG.debug("Peer is requesting a re-attestation")
-            }
-            if (!fsm.restartRatProverDriver()) {
-                LOG.warn("Cannot run Rat prover, close idscp connection")
-                return@Transition FSM.FsmResult(FSM.FsmResultCode.RAT_ERROR, fsm.getState(FsmState.STATE_CLOSED))
-            }
-            FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_RAT_PROVER))
-        })
-        addTransition(IdscpMessage.IDSCPDATEXPIRED_FIELD_NUMBER, Transition {
-            if (LOG.isDebugEnabled) {
-                LOG.debug("Peer is requesting a new DAT, followed by a re-attestation")
-            }
-            if (!fsm.sendFromFSM(Idscp2MessageHelper.createIdscpDatMessage(fsm.getDynamicAttributeToken))) {
-                LOG.warn("Cannot send Dat message")
-                return@Transition FSM.FsmResult(FSM.FsmResultCode.IO_ERROR, fsm.getState(FsmState.STATE_CLOSED))
-            }
-            if (!fsm.restartRatProverDriver()) {
-                LOG.warn("Cannot run Rat prover, close idscp connection")
-                return@Transition FSM.FsmResult(FSM.FsmResultCode.RAT_ERROR, fsm.getState(FsmState.STATE_CLOSED))
-            }
-            FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_RAT_PROVER))
-        })
+        )
 
-        addTransition(IdscpMessage.IDSCPDATA_FIELD_NUMBER, Transition {
-            fsm.recvData(it.idscpMessage.idscpData)
-            FSM.FsmResult(FSM.FsmResultCode.OK, this)
-        })
-
-        addTransition(IdscpMessage.IDSCPCLOSE_FIELD_NUMBER, Transition {
-            if (LOG.isTraceEnabled) {
-                LOG.trace("Receive IDSCP_CLOSED")
+        addTransition(
+            IdscpMessage.IDSCPDATA_FIELD_NUMBER,
+            Transition {
+                fsm.recvData(it.idscpMessage.idscpData)
+                FSM.FsmResult(FSM.FsmResultCode.OK, this)
             }
-            FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_CLOSED))
-        })
+        )
+
+        addTransition(
+            IdscpMessage.IDSCPCLOSE_FIELD_NUMBER,
+            Transition {
+                if (LOG.isTraceEnabled) {
+                    LOG.trace("Receive IDSCP_CLOSED")
+                }
+                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_CLOSED))
+            }
+        )
 
         setNoTransitionHandler {
             if (LOG.isTraceEnabled) {

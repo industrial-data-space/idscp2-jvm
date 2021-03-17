@@ -1,3 +1,22 @@
+/*-
+ * ========================LICENSE_START=================================
+ * idscp2
+ * %%
+ * Copyright (C) 2021 Fraunhofer AISEC
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * =========================LICENSE_END==================================
+ */
 package de.fhg.aisec.ids.idscp2.idscp_core.fsm
 
 import com.google.protobuf.InvalidProtocolBufferException
@@ -15,15 +34,16 @@ import de.fhg.aisec.ids.idscp2.idscp_core.messages.Idscp2MessageHelper
 import de.fhg.aisec.ids.idscp2.idscp_core.rat_registry.RatProverDriverRegistry
 import de.fhg.aisec.ids.idscp2.idscp_core.rat_registry.RatVerifierDriverRegistry
 import de.fhg.aisec.ids.idscp2.idscp_core.secure_channel.SecureChannel
-import de.fhg.aisec.ids.idscp2.messages.IDSCP2.*
+import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpAck
+import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpData
+import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpMessage
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import java.nio.charset.StandardCharsets
 import java.security.cert.X509Certificate
-import java.util.*
+import java.util.HashMap
 import java.util.concurrent.locks.ReentrantLock
-import kotlin.NoSuchElementException
 
 /**
  * The finite state machine FSM of the IDSCP2 protocol
@@ -36,13 +56,17 @@ import kotlin.NoSuchElementException
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
-class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
+class FSM(
+    connection: Idscp2Connection,
+    secureChannel: SecureChannel,
     /**
      * Daps Driver instance
      */
-          private val dapsDriver: DapsDriver,
-          attestationConfig: AttestationConfig, ackTimeoutDelay: Long, handshakeTimeoutDelay: Long)
-    : RatProverFsmListener, RatVerifierFsmListener, ScFsmListener {
+    private val dapsDriver: DapsDriver,
+    attestationConfig: AttestationConfig,
+    ackTimeoutDelay: Long,
+    handshakeTimeoutDelay: Long
+) : RatProverFsmListener, RatVerifierFsmListener, ScFsmListener {
     /*  -----------   IDSCP2 Protocol States   ---------- */
     private val states = HashMap<FsmState, State>()
 
@@ -59,7 +83,7 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
     }
 
     /* FSM transition result */
-    enum class FsmResultCode (val value: String) {
+    enum class FsmResultCode(val value: String) {
         UNKNOWN_TRANSITION("No transition available for given event in current state."),
         FSM_LOCKED("FSM is locked forever."),
         FSM_NOT_STARTED("Handshake was never started."),
@@ -93,16 +117,16 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
      *
      * Only one driver can be valid at a time
      */
-    private var currentRatProverId //avoid messages from old prover drivers
-            : String? = null
-    private var currentRatVerifierId //avoid messages from old verifier drivers
-            : String? = null
+    private var currentRatProverId: String? = // avoid messages from old prover drivers
+        null
+    private var currentRatVerifierId: String? = // avoid messages from old verifier drivers
+        null
 
     /**
      * RAT Mechanisms, calculated during handshake in WAIT_FOR_HELLO_STATE
      */
-    private lateinit var proverMechanism: String //RAT prover mechanism
-    private lateinit var verifierMechanism: String //RAT Verifier mechanism
+    private lateinit var proverMechanism: String // RAT prover mechanism
+    private lateinit var verifierMechanism: String // RAT Verifier mechanism
 
     /**
      * A FIFO-fair synchronization lock for the finite state machine
@@ -179,8 +203,10 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
         // vulnerabilities
         //
         if (fsmIsBusy.isHeldByCurrentThread) {
-            val e = RuntimeException("The current thread holds the fsm lock already. "
-                    + "A circle might occur that could lead to undefined behaviour within the fsm")
+            val e = RuntimeException(
+                "The current thread holds the fsm lock already. " +
+                    "A circle might occur that could lead to undefined behaviour within the fsm"
+            )
             // Log exception before throwing, since some threads swallow the exception without any notification
             LOG.error(e.message, e)
             throw e
@@ -195,10 +221,10 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
      */
     override fun onMessage(data: ByteArray) {
 
-        //check for incorrect usage
+        // check for incorrect usage
         checkForFsmCycles()
 
-        //parse message and create new IDSCP Message event, then pass it to current state and
+        // parse message and create new IDSCP Message event, then pass it to current state and
         // update new state
         val message: IdscpMessage = try {
             IdscpMessage.parseFrom(data)
@@ -207,7 +233,7 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
             return
         }
         val event = Event(message)
-        //must wait when fsm is in state STATE_CLOSED --> wait() will be notified when fsm is
+        // must wait when fsm is in state STATE_CLOSED --> wait() will be notified when fsm is
         // leaving STATE_CLOSED
         fsmIsBusy.lock()
         try {
@@ -231,7 +257,7 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
      * An internal control message (ICM) occurred, provide it to the fsm as an event
      */
     private fun onControlMessage(controlMessage: InternalControlMessage) {
-        //create Internal Control Message Event and pass it to current state and update new state
+        // create Internal Control Message Event and pass it to current state and update new state
         val e = Event(controlMessage)
         fsmIsBusy.lock()
         try {
@@ -249,8 +275,6 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
         processRatProverEvent(Event(controlMessage))
     }
 
-
-
     /**
      * API for RatProver to provide Prover Messages to the fsm
      *
@@ -263,7 +287,7 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
      * ignored, else the event is provided to the fsm
      */
     private fun processRatProverEvent(e: Event) {
-        //check for incorrect usage
+        // check for incorrect usage
         checkForFsmCycles()
 
         fsmIsBusy.lock()
@@ -298,7 +322,7 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
      * ignored, else the event is provided to the fsm
      */
     private fun processRatVerifierEvent(e: Event) {
-        //check for incorrect usage
+        // check for incorrect usage
         checkForFsmCycles()
 
         fsmIsBusy.lock()
@@ -313,7 +337,7 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
         }
     }
 
-    private fun onUpperEvent(event: Event) : FsmResultCode {
+    private fun onUpperEvent(event: Event): FsmResultCode {
         // check for incorrect usage
         checkForFsmCycles()
         fsmIsBusy.lock()
@@ -329,7 +353,7 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
      *
      * @return FsmResultCode, the result of the success of the triggered transition
      */
-    private fun feedEvent(event: Event) : FsmResultCode {
+    private fun feedEvent(event: Event): FsmResultCode {
         val prevState = currentState
         val result = currentState.feedEvent(event)
         currentState = result.nextState
@@ -345,8 +369,8 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
      * The checkForFsmCycles method first checks for risky thread cycles that occur by incorrect
      * driver implementations
      */
-    fun closeConnection() : FsmResultCode {
-        //check for incorrect usage
+    fun closeConnection(): FsmResultCode {
+        // check for incorrect usage
         if (LOG.isTraceEnabled) {
             LOG.trace("Sending stop message to connection peer...")
         }
@@ -361,7 +385,7 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
      */
     @Throws(Idscp2HandshakeException::class)
     fun startIdscpHandshake() {
-        //check for incorrect usage
+        // check for incorrect usage
         checkForFsmCycles()
         fsmIsBusy.lock()
         try {
@@ -380,7 +404,7 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
 
                 // check if not  connected and locked forever, then the handshake has failed
                 if (!isConnected && isLocked) {
-                    //handshake failed, throw exception
+                    // handshake failed, throw exception
                     throw Idscp2HandshakeException("Handshake failed")
                 }
             } else {
@@ -397,7 +421,7 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
      * Send idscp data from the fsm via the secure channel to the peer
      */
     fun sendFromFSM(msg: IdscpMessage): Boolean {
-        //send messages from fsm
+        // send messages from fsm
         return try {
             secureChannel.send(msg.toByteArray())
         } catch (e: Exception) {
@@ -417,7 +441,7 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
         // Broadcast the error to the respective listeners when the fsm is not yet locked
 
         // run in async fire-and-forget coroutine to avoid cycles cause by protocol misuse
-        if (!isFsmLocked){
+        if (!isFsmLocked) {
             GlobalScope.launch {
                 connection.onError(t)
             }
@@ -446,13 +470,13 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
     }
 
     val remotePeerCertificate: X509Certificate?
-            get() = this.peerCertificate
+        get() = this.peerCertificate
 
     /**
      * Send idscp message from the User via the secure channel
      */
-    fun send(msg: ByteArray?) : FsmResultCode {
-        //Send messages from user only when idscp connection is established
+    fun send(msg: ByteArray?): FsmResultCode {
+        // Send messages from user only when idscp connection is established
         idscpHandshakeCompletedLatch.await()
         val idscpMessage = Idscp2MessageHelper.createIdscpDataMessage(msg)
         return onUpperEvent(Event(InternalControlMessage.SEND_DATA, idscpMessage))
@@ -461,8 +485,8 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
     /**
      * Repeat RAT Verification if remote peer, triggered by User
      */
-    fun repeatRat() : FsmResultCode {
-        //repeat rat only when idscp connection is established
+    fun repeatRat(): FsmResultCode {
+        // repeat rat only when idscp connection is established
         idscpHandshakeCompletedLatch.await()
         return onUpperEvent(Event(InternalControlMessage.REPEAT_RAT))
     }
@@ -485,7 +509,7 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
      */
     val isConnected: Boolean
         get() = currentState == states[FsmState.STATE_ESTABLISHED] ||
-                currentState == states[FsmState.STATE_WAIT_FOR_ACK]
+            currentState == states[FsmState.STATE_WAIT_FOR_ACK]
 
     /**
      * Notify handshake lock about result
@@ -520,9 +544,12 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
         }
 
         if (LOG.isTraceEnabled) {
-            LOG.trace("Calculate RAT prover mechanism for given local provers: {} " +
-                    "and remote verifiers: {}", localSupportedProver.contentToString(),
-                    remoteExpectedVerifier.contentToString())
+            LOG.trace(
+                "Calculate RAT prover mechanism for given local provers: {} " +
+                    "and remote verifiers: {}",
+                localSupportedProver.contentToString(),
+                remoteExpectedVerifier.contentToString()
+            )
         }
 
         val match = matchRatMechanisms(remoteExpectedVerifier, localSupportedProver)
@@ -551,9 +578,12 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
         }
 
         if (LOG.isTraceEnabled) {
-            LOG.trace("Calculate RAT verifier mechanism for given local verifiers: {} " +
-                    "and remote provers: {}", localExpectedVerifier.contentToString(),
-                    remoteSupportedProver.contentToString())
+            LOG.trace(
+                "Calculate RAT verifier mechanism for given local verifiers: {} " +
+                    "and remote provers: {}",
+                localExpectedVerifier.contentToString(),
+                remoteSupportedProver.contentToString()
+            )
         }
 
         val match = matchRatMechanisms(localExpectedVerifier, remoteSupportedProver)
@@ -582,11 +612,11 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
      * @return false if no match was found
      */
     fun restartRatVerifierDriver(): Boolean {
-        //assume verifier mechanism is set
+        // assume verifier mechanism is set
         stopRatVerifierDriver()
         ratVerifierDriver = RatVerifierDriverRegistry.startRatVerifierDriver(verifierMechanism, this)
         return ratVerifierDriver?.let {
-            //safe the thread ID
+            // safe the thread ID
             currentRatVerifierId = it.id.toString()
             if (LOG.isTraceEnabled) {
                 LOG.trace("Start verifier_handshake timeout")
@@ -624,7 +654,7 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
      * @return false if no match was found
      */
     fun restartRatProverDriver(): Boolean {
-        //assume prover mechanism is set
+        // assume prover mechanism is set
         stopRatProverDriver()
         ratProverDriver = RatProverDriverRegistry.startRatProverDriver(proverMechanism, this)
         return ratProverDriver?.let {
@@ -853,23 +883,32 @@ class FSM(connection: Idscp2Connection, secureChannel: SecureChannel,
 
         /* ------------- FSM STATE Initialization -------------*/
         states[FsmState.STATE_CLOSED] = StateClosed(
-                this, onMessageBlock, attestationConfig)
+            this, onMessageBlock, attestationConfig
+        )
         states[FsmState.STATE_WAIT_FOR_HELLO] = StateWaitForHello(
-                this, handshakeTimer, datTimer, dapsDriver, attestationConfig)
+            this, handshakeTimer, datTimer, dapsDriver, attestationConfig
+        )
         states[FsmState.STATE_WAIT_FOR_RAT] = StateWaitForRat(
-                this, handshakeTimer, verifierHandshakeTimer, proverHandshakeTimer, ratTimer)
+            this, handshakeTimer, verifierHandshakeTimer, proverHandshakeTimer, ratTimer
+        )
         states[FsmState.STATE_WAIT_FOR_RAT_PROVER] = StateWaitForRatProver(
-                this, ratTimer, handshakeTimer, proverHandshakeTimer, ackTimer)
+            this, ratTimer, handshakeTimer, proverHandshakeTimer, ackTimer
+        )
         states[FsmState.STATE_WAIT_FOR_RAT_VERIFIER] = StateWaitForRatVerifier(
-                this, ratTimer, handshakeTimer, verifierHandshakeTimer, ackTimer)
+            this, ratTimer, handshakeTimer, verifierHandshakeTimer, ackTimer
+        )
         states[FsmState.STATE_WAIT_FOR_DAT_AND_RAT] = StateWaitForDatAndRat(
-                this, handshakeTimer, proverHandshakeTimer, datTimer, dapsDriver)
+            this, handshakeTimer, proverHandshakeTimer, datTimer, dapsDriver
+        )
         states[FsmState.STATE_WAIT_FOR_DAT_AND_RAT_VERIFIER] = StateWaitForDatAndRatVerifier(
-                this, handshakeTimer, datTimer, dapsDriver)
+            this, handshakeTimer, datTimer, dapsDriver
+        )
         states[FsmState.STATE_ESTABLISHED] = StateEstablished(
-                this, ratTimer, handshakeTimer, ackTimer, nextSendAlternatingBit)
+            this, ratTimer, handshakeTimer, ackTimer, nextSendAlternatingBit
+        )
         states[FsmState.STATE_WAIT_FOR_ACK] = StateWaitForAck(
-                this, ratTimer, handshakeTimer, ackTimer)
+            this, ratTimer, handshakeTimer, ackTimer
+        )
 
         // Set initial state
         currentState = states[FsmState.STATE_CLOSED] ?: throw NoSuchElementException("State unknown")

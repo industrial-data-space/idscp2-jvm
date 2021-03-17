@@ -1,6 +1,6 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.yaml.snakeyaml.Yaml
-import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 
 buildscript {
     repositories {
@@ -26,8 +26,14 @@ plugins {
 
 @Suppress("UNCHECKED_CAST")
 val libraryVersions: Map<String, String> =
-    Yaml().loadAs(file("${rootDir}/libraryVersions.yaml").inputStream(), Map::class.java) as Map<String, String>
+    Yaml().loadAs(file("$rootDir/libraryVersions.yaml").inputStream(), Map::class.java) as Map<String, String>
 extra.set("libraryVersions", libraryVersions)
+
+val descriptions: Map < String, String > = mapOf(
+    "idscp2" to "IDSCP2 Protocol Implementation",
+    "idscp2-app-layer" to "IDSCP2 Application Layer Implementation",
+    "camel-idscp2" to "Camel IDSCP2 Component Implementation"
+)
 
 allprojects {
     group = "de.fhg.aisec.ids"
@@ -39,12 +45,6 @@ allprojects {
         maven("https://maven.iais.fraunhofer.de/artifactory/eis-ids-public/")
     }
 }
-
-val descriptions : Map < String, String > = mapOf (
-    "idscp2" to "IDSCP2 Protocol Implementation",
-    "idscp2-app-layer" to "IDSCP2 Application Layer Implementation",
-    "camel-idscp2" to "Camel IDSCP2 Component Implementation"
-)
 
 subprojects {
     apply(plugin = "biz.aQute.bnd.builder")
@@ -95,8 +95,8 @@ subprojects {
 
     tasks.withType<JavaCompile> {
         options.encoding = "UTF-8"
-//        options.compilerArgs << "-Xlint:unchecked"
-//        options.deprecation = true
+        // options.compilerArgs.add("-Xlint:unchecked")
+        // options.isDeprecation = true
     }
 
     tasks.jar {
@@ -170,14 +170,15 @@ subprojects {
     apply(plugin = "com.diffplug.spotless")
 
     spotless {
-        isEnforceCheck = false
-
         kotlin {
-            licenseHeader("""/*-
+            target("**/*.kt")
+            ktlint(libraryVersions["ktlint"])
+            licenseHeader(
+                """/*-
  * ========================LICENSE_START=================================
  * ${project.name}
  * %%
- * Copyright (C) \${"$"}YEAR Fraunhofer AISEC
+ * Copyright (C) ${"$"}YEAR Fraunhofer AISEC
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -191,7 +192,8 @@ subprojects {
  * See the License for the specific language governing permissions and
  * limitations under the License.
  * =========================LICENSE_END==================================
- */""").yearSeparator(" - ")
+ */"""
+            ).yearSeparator(" - ")
         }
     }
 }

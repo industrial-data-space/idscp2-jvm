@@ -10,7 +10,7 @@ apply(plugin = "java")
 apply(plugin = "com.google.protobuf")
 apply(plugin = "idea")
 
-val generatedProtoBaseDir = "${projectDir}/generated"
+val generatedProtoBaseDir = "$projectDir/generated"
 
 protobuf {
     generatedFilesBaseDir = generatedProtoBaseDir
@@ -25,7 +25,7 @@ tasks.named("clean") {
 configure<IdeaModel> {
     module {
         // mark as generated sources for IDEA
-        generatedSourceDirs.add(File("${generatedProtoBaseDir}/main/java"))
+        generatedSourceDirs.add(File("$generatedProtoBaseDir/main/java"))
     }
 }
 
