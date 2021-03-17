@@ -17,17 +17,17 @@
 package de.fhg.aisec.ids.camel.idscp2.server
 
 import de.fhg.aisec.ids.camel.idscp2.Utils
-import de.fhg.aisec.ids.idscp2.idscp_core.api.Idscp2EndpointListener
 import de.fhg.aisec.ids.idscp2.app_layer.AppLayerConnection
-import de.fraunhofer.iais.eis.Message
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.DefaultDapsDriver
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.DefaultDapsDriverConfig
 import de.fhg.aisec.ids.idscp2.default_drivers.rat.dummy.RatProverDummy
 import de.fhg.aisec.ids.idscp2.default_drivers.rat.dummy.RatVerifierDummy
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
-import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2ConnectionListener
+import de.fhg.aisec.ids.idscp2.idscp_core.api.Idscp2EndpointListener
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.AttestationConfig
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
+import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2ConnectionListener
+import de.fraunhofer.iais.eis.Message
 import org.apache.camel.Processor
 import org.apache.camel.Producer
 import org.apache.camel.spi.UriEndpoint
@@ -40,39 +40,55 @@ import java.util.*
 import java.util.regex.Pattern
 
 @UriEndpoint(
-        scheme = "idscp2server",
-        title = "IDSCP2 Server Socket",
-        syntax = "idscp2server://host:port",
-        label = "ids"
+    scheme = "idscp2server",
+    title = "IDSCP2 Server Socket",
+    syntax = "idscp2server://host:port",
+    label = "ids"
 )
 class Idscp2ServerEndpoint(uri: String?, private val remaining: String, component: Idscp2ServerComponent?) :
-        DefaultEndpoint(uri, component), Idscp2EndpointListener<AppLayerConnection> {
+    DefaultEndpoint(uri, component), Idscp2EndpointListener<AppLayerConnection> {
     private lateinit var serverConfiguration: Idscp2Configuration
     private lateinit var secureChannelConfig: NativeTlsConfiguration
     private var server: CamelIdscp2Server? = null
     private val consumers: MutableSet<Idscp2ServerConsumer> = HashSet()
 
     @UriParam(
-            label = "security",
-            description = "The SSL context for the IDSCP2 endpoint"
+        label = "security",
+        description = "The transport encryption SSL context for the IDSCP2 endpoint"
     )
-    var sslContextParameters: SSLContextParameters? = null
+    var transportSslContextParameters: SSLContextParameters? = null
+
     @UriParam(
-            label = "security",
-            description = "The alias of the DAPS key in the keystore provided by sslContextParameters",
-            defaultValue = "1"
+        label = "security",
+        description = "The DAPS authentication SSL context for the IDSCP2 endpoint"
+    )
+    var dapsSslContextParameters: SSLContextParameters? = null
+
+    @UriParam(
+        label = "security",
+        description = "The SSL context for the IDSCP2 endpoint (deprecated)"
+    )
+    @Deprecated("Depreacted in favor of transportSslContextParameters and dapsSslContextParameters")
+    var sslContextParameters: SSLContextParameters? = null
+
+    @UriParam(
+        label = "security",
+        description = "The alias of the DAPS key in the keystore provided by sslContextParameters",
+        defaultValue = "1"
     )
     var dapsKeyAlias: String = "1"
+
     @UriParam(
-            label = "security",
-            description = "The validity time of remote attestation and DAT in milliseconds",
-            defaultValue = "600000"
+        label = "security",
+        description = "The validity time of remote attestation and DAT in milliseconds",
+        defaultValue = "600000"
     )
     var dapsRatTimeoutDelay: Long = AttestationConfig.DEFAULT_RAT_TIMEOUT_DELAY.toLong()
+
     @UriParam(
-            label = "common",
-            description = "Enable IdsMessage headers (Required for Usage Control)",
-            defaultValue = "false"
+        label = "common",
+        description = "Enable IdsMessage headers (Required for Usage Control)",
+        defaultValue = "false"
     )
     var useIdsMessages: Boolean = false
 
@@ -134,6 +150,7 @@ class Idscp2ServerEndpoint(uri: String?, private val remaining: String, componen
             override fun onError(t: Throwable) {
                 LOG.error("Error in Idscp2ServerEndpoint-managed connection", t)
             }
+
             override fun onClose() {
                 if (useIdsMessages) {
                     consumers.forEach { connection.removeIdsMessageListener(it) }
@@ -161,49 +178,65 @@ class Idscp2ServerEndpoint(uri: String?, private val remaining: String, componen
 
         // create attestation config
         val localAttestationConfig = AttestationConfig.Builder()
-                .setSupportedRatSuite(arrayOf(RatProverDummy.RAT_PROVER_DUMMY_ID))
-                .setExpectedRatSuite(arrayOf(RatVerifierDummy.RAT_VERIFIER_DUMMY_ID))
-                .setRatTimeoutDelay(dapsRatTimeoutDelay)
-                .build()
+            .setSupportedRatSuite(arrayOf(RatProverDummy.RAT_PROVER_DUMMY_ID))
+            .setExpectedRatSuite(arrayOf(RatVerifierDummy.RAT_VERIFIER_DUMMY_ID))
+            .setRatTimeoutDelay(dapsRatTimeoutDelay)
+            .build()
 
         // create daps config
         val dapsDriverConfigBuilder = DefaultDapsDriverConfig.Builder()
-                .setDapsUrl(Utils.dapsUrlProducer())
-                .setKeyAlias(dapsKeyAlias)
+            .setDapsUrl(Utils.dapsUrlProducer())
+            .setKeyAlias(dapsKeyAlias)
 
         val secureChannelConfigBuilder = NativeTlsConfiguration.Builder()
-                .setHost(host)
-                .setServerPort(port)
+            .setHost(host)
+            .setServerPort(port)
 
-        sslContextParameters?.let {
+        @Suppress("DEPRECATION")
+        (transportSslContextParameters ?: sslContextParameters)?.let {
             secureChannelConfigBuilder
-                    .setKeyPassword(it.keyManagers?.keyPassword?.toCharArray()
-                            ?: "password".toCharArray())
-                    .setKeyStorePath(Paths.get(it.keyManagers?.keyStore?.resource ?: "DUMMY-FILENAME.p12"))
-                    .setKeyStoreKeyType(it.keyManagers?.keyStore?.type ?: "RSA")
-                    .setKeyStorePassword(it.keyManagers?.keyStore?.password?.toCharArray()
-                            ?: "password".toCharArray())
-                    .setTrustStorePath(Paths.get(it.trustManagers?.keyStore?.resource ?: "DUMMY-FILENAME.p12"))
-                    .setTrustStorePassword(it.trustManagers?.keyStore?.password?.toCharArray()
-                            ?: "password".toCharArray())
-                    .setCertificateAlias(it.certAlias ?: "1.0.1")
+                .setKeyPassword(
+                    it.keyManagers?.keyPassword?.toCharArray()
+                        ?: "password".toCharArray()
+                )
+                .setKeyStorePath(Paths.get(it.keyManagers?.keyStore?.resource ?: "DUMMY-FILENAME.p12"))
+                .setKeyStoreKeyType(it.keyManagers?.keyStore?.type ?: "RSA")
+                .setKeyStorePassword(
+                    it.keyManagers?.keyStore?.password?.toCharArray()
+                        ?: "password".toCharArray()
+                )
+                .setTrustStorePath(Paths.get(it.trustManagers?.keyStore?.resource ?: "DUMMY-FILENAME.p12"))
+                .setTrustStorePassword(
+                    it.trustManagers?.keyStore?.password?.toCharArray()
+                        ?: "password".toCharArray()
+                )
+                .setCertificateAlias(it.certAlias ?: "1.0.1")
+        }
 
+        @Suppress("DEPRECATION")
+        (dapsSslContextParameters ?: sslContextParameters)?.let {
             dapsDriverConfigBuilder
-                    .setKeyPassword(it.keyManagers?.keyPassword?.toCharArray()
-                        ?: "password".toCharArray())
-                    .setKeyStorePath(Paths.get(it.keyManagers?.keyStore?.resource ?: "DUMMY-FILENAME.p12"))
-                    .setKeyStorePassword(it.keyManagers?.keyStore?.password?.toCharArray()
-                            ?: "password".toCharArray())
-                    .setTrustStorePath(Paths.get(it.trustManagers?.keyStore?.resource ?: "DUMMY-FILENAME.p12"))
-                    .setTrustStorePassword(it.trustManagers?.keyStore?.password?.toCharArray()
-                            ?: "password".toCharArray())
+                .setKeyPassword(
+                    it.keyManagers?.keyPassword?.toCharArray()
+                        ?: "password".toCharArray()
+                )
+                .setKeyStorePath(Paths.get(it.keyManagers?.keyStore?.resource ?: "DUMMY-FILENAME.p12"))
+                .setKeyStorePassword(
+                    it.keyManagers?.keyStore?.password?.toCharArray()
+                        ?: "password".toCharArray()
+                )
+                .setTrustStorePath(Paths.get(it.trustManagers?.keyStore?.resource ?: "DUMMY-FILENAME.p12"))
+                .setTrustStorePassword(
+                    it.trustManagers?.keyStore?.password?.toCharArray()
+                        ?: "password".toCharArray()
+                )
         }
 
         // create idscp config
         serverConfiguration = Idscp2Configuration.Builder()
-                .setAttestationConfig(localAttestationConfig)
-                .setDapsDriver(DefaultDapsDriver(dapsDriverConfigBuilder.build()))
-                .build()
+            .setAttestationConfig(localAttestationConfig)
+            .setDapsDriver(DefaultDapsDriver(dapsDriverConfigBuilder.build()))
+            .build()
 
         secureChannelConfig = secureChannelConfigBuilder.build()
 

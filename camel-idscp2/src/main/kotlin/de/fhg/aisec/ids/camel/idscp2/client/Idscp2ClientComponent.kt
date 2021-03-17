@@ -24,14 +24,16 @@ import org.apache.camel.Endpoint
 import org.apache.camel.spi.annotations.Component
 import org.apache.camel.support.DefaultComponent
 
-@Component("idscp2server")
+@Component("idscp2client")
 class Idscp2ClientComponent : DefaultComponent() {
 
     init {
         RatProverDriverRegistry.registerDriver(
-                RatProverDummy.RAT_PROVER_DUMMY_ID, ::RatProverDummy, null)
+            RatProverDummy.RAT_PROVER_DUMMY_ID, ::RatProverDummy, null
+        )
         RatVerifierDriverRegistry.registerDriver(
-                RatVerifierDummy.RAT_VERIFIER_DUMMY_ID, ::RatVerifierDummy, null)
+            RatVerifierDummy.RAT_VERIFIER_DUMMY_ID, ::RatVerifierDummy, null
+        )
     }
 
     override fun createEndpoint(uri: String, remaining: String, parameters: Map<String, Any>): Endpoint {

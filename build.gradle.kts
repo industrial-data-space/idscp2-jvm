@@ -31,7 +31,6 @@ extra.set("libraryVersions", libraryVersions)
 
 allprojects {
     group = "de.fhg.aisec.ids"
-    version = "0.2.0"
 
     repositories {
         mavenCentral()
