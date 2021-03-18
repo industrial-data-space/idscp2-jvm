@@ -183,6 +183,15 @@ class FSM(
      */
     private var peerCertificate: X509Certificate? = null
 
+    /**
+     * Remote peer dynamic attribute token
+     */
+    private var peerDat: ByteArray = "INVALID_DAT".toByteArray()
+
+    fun setPeerDat(dat: ByteArray) {
+        this.peerDat = dat
+    }
+
     private fun checkForFsmCycles() {
         // check if current thread holds already the fsm lock, then we have a circle
         // this runs into an issue: onControlMessage must be called only from other threads!
@@ -309,6 +318,9 @@ class FSM(
     override fun onRatVerifierMessage(controlMessage: InternalControlMessage) {
         processRatVerifierEvent(Event(controlMessage))
     }
+
+    override val remotePeerDat: ByteArray
+        get() = peerDat
 
     /**
      * API for RatVerifier to provide Verifier Messages to the fsm

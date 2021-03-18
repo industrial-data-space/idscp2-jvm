@@ -225,7 +225,7 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
                 } else {
                     throw DatException("DAPS response does not contain \"access_token\" or \"error\" field.")
                 }
-                verifyTokenSecurityAttributes(token.toByteArray(StandardCharsets.UTF_8), null, localPeerCertificate)
+                innerVerifyToken(token.toByteArray(StandardCharsets.UTF_8), null, localPeerCertificate)
                 token.toByteArray(StandardCharsets.UTF_8)
             } catch (e: IOException) {
                 throw DatException("Error whilst retrieving DAT", e)
@@ -252,12 +252,11 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
         if (peerCertificate == null)
             throw DatException("Missing peer certificate for fingerprint validation")
 
-        return verifyTokenSecurityAttributes(dat, securityRequirements, peerCertificate)
+        return innerVerifyToken(dat, securityRequirements, peerCertificate)
     }
 
     /**
-     * Verify a given dynamic attribute token, given the security attributes as parameter. This is used for IDSCPv1
-     * legacy implementation and for internal purpose
+     * Verify a given dynamic attribute token, given the security attributes as parameter.
      *
      * If the security requirements is not null and an instance of the SecurityRequirements class
      * the method will also check the provided security attributes of the connector that belongs
@@ -268,7 +267,7 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
      * @return The number of seconds this DAT is valid
      * @throws DatException
      */
-    fun verifyTokenSecurityAttributes(
+    private fun innerVerifyToken(
         dat: ByteArray,
         securityRequirements: SecurityRequirements?,
         certificate: X509Certificate

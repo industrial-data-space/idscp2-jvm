@@ -41,6 +41,7 @@ class RatVerifierDummy(fsmListener: RatVerifierFsmListener) : RatVerifierDriver<
     }
 
     override fun run() {
+        @Suppress("UNUSED_VARIABLE") val dat = fsmListener.remotePeerDat
         var countDown = 2
         while (running) {
             try {

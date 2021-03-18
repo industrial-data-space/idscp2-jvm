@@ -214,6 +214,7 @@ class StateWaitForDatAndRat(
                 if (LOG.isTraceEnabled) {
                     LOG.trace("Remote DAT is valid. Set dat timeout")
                 }
+                fsm.setPeerDat(dat)
                 datTimer.resetTimeout(datValidityPeriod * 1000)
 
                 // start RAT Verifier

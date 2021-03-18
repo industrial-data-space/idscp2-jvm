@@ -196,9 +196,10 @@ class StateWaitForHello(
                     return@Transition FSM.FsmResult(FSM.FsmResultCode.MISSING_DAT, fsm.getState(FsmState.STATE_CLOSED))
                 }
 
+                val remoteDat = idscpHello.dynamicAttributeToken.token.toByteArray()
                 try {
                     if (0 > dapsDriver.verifyToken(
-                            idscpHello.dynamicAttributeToken.token.toByteArray(),
+                            remoteDat,
                             fsm.remotePeerCertificate
                         ).also { datValidityPeriod = it }
                     ) {
@@ -226,6 +227,7 @@ class StateWaitForHello(
                 if (LOG.isTraceEnabled) {
                     LOG.trace("Remote DAT is valid. Set dat timeout to its validity period")
                 }
+                fsm.setPeerDat(remoteDat)
                 datTimer.resetTimeout(datValidityPeriod * 1000)
                 fsm.setRatMechanisms(proverMechanism, verifierMechanism)
 

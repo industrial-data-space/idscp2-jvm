@@ -35,4 +35,9 @@ interface RatVerifierFsmListener {
      */
     fun onRatVerifierMessage(controlMessage: InternalControlMessage)
     fun onRatVerifierMessage(controlMessage: InternalControlMessage, ratMessage: ByteArray)
+
+    /**
+     * Access the remote peer DAT from the RAT verifier
+     */
+    val remotePeerDat: ByteArray
 }
