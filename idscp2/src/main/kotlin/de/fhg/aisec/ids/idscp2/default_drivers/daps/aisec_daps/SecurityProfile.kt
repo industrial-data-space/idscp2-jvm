@@ -27,9 +27,9 @@ enum class SecurityProfile {
     TRUSTED_PLUS;
 
     companion object {
-        const val CONNECTOR_SECURITY_PROFILE_BASE = "idsc:BASE_CONNECTOR_SECURITY_PROFILE"
-        const val CONNECTOR_SECURITY_PROFILE_TRUSTED = "idsc:TRUSTED_CONNECTOR_SECURITY_PROFILE"
-        const val CONNECTOR_SECURITY_PROFILE_TRUSTED_PLUS = "idsc:TRUSTED_CONNECTOR_PLUS_SECURITY_PROFILE"
+        private const val CONNECTOR_SECURITY_PROFILE_BASE = "idsc:BASE_CONNECTOR_SECURITY_PROFILE"
+        private const val CONNECTOR_SECURITY_PROFILE_TRUSTED = "idsc:TRUSTED_CONNECTOR_SECURITY_PROFILE"
+        private const val CONNECTOR_SECURITY_PROFILE_TRUSTED_PLUS = "idsc:TRUSTED_CONNECTOR_PLUS_SECURITY_PROFILE"
 
         fun fromString(s: String): SecurityProfile {
             return when (s) {

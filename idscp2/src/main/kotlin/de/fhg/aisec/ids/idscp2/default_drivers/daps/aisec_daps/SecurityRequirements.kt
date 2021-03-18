@@ -31,6 +31,7 @@ class SecurityRequirements {
 
     class Builder {
         private val requirements = SecurityRequirements()
+
         fun setRequiredSecurityLevel(securityProfile: SecurityProfile): Builder {
             requirements.requiredSecurityLevel = securityProfile
             return this
