@@ -20,6 +20,7 @@
 package de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners
 
 import de.fhg.aisec.ids.idscp2.idscp_core.fsm.InternalControlMessage
+import java.security.cert.X509Certificate
 
 /**
  * An FSM Listener Interface for the RatVerifier driver implemented by the FSM to restrict FSM API to
@@ -40,4 +41,9 @@ interface RatVerifierFsmListener {
      * Access the remote peer DAT from the RAT verifier
      */
     val remotePeerDat: ByteArray
+
+    /**
+     * Access the remote peer transport certificate from the RAT verifier
+     */
+    val remotePeerCertificate: X509Certificate?
 }

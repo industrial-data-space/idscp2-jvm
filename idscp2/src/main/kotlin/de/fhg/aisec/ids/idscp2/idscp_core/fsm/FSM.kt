@@ -481,7 +481,7 @@ class FSM(
         this.peerCertificate = certificate
     }
 
-    val remotePeerCertificate: X509Certificate?
+    override val remotePeerCertificate: X509Certificate?
         get() = this.peerCertificate
 
     /**

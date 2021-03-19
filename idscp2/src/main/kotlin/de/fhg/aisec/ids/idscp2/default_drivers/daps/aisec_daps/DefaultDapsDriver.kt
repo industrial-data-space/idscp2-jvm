@@ -316,10 +316,19 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
             if (LOG.isDebugEnabled) {
                 LOG.debug("Validate peer certificate fingerprint against expected fingerprint from DAT")
             }
-            // TODO multiple fingerprints?
-            // get expected fingerprint from DAT
-            val datCertFingerprint = claims.getClaimValue("transportCertsSha256")
-                ?: throw DatException("DAT does not contain peer certificate fingerprints")
+
+            val datCertFingerprints: List<String> = when {
+                claims.isClaimValueStringList("transportCertsSha256") -> {
+                    claims.getStringListClaimValue("transportCertsSha256")
+                }
+                claims.isClaimValueString("transportCertsSha256") -> {
+                    val fingerprint = claims.getStringClaimValue("transportCertsSha256")
+                    listOf(fingerprint)
+                }
+                else -> {
+                    throw DatException("Missing or invalid 'transportCertsSha256' format in DAT")
+                }
+            }
 
             // calculate peer certificate SHA256 fingerprint
             val peerCertFingerprint: String
@@ -332,8 +341,9 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
                 throw DatException("Cannot calculate peer certificate fingerprint", e)
             }
 
-            if (peerCertFingerprint != datCertFingerprint) {
-                throw DatException("Fingerprint of peer certificate does not match the expected fingerprint from DAT")
+            // check if peer cert fingerprint is a valid fingerprint from the DAT
+            if (!datCertFingerprints.contains(peerCertFingerprint)) {
+                throw DatException("Fingerprint of peer certificate does not match an expected fingerprint from DAT")
             }
         }
 
