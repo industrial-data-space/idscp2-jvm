@@ -27,6 +27,9 @@ jobs:
       - uses: actions/setup-java@v1
         with:
           java-version: 11
+      - uses: arduino/setup-protoc@v1
+        with:
+          version: '3.x'
       - name: Build
         run: |
           if [ "$SONAR_TOKEN" != "" ]
