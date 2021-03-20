@@ -184,6 +184,11 @@ class FSM(
     private var peerCertificate: X509Certificate? = null
 
     /**
+     * Local peer dynamic attribute token
+     */
+    var localDat: ByteArray = "INVALID_DAT".toByteArray()
+
+    /**
      * Remote peer dynamic attribute token
      */
     private var peerDat: ByteArray = "INVALID_DAT".toByteArray()
@@ -504,12 +509,15 @@ class FSM(
     }
 
     /**
-     * Get Dat
+     * Get local Dat
      */
     val getDynamicAttributeToken: ByteArray
         get() {
             return try {
-                dapsDriver.token
+                // get token from DAPS driver, update inner connection token and return
+                val token = dapsDriver.token
+                localDat = token
+                token
             } catch (e: Exception) {
                 LOG.error("Exception occurred during requesting DAT from DAPS:", e)
                 "INVALID_DAT".toByteArray(StandardCharsets.UTF_8)

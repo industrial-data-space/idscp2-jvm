@@ -27,7 +27,7 @@ import java.nio.file.Paths
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
-class DefaultDapsDriverConfig {
+class AisecDapsDriverConfig {
     var dapsUrl = "https://daps.aisec.fraunhofer.de"
         private set
     var keyStorePath: Path = Paths.get("DUMMY-FILENAME.p12")
@@ -43,9 +43,11 @@ class DefaultDapsDriverConfig {
     var trustStorePassword: CharArray = "password".toCharArray()
         private set
     var securityRequirements: SecurityRequirements? = null
+        private set
+    var dapsTokenRenewalThreshold: Float = DEFAULT_TOKEN_RENEWAL_THRESHOLD
 
     class Builder {
-        private val config = DefaultDapsDriverConfig()
+        private val config = AisecDapsDriverConfig()
         fun setDapsUrl(dapsUrl: String): Builder {
             config.dapsUrl = dapsUrl
             return this
@@ -86,8 +88,19 @@ class DefaultDapsDriverConfig {
             return this
         }
 
-        fun build(): DefaultDapsDriverConfig {
+        fun setTokenRenewalThreshold(threshold: Float): Builder {
+            if (0 < threshold && 1 >= threshold) {
+                config.dapsTokenRenewalThreshold = threshold
+            }
+            return this
+        }
+
+        fun build(): AisecDapsDriverConfig {
             return config
         }
+    }
+
+    companion object {
+        const val DEFAULT_TOKEN_RENEWAL_THRESHOLD: Float = 0.666F
     }
 }

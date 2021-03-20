@@ -53,6 +53,7 @@ import java.time.Instant
 import java.util.Date
 import java.util.HashMap
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.ReentrantLock
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocketFactory
 import javax.net.ssl.X509ExtendedTrustManager
@@ -63,7 +64,7 @@ import javax.net.ssl.X509ExtendedTrustManager
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  * @author Gerd Brost (gerd.brost@aisec.fraunhofer.de)
  */
-class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
+class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
     private var sslSocketFactory: SSLSocketFactory
     private var securityRequirements: SecurityRequirements? = config.securityRequirements
     private val trustManager: X509ExtendedTrustManager
@@ -89,6 +90,22 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
 
     // requires hexLookup to be existent
     private val connectorUUID: String = createConnectorUUID(localPeerCertificate)
+
+    /**
+     * The token, that will be issued until the renewalTime is over. This mechanism reduces the number
+     * of DAPS requests which might be problematic for higher scaling peers.
+     * When a connection is requesting a token when the renewalTime is over then the currentToken
+     * will be overwritten by a new requested DAT from the DAPS. The new renewalTime is calculated by
+     * the renewalThreshold:
+     *
+     * renewalTime = now + tokenValidityTime (in seconds) * renewalThreshold
+     *
+     * The threshold must be in (0;1]
+     */
+    private var currentToken: ByteArray = "INVALID_TOKEN".toByteArray()
+    private var renewalTime: NumericDate = NumericDate.now()
+    private val renewalThreshold = config.dapsTokenRenewalThreshold
+    private val renewalLock = ReentrantLock(true)
 
     init {
         // create ssl socket factory for secure
@@ -139,14 +156,19 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
         return skiResult + "keyid:" + akiResult.substring(0, akiResult.length - 1)
     }
 
-    /**
-     * Receive the signed and valid dynamic attribute token from the DAPS
-     *
-     * @throws DatException
-     */
-    override val token: ByteArray
-        get() {
-            val token: String
+    private fun syncGetToken(): ByteArray {
+        try {
+            renewalLock.lock()
+
+            if (NumericDate.now().isBefore(renewalTime)) {
+                // the current token is still valid
+                if (LOG.isDebugEnabled) {
+                    LOG.debug("Issue cached DAT: {}", currentToken.toString(StandardCharsets.UTF_8))
+                }
+                return currentToken
+            }
+
+            // request a new token from the DAPS
             LOG.info("Retrieving Dynamic Attribute Token from Daps ...")
 
             if (LOG.isDebugEnabled) {
@@ -180,57 +202,73 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
                 .add("client_assertion", jwt)
                 .add("scope", "idsc:IDS_CONNECTOR_ATTRIBUTES_ALL")
                 .build()
+
             val client = OkHttpClient.Builder()
                 .sslSocketFactory(sslSocketFactory, trustManager)
                 .connectTimeout(15, TimeUnit.SECONDS)
                 .writeTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(15, TimeUnit.SECONDS)
                 .build()
+
             val request = Request.Builder()
                 .url("$dapsUrl/v2/token")
                 .post(formBody)
                 .build()
-            return try {
-                // get http response from DAPS
-                val response = client.newCall(request).execute()
 
-                // check for valid response
-                if (!response.isSuccessful) {
-                    LOG.error(
-                        "Failed to request token issued with parameters: Issuer: {}, Subject: {}, " +
-                            "Expiration: {}, IssuedAt: {}, NotBefore: {}, Audience: {}",
-                        connectorUUID,
-                        connectorUUID,
-                        expiration,
-                        issuedAt,
-                        notBefore,
-                        TARGET_AUDIENCE
-                    )
-                    throw DatException("Received non-200 http response: " + response.code)
-                }
-                if (LOG.isDebugEnabled) {
-                    LOG.debug("Acquired DAT from {}/v2/token", dapsUrl)
-                }
-                val json = JSONObject(
-                    response.body?.string()
-                        ?: throw DatException("Received empty DAPS response")
+            // get http response from DAPS
+            val response = client.newCall(request).execute()
+
+            // check for valid response
+            if (!response.isSuccessful) {
+                LOG.error(
+                    "Failed to request token issued with parameters: Issuer: {}, Subject: {}, " +
+                        "Expiration: {}, IssuedAt: {}, NotBefore: {}, Audience: {}",
+                    connectorUUID,
+                    connectorUUID,
+                    expiration,
+                    issuedAt,
+                    notBefore,
+                    TARGET_AUDIENCE
                 )
-                if (json.has("access_token")) {
-                    token = json.getString("access_token")
-                    if (LOG.isDebugEnabled) {
-                        LOG.debug("Received DAT from DAPS: {}", token)
-                    }
-                } else if (json.has("error")) {
-                    throw DatException("DAPS reported error: " + json.getString("error"))
-                } else {
-                    throw DatException("DAPS response does not contain \"access_token\" or \"error\" field.")
-                }
-                innerVerifyToken(token.toByteArray(StandardCharsets.UTF_8), null, localPeerCertificate)
-                token.toByteArray(StandardCharsets.UTF_8)
-            } catch (e: IOException) {
-                throw DatException("Error whilst retrieving DAT", e)
+                throw DatException("Received non-200 http response: " + response.code)
             }
+
+            if (LOG.isDebugEnabled) {
+                LOG.debug("Acquired DAT from {}/v2/token", dapsUrl)
+            }
+            val json = JSONObject(
+                response.body?.string()
+                    ?: throw DatException("Received empty DAPS response")
+            )
+
+            val token: String
+            if (json.has("access_token")) {
+                token = json.getString("access_token")
+                if (LOG.isDebugEnabled) {
+                    LOG.debug("Received DAT from DAPS: {}", token)
+                }
+            } else if (json.has("error")) {
+                throw DatException("DAPS reported error: " + json.getString("error"))
+            } else {
+                throw DatException("DAPS response does not contain \"access_token\" or \"error\" field.")
+            }
+
+            innerVerifyToken(token.toByteArray(StandardCharsets.UTF_8), null, localPeerCertificate, true)
+            return token.toByteArray(StandardCharsets.UTF_8)
+        } catch (e: IOException) {
+            throw DatException("Error whilst retrieving DAT", e)
+        } finally {
+            renewalLock.unlock()
         }
+    }
+
+    /**
+     * Receive the signed and valid dynamic attribute token from the DAPS
+     *
+     * @throws DatException
+     */
+    override val token: ByteArray
+        get() = syncGetToken()
 
     /**
      * Update the security requirements of the DAPS (This might be caused by changes in the connector configuration)
@@ -252,7 +290,7 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
         if (peerCertificate == null)
             throw DatException("Missing peer certificate for fingerprint validation")
 
-        return innerVerifyToken(dat, securityRequirements, peerCertificate)
+        return innerVerifyToken(dat, securityRequirements, peerCertificate, false)
     }
 
     /**
@@ -270,7 +308,8 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
     private fun innerVerifyToken(
         dat: ByteArray,
         securityRequirements: SecurityRequirements?,
-        certificate: X509Certificate
+        certificate: X509Certificate,
+        setCurrentToken: Boolean
     ): Long {
         if (LOG.isDebugEnabled) {
             LOG.debug("Verifying dynamic attribute token...")
@@ -309,6 +348,13 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
             validityTime = expTime.value - NumericDate.now().value
         } catch (e: Exception) {
             throw DatException("Error during claims processing", e)
+        }
+
+        if (setCurrentToken) {
+            // overwrite current local token in daps driver instance
+            currentToken = dat
+            renewalTime = NumericDate.now()
+            renewalTime.addSeconds(validityTime.times(renewalThreshold).toLong())
         }
 
         // in case of validating remote DAT check the expected fingerprint from the DAT against the peers cert fingerprint
@@ -403,7 +449,7 @@ class DefaultDapsDriver(config: DefaultDapsDriverConfig) : DapsDriver {
     }
 
     companion object {
-        private val LOG = LoggerFactory.getLogger(DefaultDapsDriver::class.java)
+        private val LOG = LoggerFactory.getLogger(AisecDapsDriver::class.java)
         private const val TARGET_AUDIENCE = "idsc:IDS_CONNECTORS_ALL"
     }
 }

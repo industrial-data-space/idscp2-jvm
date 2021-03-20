@@ -65,12 +65,12 @@ class Idscp2ClientInitiator {
             })
             connection.addMessageListener { c: Idscp2Connection, data: ByteArray ->
                 LOG.info("Received ping message: " + String(data, StandardCharsets.UTF_8))
-
                 c.close()
             }
             connection.unlockMessaging()
             LOG.info("Send PING ...")
             connection.nonBlockingSend("PING".toByteArray(StandardCharsets.UTF_8))
+            LOG.info("Local DAT: " + String(connection.localDynamicAttributeToken, StandardCharsets.UTF_8))
         }.exceptionally { t: Throwable? ->
             LOG.error("Client endpoint error occurred", t)
             null

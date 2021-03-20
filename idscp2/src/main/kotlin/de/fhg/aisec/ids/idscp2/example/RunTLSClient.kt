@@ -19,8 +19,8 @@
  */
 package de.fhg.aisec.ids.idscp2.example
 
-import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.DefaultDapsDriver
-import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.DefaultDapsDriverConfig
+import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.AisecDapsDriver
+import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.AisecDapsDriverConfig
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.SecurityProfile
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.SecurityRequirements
 import de.fhg.aisec.ids.idscp2.default_drivers.rat.dummy.RatProverDummy
@@ -60,8 +60,8 @@ object RunTLSClient {
             .setRequiredSecurityLevel(SecurityProfile.TRUSTED)
             .build()
 
-        val dapsDriver = DefaultDapsDriver(
-            DefaultDapsDriverConfig.Builder()
+        val dapsDriver = AisecDapsDriver(
+            AisecDapsDriverConfig.Builder()
                 .setKeyStorePath(keyStorePath)
                 .setTrustStorePath(trustStorePath)
                 .setDapsUrl("https://daps.aisec.fraunhofer.de")

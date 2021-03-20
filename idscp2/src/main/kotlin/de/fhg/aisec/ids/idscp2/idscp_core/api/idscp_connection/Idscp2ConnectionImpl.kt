@@ -209,6 +209,9 @@ class Idscp2ConnectionImpl(
     override val isClosed: Boolean
         get() = fsm.isFsmLocked
 
+    override val localDynamicAttributeToken: ByteArray
+        get() = fsm.localDat
+
     override fun addConnectionListener(listener: Idscp2ConnectionListener) {
         connectionListeners.add(listener)
     }

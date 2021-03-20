@@ -84,6 +84,11 @@ interface Idscp2Connection {
      */
     val isClosed: Boolean
 
+    /**
+     * Access the local dynamic attribute token
+     */
+    val localDynamicAttributeToken: ByteArray
+
     fun addConnectionListener(listener: Idscp2ConnectionListener)
 
     fun removeConnectionListener(listener: Idscp2ConnectionListener): Boolean
