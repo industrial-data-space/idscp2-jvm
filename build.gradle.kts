@@ -153,8 +153,8 @@ subprojects {
                 )
 
                 credentials {
-                    username = project.findProperty("deployUsername") as String
-                    password = project.findProperty("deployPassword") as String
+                    username = project.findProperty("deployUsername") as? String
+                    password = project.findProperty("deployPassword") as? String
                 }
             }
         }
