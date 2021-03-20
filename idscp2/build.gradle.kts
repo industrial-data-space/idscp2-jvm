@@ -46,6 +46,7 @@ dependencies {
     api("org.bitbucket.b_c", "jose4j", libraryVersions["jose4j"])
     api("com.squareup.okhttp3", "okhttp", libraryVersions["okhttp"])
 
+    testImplementation("org.awaitility", "awaitility-kotlin", libraryVersions["awaitility"])
     testImplementation("junit", "junit", libraryVersions["junit4"])
     testImplementation("org.mockito", "mockito-core", libraryVersions["mockito"])
 }

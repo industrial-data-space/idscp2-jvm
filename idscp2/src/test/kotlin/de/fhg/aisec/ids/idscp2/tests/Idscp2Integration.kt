@@ -38,6 +38,7 @@ import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RatProverFsmListener
 import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RatVerifierFsmListener
 import de.fhg.aisec.ids.idscp2.idscp_core.rat_registry.RatProverDriverRegistry
 import de.fhg.aisec.ids.idscp2.idscp_core.rat_registry.RatVerifierDriverRegistry
+import org.awaitility.Awaitility.await
 import org.junit.After
 import org.junit.Assert
 import org.junit.Test
@@ -251,7 +252,7 @@ class Idscp2Integration {
             .setServerPort(5678)
             .setKeyStorePath(keyStorePath)
             .setTrustStorePath(trustStorePath)
-            .setServerSocketTimeout(1000)
+            .setServerSocketTimeout(300)
             .build()
     }
 
@@ -308,9 +309,7 @@ class Idscp2Integration {
             serverTlsConfig,
         )
         idscpServer = serverFactory.listen()
-        while (!idscpServer.isRunning) {
-            Thread.sleep(50)
-        }
+        await().until { idscpServer.isRunning }
 
         // connect
         val secureChannelDriverClient = NativeTLSDriver<Idscp2Connection>()
@@ -333,9 +332,7 @@ class Idscp2Integration {
 
         // wait until connections are closed
         closeLatch.await()
-        while (!clientConnection?.isClosed!! || idscpServer.allConnections.isNotEmpty() || !serverConnection?.isClosed!!) {
-            Thread.sleep(50)
-        }
+        await().until { clientConnection?.isClosed!! && idscpServer.allConnections.isEmpty() && serverConnection?.isClosed!! }
     }
 
     /**
@@ -383,9 +380,7 @@ class Idscp2Integration {
             serverTlsConfig,
         )
         idscpServer = serverFactory.listen()
-        while (!idscpServer.isRunning) {
-            Thread.sleep(50)
-        }
+        await().until { idscpServer.isRunning }
 
         // connect
         val secureChannelDriverClient = NativeTLSDriver<Idscp2Connection>()
@@ -418,21 +413,15 @@ class Idscp2Integration {
         val clientConnection = cc!!
 
         // wait until connected
-        while (!clientConnection.isConnected || !serverConnection.isConnected) {
-            Thread.sleep(50)
-        }
+        await().until { clientConnection.isConnected && serverConnection.isConnected }
 
         if (reRatOrDat) {
 
             // ensure re-attestation takes place
-            while (clientConnection.isConnected || serverConnection.isConnected) {
-                Thread.sleep(50)
-            }
+            await().until { !clientConnection.isConnected && !serverConnection.isConnected }
 
             // wait until re-attestation was successful
-            while (!clientConnection.isConnected || !serverConnection.isConnected) {
-                Thread.sleep(50)
-            }
+            await().until { clientConnection.isConnected && serverConnection.isConnected }
         } else {
 
             // send two message from the client to the server via blocking send
@@ -444,9 +433,7 @@ class Idscp2Integration {
             assert(!clientConnection.isConnected)
 
             // wait until repeat RAT is done
-            while (!clientConnection.isConnected || !serverConnection.isConnected) {
-                Thread.sleep(50)
-            }
+            await().until { clientConnection.isConnected && serverConnection.isConnected }
 
             // send from server to client
             serverConnection.blockingSend("THREE".toByteArray(StandardCharsets.UTF_8), 2000, 100)
@@ -456,9 +443,7 @@ class Idscp2Integration {
             assert(!serverConnection.isConnected)
 
             // wait until repeat RAT is done
-            while (!clientConnection.isConnected || !serverConnection.isConnected) {
-                Thread.sleep(50)
-            }
+            await().until { clientConnection.isConnected && serverConnection.isConnected }
 
             // send one message from client and one from server
             clientConnection.blockingSend("FOUR".toByteArray(StandardCharsets.UTF_8), 2000, 100)
@@ -471,9 +456,7 @@ class Idscp2Integration {
 
         // close from client
         clientConnection.close()
-        while (!clientConnection.isClosed || idscpServer.allConnections.isNotEmpty() || !serverConnection.isClosed) {
-            Thread.sleep(50)
-        }
+        await().until { clientConnection.isClosed && serverConnection.isClosed && idscpServer.allConnections.isEmpty() }
     }
 
     /**
