@@ -43,7 +43,7 @@ import javax.net.ssl.SSLSocket
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
 class TLSServer<CC : Idscp2Connection>(
-    nativeTlsConfiguration: NativeTlsConfiguration,
+    private val nativeTlsConfiguration: NativeTlsConfiguration,
     private val secureChannelInitListener: SecureChannelInitListener<CC>,
     private val serverListenerPromise: CompletableFuture<ServerConnectionListener<CC>>
 ) :
@@ -74,7 +74,10 @@ class TLSServer<CC : Idscp2Connection>(
                     if (LOG.isTraceEnabled) {
                         LOG.trace("New TLS client has connected. Creating new server thread...")
                     }
-                    val serverThread = TLSServerThread(sslSocket, secureChannelInitListener, serverListenerPromise)
+                    val serverThread = TLSServerThread(
+                        sslSocket, secureChannelInitListener, serverListenerPromise,
+                        nativeTlsConfiguration
+                    )
                     sslSocket.addHandshakeCompletedListener(serverThread)
                     serverThread.start()
                 } catch (serverThreadException: Exception) {

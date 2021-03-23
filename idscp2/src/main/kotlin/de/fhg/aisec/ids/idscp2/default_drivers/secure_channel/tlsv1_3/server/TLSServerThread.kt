@@ -19,6 +19,7 @@
  */
 package de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.server
 
+import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.TLSSessionVerificationHelper
 import de.fhg.aisec.ids.idscp2.idscp_core.FastLatch
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2Connection
@@ -53,7 +54,8 @@ import javax.net.ssl.SSLSocket
 class TLSServerThread<CC : Idscp2Connection> internal constructor(
     private val sslSocket: SSLSocket,
     private val configCallback: SecureChannelInitListener<CC>,
-    private val serverListenerPromise: CompletableFuture<ServerConnectionListener<CC>>
+    private val serverListenerPromise: CompletableFuture<ServerConnectionListener<CC>>,
+    private val nativeTlsConfiguration: NativeTlsConfiguration
 ) :
     Thread(), HandshakeCompletedListener, SecureChannelEndpoint, Closeable {
     @Volatile
@@ -168,7 +170,10 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
 
         // verify tls session on application layer: hostname verification, certificate validity
         try {
-            TLSSessionVerificationHelper.verifyTlsSession(sslSession.peerHost, sslSession.peerPort, peerCert)
+            TLSSessionVerificationHelper.verifyTlsSession(
+                sslSession.peerHost, sslSession.peerPort, peerCert,
+                nativeTlsConfiguration.hostnameVerificationEnabled
+            )
             if (LOG.isTraceEnabled) {
                 LOG.trace("TLS session is valid")
             }

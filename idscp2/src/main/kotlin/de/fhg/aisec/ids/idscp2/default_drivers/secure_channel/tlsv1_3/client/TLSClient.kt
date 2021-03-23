@@ -54,7 +54,7 @@ import javax.net.ssl.SSLSocket
 class TLSClient<CC : Idscp2Connection>(
     private val connectionFactory: (SecureChannel, Idscp2Configuration) -> CC,
     private val clientConfiguration: Idscp2Configuration,
-    nativeTlsConfiguration: NativeTlsConfiguration,
+    private val nativeTlsConfiguration: NativeTlsConfiguration,
     private val connectionFuture: CompletableFuture<CC>
 ) : HandshakeCompletedListener, DataAvailableListener, SecureChannelEndpoint {
     private val clientSocket: Socket
@@ -176,7 +176,10 @@ class TLSClient<CC : Idscp2Connection>(
             }
             val peerCert = certificates[0] as X509Certificate
 
-            TLSSessionVerificationHelper.verifyTlsSession(sslSession.peerHost, sslSession.peerPort, peerCert)
+            TLSSessionVerificationHelper.verifyTlsSession(
+                sslSession.peerHost, sslSession.peerPort, peerCert,
+                nativeTlsConfiguration.hostnameVerificationEnabled
+            )
             if (LOG.isTraceEnabled) {
                 LOG.trace("TLS session is valid")
             }

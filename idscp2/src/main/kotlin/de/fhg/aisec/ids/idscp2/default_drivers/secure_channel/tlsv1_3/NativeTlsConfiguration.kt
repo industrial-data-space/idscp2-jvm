@@ -47,6 +47,9 @@ class NativeTlsConfiguration {
     var keyStoreKeyType = "RSA"
         private set
     var serverSocketTimeout: Int = DEFAULT_SERVER_SOCKET_TIMEOUT
+        private set
+    var hostnameVerificationEnabled = true
+        private set
 
     class Builder {
         private val config = NativeTlsConfiguration()
@@ -100,6 +103,11 @@ class NativeTlsConfiguration {
             return this
         }
 
+        fun dangerDisableHostnameVerification(): Builder {
+            config.hostnameVerificationEnabled = false
+            return this
+        }
+
         fun build(): NativeTlsConfiguration {
             return config
         }
@@ -121,6 +129,7 @@ class NativeTlsConfiguration {
         if (certificateAlias != other.certificateAlias) return false
         if (keyStoreKeyType != other.keyStoreKeyType) return false
         if (serverSocketTimeout != other.serverSocketTimeout) return false
+        if (hostnameVerificationEnabled != other.hostnameVerificationEnabled) return false
 
         return true
     }
@@ -136,6 +145,7 @@ class NativeTlsConfiguration {
         result = 31 * result + certificateAlias.hashCode()
         result = 31 * result + keyStoreKeyType.hashCode()
         result = 31 * result + serverSocketTimeout.hashCode()
+        result = 31 * result + hostnameVerificationEnabled.hashCode()
         return result
     }
 
@@ -144,7 +154,8 @@ class NativeTlsConfiguration {
             "trustStorePassword=${trustStorePassword.contentToString()}, " +
             "keyStorePath=$keyStorePath, keyStorePassword=${keyStorePassword.contentToString()}, " +
             "certificateAlias='$certificateAlias', " +
-            "keyStoreKeyType='$keyStoreKeyType', " + "serverSocketTimeout='$serverSocketTimeout'"
+            "keyStoreKeyType='$keyStoreKeyType', " + "serverSocketTimeout='$serverSocketTimeout', " +
+            "hostnameVerificationEnabled='$hostnameVerificationEnabled'"
     }
 
     companion object {

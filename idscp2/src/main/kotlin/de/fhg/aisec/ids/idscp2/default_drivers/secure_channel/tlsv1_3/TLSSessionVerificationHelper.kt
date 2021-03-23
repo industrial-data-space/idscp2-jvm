@@ -55,11 +55,17 @@ object TLSSessionVerificationHelper {
      * Throws SSlPeerUnverifiedException if peer certificate is not secure for this peer
      */
     @Throws(SSLPeerUnverifiedException::class)
-    fun verifyTlsSession(host: String, port: Int, peerCert: X509Certificate) {
+    fun verifyTlsSession(host: String, port: Int, peerCert: X509Certificate, hostnameVerificationEnabled: Boolean) {
         if (LOG.isTraceEnabled) {
             LOG.trace("Connected to {}:{}", host, port)
         }
         try {
+
+            /*
+             * Hostname verification is always enabled per default but the user can disable it using an as
+             * danger marked function of the native tls configuration (e.g. for testing purposes)
+             */
+            if (hostnameVerificationEnabled) {
 
             /*
              * According to RFC6125, hostname verification should be done against the certificate's
@@ -67,53 +73,70 @@ object TLSSessionVerificationHelper {
              * implementations, the check is done against the certificate's commonName, but this is
              * deprecated for quite a while and is therefore not supported anymore in the IDSCP2 protocol.
              */
-            val sans = peerCert.subjectAlternativeNames
-                ?: throw SSLPeerUnverifiedException(
-                    "No Subject alternative names for hostname " +
-                        "verification provided"
-                )
-            val acceptedDnsNames = ArrayList<String>()
-            val acceptedIpAddresses = ArrayList<String>()
-            for (subjectAltName in sans) {
-                if (subjectAltName.size != 2) {
-                    continue
-                }
-                val value = subjectAltName[1]
-                when (subjectAltName[0] as Int?) {
-                    2 -> if (value is String) {
-                        acceptedDnsNames.add(value)
-                    } else if (value is ByteArray) {
-                        acceptedDnsNames.add(String(value))
+                val sans = peerCert.subjectAlternativeNames
+                    ?: throw SSLPeerUnverifiedException(
+                        "No Subject alternative names for hostname " +
+                            "verification provided"
+                    )
+                val acceptedDnsNames = ArrayList<String>()
+                val acceptedIpAddresses = ArrayList<String>()
+                for (subjectAltName in sans) {
+                    if (subjectAltName.size != 2) {
+                        continue
                     }
-                    7 -> if (value is String) {
-                        acceptedIpAddresses.add(value)
-                    } else if (value is ByteArray) {
-                        acceptedIpAddresses.add(String(value))
-                    }
-                    else -> {
-                        if (LOG.isTraceEnabled) {
-                            LOG.trace("Unhandled SAN type \"{}\" with value \"{}\"", subjectAltName[0], value)
+                    val value = subjectAltName[1]
+                    when (subjectAltName[0] as Int?) {
+                        2 -> if (value is String) {
+                            acceptedDnsNames.add(value)
+                        } else if (value is ByteArray) {
+                            acceptedDnsNames.add(String(value))
+                        }
+                        7 -> if (value is String) {
+                            acceptedIpAddresses.add(value)
+                        } else if (value is ByteArray) {
+                            acceptedIpAddresses.add(String(value))
+                        }
+                        else -> {
+                            if (LOG.isTraceEnabled) {
+                                LOG.trace("Unhandled SAN type \"{}\" with value \"{}\"", subjectAltName[0], value)
+                            }
                         }
                     }
                 }
-            }
 
-            if (isIpAddress(host)) {
-                // First, check IP addresses directly given by type-7-SANs
-                if (!acceptedIpAddresses.contains(host)) {
-                    // Check IP addresses using DNS resolving
-                    // This check is *weak* and should be accompanied by DAT fingerprint checking later on
-                    val resolvedIps = acceptedDnsNames.flatMap {
-                        try {
-                            InetAddress.getAllByName(it).toList()
-                        } catch (e: Throwable) {
-                            emptyList()
+                if (isIpAddress(host)) {
+                    // First, check IP addresses directly given by type-7-SANs
+                    if (!acceptedIpAddresses.contains(host)) {
+                        // Check IP addresses using DNS resolving
+                        // This check is *weak* and should be accompanied by DAT fingerprint checking later on
+                        val resolvedIps = acceptedDnsNames.flatMap {
+                            try {
+                                InetAddress.getAllByName(it).toList()
+                            } catch (e: Throwable) {
+                                emptyList()
+                            }
+                        }.map { it.hostAddress }
+                        if (LOG.isTraceEnabled) {
+                            LOG.trace("Resolved IPs: {}", resolvedIps.toSet().joinToString())
                         }
-                    }.map { it.hostAddress }
-                    if (LOG.isTraceEnabled) {
-                        LOG.trace("Resolved IPs: {}", resolvedIps.toSet().joinToString())
+                        if (!resolvedIps.contains(host)) {
+                            throw SSLPeerUnverifiedException(
+                                "Hostname verification failed. Peer certificate does " +
+                                    "not belong to peer host"
+                            )
+                        }
                     }
-                    if (!resolvedIps.contains(host)) {
+                } else {
+                    // Check hostname
+                    val hostLabels = host.split(".")
+                    var found = false
+                    for (entry in acceptedDnsNames) {
+                        if (checkHostname(entry.trimEnd('.').split("."), hostLabels)) {
+                            found = true
+                            break
+                        }
+                    }
+                    if (!found) {
                         throw SSLPeerUnverifiedException(
                             "Hostname verification failed. Peer certificate does " +
                                 "not belong to peer host"
@@ -121,21 +144,7 @@ object TLSSessionVerificationHelper {
                     }
                 }
             } else {
-                // Check hostname
-                val hostLabels = host.split(".")
-                var found = false
-                for (entry in acceptedDnsNames) {
-                    if (checkHostname(entry.trimEnd('.').split("."), hostLabels)) {
-                        found = true
-                        break
-                    }
-                }
-                if (!found) {
-                    throw SSLPeerUnverifiedException(
-                        "Hostname verification failed. Peer certificate does " +
-                            "not belong to peer host"
-                    )
-                }
+                LOG.warn("DANGER: TLS Hostname Verification is disabled.")
             }
 
             // check certificate validity for now and at least one day
