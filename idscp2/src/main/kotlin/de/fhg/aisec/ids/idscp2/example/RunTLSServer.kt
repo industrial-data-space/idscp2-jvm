@@ -65,7 +65,7 @@ object RunTLSServer {
             AisecDapsDriverConfig.Builder()
                 .setKeyStorePath(keyStorePath)
                 .setTrustStorePath(trustStorePath)
-                .setDapsUrl("https://daps.aisec.fraunhofer.de")
+                .setDapsUrl("https://daps-dev.aisec.fraunhofer.de")
                 .setSecurityRequirements(securityRequirements)
                 .build()
         )

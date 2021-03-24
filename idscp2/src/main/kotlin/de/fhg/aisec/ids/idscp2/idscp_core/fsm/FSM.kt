@@ -20,7 +20,6 @@
 package de.fhg.aisec.ids.idscp2.idscp_core.fsm
 
 import com.google.protobuf.InvalidProtocolBufferException
-import de.fhg.aisec.ids.idscp2.idscp_core.FastLatch
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.AttestationConfig
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2Connection
 import de.fhg.aisec.ids.idscp2.idscp_core.drivers.DapsDriver
@@ -43,6 +42,7 @@ import org.slf4j.LoggerFactory
 import java.nio.charset.StandardCharsets
 import java.security.cert.X509Certificate
 import java.util.HashMap
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.locks.ReentrantLock
 
 /**
@@ -57,15 +57,13 @@ import java.util.concurrent.locks.ReentrantLock
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
 class FSM(
-    connection: Idscp2Connection,
-    secureChannel: SecureChannel,
-    /**
-     * Daps Driver instance
-     */
+    private val secureChannel: SecureChannel,
     private val dapsDriver: DapsDriver,
     attestationConfig: AttestationConfig,
     ackTimeoutDelay: Long,
-    handshakeTimeoutDelay: Long
+    handshakeTimeoutDelay: Long,
+    private val connectionId: String,
+    private val connection: CompletableFuture<Idscp2Connection>
 ) : RatProverFsmListener, RatVerifierFsmListener, ScFsmListener {
     /*  -----------   IDSCP2 Protocol States   ---------- */
     private val states = HashMap<FsmState, State>()
@@ -104,8 +102,6 @@ class FSM(
     private var currentState: State
 
     /*  ----------------   end of states   --------------- */
-    private val connection: Idscp2Connection
-    private val secureChannel: SecureChannel
     var ratProverDriver: RatProverDriver<*>? = null
         private set
     var ratVerifierDriver: RatVerifierDriver<*>? = null
@@ -145,7 +141,6 @@ class FSM(
      */
     private val idscpHandshakeLock = fsmIsBusy.newCondition()
     private var handshakeResultAvailable = false
-    private val idscpHandshakeCompletedLatch = FastLatch()
 
     /**
      * Check if FSM is closed forever
@@ -459,7 +454,7 @@ class FSM(
 
         // run in async fire-and-forget coroutine to avoid cycles cause by protocol misuse
         if (!isFsmLocked) {
-            GlobalScope.launch {
+            connection.thenAcceptAsync { connection: Idscp2Connection ->
                 connection.onError(t)
             }
         }
@@ -493,8 +488,6 @@ class FSM(
      * Send idscp message from the User via the secure channel
      */
     fun send(msg: ByteArray?): FsmResultCode {
-        // Send messages from user only when idscp connection is established
-        idscpHandshakeCompletedLatch.await()
         val idscpMessage = Idscp2MessageHelper.createIdscpDataMessage(msg)
         return onUpperEvent(Event(InternalControlMessage.SEND_DATA, idscpMessage))
     }
@@ -503,8 +496,6 @@ class FSM(
      * Repeat RAT Verification if remote peer, triggered by User
      */
     fun repeatRat(): FsmResultCode {
-        // repeat rat only when idscp connection is established
-        idscpHandshakeCompletedLatch.await()
         return onUpperEvent(Event(InternalControlMessage.REPEAT_RAT))
     }
 
@@ -539,7 +530,6 @@ class FSM(
         try {
             handshakeResultAvailable = true
             idscpHandshakeLock.signal()
-            idscpHandshakeCompletedLatch.unlock()
         } finally {
             fsmIsBusy.unlock()
         }
@@ -716,8 +706,8 @@ class FSM(
     fun shutdownFsm() {
 
         if (LOG.isTraceEnabled) {
-            LOG.trace("Shutting down FSM of connection {}...", connection.id)
-            LOG.trace("Running close handlers of connection {}...", connection.id)
+            LOG.trace("Shutting down FSM of connection {}...", connectionId)
+            LOG.trace("Running close handlers of connection {}...", connectionId)
         }
 
         if (LOG.isTraceEnabled) {
@@ -727,13 +717,8 @@ class FSM(
 
         // run in async fire-and-forget coroutine to avoid cycles caused by protocol misuse
         GlobalScope.launch {
-            connection.onClose()
-        }
-
-        // run in async fire-and-forget coroutine to avoid cycles caused by protocol misuse
-        GlobalScope.launch {
             if (LOG.isTraceEnabled) {
-                LOG.trace("Closing secure channel of connection {}...", connection.id)
+                LOG.trace("Closing secure channel of connection {}...", connectionId)
             }
             secureChannel.close()
         }
@@ -760,14 +745,19 @@ class FSM(
             }
             notifyHandshakeCompleteLock()
         }
+
+        // run in async to avoid cycles caused by protocol misuse
+        connection.thenAcceptAsync { connection: Idscp2Connection ->
+            connection.onClose()
+        }
     }
 
     /**
      * Provide IDSCP2 message to the message listener
      */
     private fun notifyIdscpMsgListener(data: ByteArray) {
-        // run in async fire-and-forget coroutine to avoid cycles caused by protocol misuse
-        GlobalScope.launch {
+        // run in async to avoid cycles caused by protocol misuse
+        connection.thenAcceptAsync { connection: Idscp2Connection ->
             connection.onMessage(data)
 
             if (LOG.isTraceEnabled) {
@@ -782,9 +772,6 @@ class FSM(
     fun getState(state: FsmState): State {
         return states[state] ?: throw NoSuchElementException("State unknown")
     }
-
-    val isNotClosed: Boolean
-        get() = currentState == getState(FsmState.STATE_CLOSED)
 
     fun setRatMechanisms(proverMechanism: String, verifierMechanism: String) {
         this.proverMechanism = proverMechanism
@@ -931,8 +918,6 @@ class FSM(
         )
 
         // Set initial state
-        currentState = states[FsmState.STATE_CLOSED] ?: throw NoSuchElementException("State unknown")
-        this.connection = connection
-        this.secureChannel = secureChannel
+        currentState = states[FsmState.STATE_CLOSED]!!
     }
 }

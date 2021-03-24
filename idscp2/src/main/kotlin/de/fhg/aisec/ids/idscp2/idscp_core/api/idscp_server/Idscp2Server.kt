@@ -19,7 +19,9 @@
  */
 package de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server
 
+import de.fhg.aisec.ids.idscp2.idscp_core.api.Idscp2EndpointListener
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2Connection
+import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2ConnectionAdapter
 import de.fhg.aisec.ids.idscp2.idscp_core.drivers.SecureServer
 import org.slf4j.LoggerFactory
 import java.util.Collections
@@ -31,7 +33,10 @@ import java.util.HashSet
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
-class Idscp2Server<CC : Idscp2Connection>(private val secureServer: SecureServer) : ServerConnectionListener<CC> {
+class Idscp2Server<CC : Idscp2Connection>(
+    private val secureServer: SecureServer,
+    private val endpointListener: Idscp2EndpointListener<CC>
+) : ServerConnectionListener<CC> {
     private val connections = Collections.synchronizedSet(HashSet<CC>())
 
     /**
@@ -53,13 +58,26 @@ class Idscp2Server<CC : Idscp2Connection>(private val secureServer: SecureServer
     }
 
     override fun onConnectionCreated(connection: CC) {
-        if (LOG.isTraceEnabled)
+        if (LOG.isTraceEnabled) {
             LOG.trace("Bind connection with id {} to Idscp2Server {}", connection.id, this.toString())
-        connections.add(connection)
-    }
+        }
 
-    override fun onConnectionClose(connection: CC) {
-        connections.remove(connection)
+        // register close listener for unregister connection from the server on closure
+        connection.addConnectionListener(object : Idscp2ConnectionAdapter() {
+            override fun onClose() {
+                connections.remove(connection)
+            }
+        })
+
+        // add connection to server connections
+        connections.add(connection)
+
+        // notify user aboout new connection
+        endpointListener.onConnection(connection)
+
+        // Listeners have been applied in onConnection() callback above, so we can safely unlock messaging now
+        // thi will also ensure that connection closures are not applied before messaging is unlocked
+        connection.unlockMessaging()
     }
 
     /**

@@ -22,12 +22,14 @@ package de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2Connection
 
 /**
- * A ServerConnectionListener interface for the Idscp2Server to get notification about
- * Idscp2Connection lifetimes in an isolated way
+ * A ServerConnectionListener interface for the Idscp2Server to get notification about new
+ * Idscp2Connection connections from the secure server
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
 interface ServerConnectionListener<CC : Idscp2Connection> {
+    /*
+     * Called when a new connection is established
+     */
     fun onConnectionCreated(connection: CC)
-    fun onConnectionClose(connection: CC)
 }

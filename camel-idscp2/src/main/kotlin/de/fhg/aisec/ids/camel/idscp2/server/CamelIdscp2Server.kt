@@ -55,10 +55,6 @@ class CamelIdscp2Server(serverConfiguration: Idscp2Configuration, nativeTlsConfi
         listeners.forEach { it.onConnection(connection) }
     }
 
-    override fun onError(t: Throwable) {
-        listeners.forEach { it.onError(t) }
-    }
-
     val allConnections: Collection<AppLayerConnection> = server.allConnections
 
     fun terminate() {

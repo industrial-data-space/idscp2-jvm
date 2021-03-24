@@ -166,10 +166,6 @@ class Idscp2ServerEndpoint(uri: String?, private val remaining: String, componen
         })
     }
 
-    override fun onError(t: Throwable) {
-        LOG.error("Error in IDSCP2 server endpoint $endpointUri", t)
-    }
-
     @Synchronized
     public override fun doStart() {
         if (LOG.isDebugEnabled) {

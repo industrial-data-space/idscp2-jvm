@@ -46,7 +46,7 @@ class NativeTlsConfiguration {
         private set
     var keyStoreKeyType = "RSA"
         private set
-    var serverSocketTimeout: Int = DEFAULT_SERVER_SOCKET_TIMEOUT
+    var socketTimeout: Int = DEFAULT_SOCKET_TIMEOUT
         private set
     var hostnameVerificationEnabled = true
         private set
@@ -99,7 +99,7 @@ class NativeTlsConfiguration {
         }
 
         fun setServerSocketTimeout(timeout: Int): Builder {
-            config.serverSocketTimeout = timeout
+            config.socketTimeout = timeout
             return this
         }
 
@@ -128,7 +128,7 @@ class NativeTlsConfiguration {
         if (!keyStorePassword.contentEquals(other.keyStorePassword)) return false
         if (certificateAlias != other.certificateAlias) return false
         if (keyStoreKeyType != other.keyStoreKeyType) return false
-        if (serverSocketTimeout != other.serverSocketTimeout) return false
+        if (socketTimeout != other.socketTimeout) return false
         if (hostnameVerificationEnabled != other.hostnameVerificationEnabled) return false
 
         return true
@@ -144,7 +144,7 @@ class NativeTlsConfiguration {
         result = 31 * result + keyStorePassword.contentHashCode()
         result = 31 * result + certificateAlias.hashCode()
         result = 31 * result + keyStoreKeyType.hashCode()
-        result = 31 * result + serverSocketTimeout.hashCode()
+        result = 31 * result + socketTimeout.hashCode()
         result = 31 * result + hostnameVerificationEnabled.hashCode()
         return result
     }
@@ -154,12 +154,12 @@ class NativeTlsConfiguration {
             "trustStorePassword=${trustStorePassword.contentToString()}, " +
             "keyStorePath=$keyStorePath, keyStorePassword=${keyStorePassword.contentToString()}, " +
             "certificateAlias='$certificateAlias', " +
-            "keyStoreKeyType='$keyStoreKeyType', " + "serverSocketTimeout='$serverSocketTimeout', " +
+            "keyStoreKeyType='$keyStoreKeyType', " + "socketTimeout='$socketTimeout', " +
             "hostnameVerificationEnabled='$hostnameVerificationEnabled'"
     }
 
     companion object {
         const val DEFAULT_SERVER_PORT = 29292
-        const val DEFAULT_SERVER_SOCKET_TIMEOUT: Int = 5000
+        const val DEFAULT_SOCKET_TIMEOUT: Int = 5000
     }
 }

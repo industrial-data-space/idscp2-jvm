@@ -279,29 +279,14 @@ class Idscp2Integration {
         serverTlsConfig: NativeTlsConfiguration
     ) {
 
-        val closeLatch = CountDownLatch(2)
-        var clientConnection: Idscp2Connection? = null
-        var serverConnection: Idscp2Connection? = null
+        val closeLatch = CountDownLatch(1)
 
         // start server
         val serverFactory = Idscp2ServerFactory(
             ::Idscp2ConnectionImpl,
             object : Idscp2EndpointListener<Idscp2Connection> {
                 override fun onConnection(connection: Idscp2Connection) {
-                    serverConnection = connection
-                    connection.addConnectionListener(object : Idscp2ConnectionAdapter() {
-                        override fun onError(t: Throwable) {
-                            Assert.fail(t.stackTraceToString())
-                        }
-
-                        override fun onClose() {
-                            closeLatch.countDown()
-                        }
-                    })
-                }
-
-                override fun onError(t: Throwable) {
-                    Assert.fail(t.stackTraceToString())
+                    Assert.fail("Connection on server side should not have been created")
                 }
             },
             serverConfig,
@@ -314,25 +299,16 @@ class Idscp2Integration {
         // connect
         val secureChannelDriverClient = NativeTLSDriver<Idscp2Connection>()
         val connectionFuture = secureChannelDriverClient.connect(::Idscp2ConnectionImpl, clientConfig, clientTlsConfig)
-        connectionFuture.thenAccept { connection: Idscp2Connection ->
-            clientConnection = connection
-            connection.addConnectionListener(object : Idscp2ConnectionAdapter() {
-                override fun onError(t: Throwable) {
-                    Assert.fail(t.stackTraceToString())
-                }
-
-                override fun onClose() {
-                    closeLatch.countDown()
-                }
-            })
+        connectionFuture.thenAccept {
+            Assert.fail("Connection on server side should not have been created")
         }.exceptionally {
-            Assert.fail(it.stackTraceToString())
+            closeLatch.countDown()
             null
         }
 
         // wait until connections are closed
         closeLatch.await()
-        await().until { clientConnection?.isClosed!! && idscpServer.allConnections.isEmpty() && serverConnection?.isClosed!! }
+        assert(idscpServer.allConnections.isEmpty())
     }
 
     /**
@@ -349,7 +325,6 @@ class Idscp2Integration {
         val connectionLatch = CountDownLatch(2)
         val messageLatchServer = CountDownLatch(3)
         val messageLatchClient = CountDownLatch(2)
-        var cc: Idscp2Connection? = null
 
         // start server
         val serverFactory = Idscp2ServerFactory(
@@ -369,10 +344,6 @@ class Idscp2Integration {
                     }
                     connection.unlockMessaging()
                     connectionLatch.countDown()
-                }
-
-                override fun onError(t: Throwable) {
-                    Assert.fail(t.stackTraceToString())
                 }
             },
             serverConfig,
@@ -397,7 +368,6 @@ class Idscp2Integration {
                 messageLatchClient.countDown()
             }
             connection.unlockMessaging()
-            cc = connection
             connectionLatch.countDown()
         }.exceptionally {
             Assert.fail(it.stackTraceToString())
@@ -410,7 +380,7 @@ class Idscp2Integration {
         // get the connection from the server
         assert(idscpServer.allConnections.size == 1)
         val serverConnection = idscpServer.allConnections.first()
-        val clientConnection = cc!!
+        val clientConnection = connectionFuture.get()
 
         // wait until connected
         await().until { clientConnection.isConnected && serverConnection.isConnected }

@@ -27,6 +27,8 @@ import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2Connection
 import de.fhg.aisec.ids.idscp2.idscp_core.drivers.SecureChannelEndpoint
 import de.fhg.aisec.ids.idscp2.idscp_core.error.Idscp2Exception
+import de.fhg.aisec.ids.idscp2.idscp_core.fsm.AsyncIdscp2Factory
+import de.fhg.aisec.ids.idscp2.idscp_core.fsm.FSM
 import de.fhg.aisec.ids.idscp2.idscp_core.secure_channel.SecureChannel
 import de.fhg.aisec.ids.idscp2.idscp_core.secure_channel.SecureChannelListener
 import org.slf4j.LoggerFactory
@@ -52,7 +54,7 @@ import javax.net.ssl.SSLSocket
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
 class TLSClient<CC : Idscp2Connection>(
-    private val connectionFactory: (SecureChannel, Idscp2Configuration) -> CC,
+    private val connectionFactory: (FSM, String) -> CC,
     private val clientConfiguration: Idscp2Configuration,
     private val nativeTlsConfiguration: NativeTlsConfiguration,
     private val connectionFuture: CompletableFuture<CC>
@@ -63,10 +65,17 @@ class TLSClient<CC : Idscp2Connection>(
     private val listenerPromise = CompletableFuture<SecureChannelListener>()
 
     /**
-     * Connect to TLS server and start TLS Handshake
+     * Connect to TLS server and start TLS Handshake. When an exception is thrown
+     * in connect() the NativeTlsDriver will catch it and complete the connection
+     * future with an Exception.
+     *
+     * This should not make the server maintain a broken connection, since either
+     * the TLS handshake or the IDSCP2 handshake will fail on server side, which
+     * will trigger a full connection cleanup.
      */
     fun connect(hostname: String?, port: Int) {
         val sslSocket = clientSocket as SSLSocket?
+
         if (sslSocket == null || sslSocket.isClosed) {
             throw Idscp2Exception("Client socket is not available")
         }
@@ -77,33 +86,40 @@ class TLSClient<CC : Idscp2Connection>(
             }
 
             // set clientSocket timeout to allow safeStop()
-            clientSocket.soTimeout = 5000
+            clientSocket.soTimeout = nativeTlsConfiguration.socketTimeout
             dataOutputStream = DataOutputStream(clientSocket.getOutputStream())
 
             // Add inputListener but start it not before handshake is complete
             inputListenerThread = InputListenerThread(clientSocket.getInputStream(), this)
-            sslSocket.addHandshakeCompletedListener(this)
+
             if (LOG.isTraceEnabled) {
                 LOG.trace("Start TLS Handshake")
             }
+            sslSocket.addHandshakeCompletedListener(this)
             sslSocket.startHandshake()
         } catch (e: SSLHandshakeException) {
-            // FIXME: Any such disconnect makes the server maintain a broken connection
-            disconnect()
+            cleanup()
             throw Idscp2Exception("TLS Handshake failed", e)
         } catch (e: SSLProtocolException) {
-            disconnect()
+            cleanup()
             throw Idscp2Exception("TLS Handshake failed", e)
         } catch (e: IOException) {
-            // FIXME: Any such disconnect makes the server maintain a broken connection
-            disconnect()
+            cleanup()
             throw Idscp2Exception("Connecting TLS client to server failed", e)
         }
     }
 
-    private fun disconnect() {
+    /**
+     * This function is either used for cleaning up broken TLS connections after handshake failure
+     * or hostname verification failure. At this stage, the input listener has not started
+     * yet and the secure channel has not been registered as listener promise yet.
+     *
+     * Or it is used for closing the TLS connection from the FSM on FSM shutdown. In this case, the
+     * input listener is available.
+     */
+    private fun cleanup() {
         if (LOG.isTraceEnabled) {
-            LOG.trace("Disconnecting from TLS server...")
+            LOG.trace("Cleanup broken TLS connection ..")
         }
         if (::inputListenerThread.isInitialized) {
             inputListenerThread.safeStop()
@@ -112,7 +128,8 @@ class TLSClient<CC : Idscp2Connection>(
             try {
                 clientSocket.close()
             } catch (e: IOException) {
-                onError(e)
+                // we do not want to transmit an error here, since the secure channel might not be
+                // established yet and an error after FSM shutdown will be ignored.
             }
         }
     }
@@ -125,13 +142,17 @@ class TLSClient<CC : Idscp2Connection>(
         listenerPromise.thenAccept { listener: SecureChannelListener -> listener.onError(e) }
     }
 
+    override fun onMessage(bytes: ByteArray) {
+        listenerPromise.thenAccept { listener: SecureChannelListener -> listener.onMessage(bytes) }
+    }
+
     override fun close() {
-        disconnect()
+        cleanup()
     }
 
     override fun send(bytes: ByteArray): Boolean {
         return if (!isConnected) {
-            LOG.warn("Client cannot send data because socket is not connected")
+            LOG.warn("Client cannot send data because TLS socket is not connected")
             false
         } else {
             try {
@@ -144,7 +165,7 @@ class TLSClient<CC : Idscp2Connection>(
                     LOG.trace("Sending message...")
                 }
                 true
-            } catch (e: IOException) {
+            } catch (e: Exception) {
                 LOG.warn("Client cannot send data", e)
                 false
             }
@@ -159,11 +180,12 @@ class TLSClient<CC : Idscp2Connection>(
         if (LOG.isTraceEnabled) {
             LOG.trace("TLS Handshake was successful")
         }
-        // TODO: When server behavior fixed, disconnect and return here instantly
-//        if (!connectionFuture.isCancelled) {
-//            disconnect()
-//            return
-//        }
+
+        // check if connection future has been cancelled by the user
+        if (connectionFuture.isCancelled) {
+            cleanup()
+            return
+        }
 
         // verify tls session on application layer: hostname verification, certificate validity
         try {
@@ -183,28 +205,29 @@ class TLSClient<CC : Idscp2Connection>(
             if (LOG.isTraceEnabled) {
                 LOG.trace("TLS session is valid")
             }
+
             // Create secure channel, register secure channel as message listener and notify IDSCP2 Configuration
             val secureChannel = SecureChannel(this, peerCert)
-            // Try to complete, won't do anything if promise has been cancelled
+
+            // Set the secure channel to this endpoint
             listenerPromise.complete(secureChannel)
-            val connection = connectionFactory(secureChannel, clientConfiguration)
-            inputListenerThread.start()
-            // Try to complete, won't do anything if promise has been cancelled
-            connectionFuture.complete(connection)
-            if (connectionFuture.isCancelled) {
-                connection.close()
+
+            // initiate idscp2 connection asynchronous.. the connection will be created using the future
+            val success = AsyncIdscp2Factory.initiateIdscp2Connection(
+                secureChannel, clientConfiguration, connectionFactory,
+                connectionFuture
+            )
+
+            // start the listener thread when the future was not cancelled
+            if (success) {
+                inputListenerThread.start()
             }
-        } catch (e: SSLPeerUnverifiedException) {
-            // FIXME: Any such disconnect makes the server maintain a broken connection
-            disconnect()
+        } catch (e: Exception) {
+            cleanup() // the server will not maintain a broken connection, since FSM handshake would timeout
             connectionFuture.completeExceptionally(
-                Idscp2Exception("TLS session is not valid. Close TLS connection", e)
+                Idscp2Exception("TLS session was not valid", e)
             )
         }
-    }
-
-    override fun onMessage(bytes: ByteArray) {
-        listenerPromise.thenAccept { listener: SecureChannelListener -> listener.onMessage(bytes) }
     }
 
     companion object {
