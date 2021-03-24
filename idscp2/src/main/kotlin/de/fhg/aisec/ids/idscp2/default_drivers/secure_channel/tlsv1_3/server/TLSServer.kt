@@ -22,10 +22,11 @@ package de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.server
 import de.fhg.aisec.ids.idscp2.default_drivers.keystores.PreConfiguration
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.TLSConstants
+import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2Connection
-import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server.SecureChannelInitListener
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server.ServerConnectionListener
 import de.fhg.aisec.ids.idscp2.idscp_core.drivers.SecureServer
+import de.fhg.aisec.ids.idscp2.idscp_core.fsm.FSM
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.net.ServerSocket
@@ -43,16 +44,18 @@ import javax.net.ssl.SSLSocket
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
 class TLSServer<CC : Idscp2Connection>(
+    private val connectionListenerPromise: CompletableFuture<ServerConnectionListener<CC>>,
     private val nativeTlsConfiguration: NativeTlsConfiguration,
-    private val secureChannelInitListener: SecureChannelInitListener<CC>,
-    private val serverListenerPromise: CompletableFuture<ServerConnectionListener<CC>>
-) :
-    Runnable, SecureServer {
+    private val serverConfiguration: Idscp2Configuration,
+    private val connectionFactory: (FSM, String) -> CC
+) : Runnable, SecureServer {
+
     @Volatile
     override var isRunning = false
         private set
     private val serverSocket: ServerSocket
     private val serverThread: Thread
+
     override fun run() {
         if (serverSocket.isClosed) {
             LOG.warn("ServerSocket has been closed, server thread is stopping now.")
@@ -66,22 +69,41 @@ class TLSServer<CC : Idscp2Connection>(
             try {
                 /*
                  * accept for new (incoming) ssl sockets. A timeout exception is thrown
-                 * after 5 seconds of inactivity to allow a clean stop via the safeStop() method
+                 * after x seconds of inactivity to allow a clean stop via the safeStop() method
                  */
                 val sslSocket = serverSocket.accept() as SSLSocket
+
                 try {
-                    // Start new server thread
                     if (LOG.isTraceEnabled) {
                         LOG.trace("New TLS client has connected. Creating new server thread...")
                     }
+
+                    // create a connection future that will give the new idscp2 connection to the idscp2 server
+                    val connectionFuture = CompletableFuture<CC>()
+                    connectionFuture.thenAccept { connection ->
+                        connectionListenerPromise.thenAccept { listener ->
+                            listener.onConnectionCreated(connection)
+                        }
+                    }.exceptionally {
+                        // either the TLS handshake or the idscp2 handshake failed, both will cleanup the server thread
+                        LOG.warn("Idscp2Connection creation failed: {}", it)
+                        null
+                    }
+
+                    // create an connection future that will register the connection to the server and notify the user
                     val serverThread = TLSServerThread(
-                        sslSocket, secureChannelInitListener, serverListenerPromise,
-                        nativeTlsConfiguration
+                        sslSocket,
+                        connectionFuture,
+                        nativeTlsConfiguration,
+                        serverConfiguration,
+                        connectionFactory
                     )
+
+                    // register handshake complete listener and run server thread which initiates the tls handshake
                     sslSocket.addHandshakeCompletedListener(serverThread)
                     serverThread.start()
                 } catch (serverThreadException: Exception) {
-                    LOG.warn("Error whilst creating/starting TLSServerThread", serverThreadException)
+                    LOG.warn("Error while creating/starting TLSServerThread", serverThreadException)
                 }
             } catch (e: SocketTimeoutException) {
                 // timeout on serverSocket blocking functions was reached
@@ -95,7 +117,6 @@ class TLSServer<CC : Idscp2Connection>(
                 isRunning = false
             } catch (e: IOException) {
                 LOG.warn("Error during TLS server socket accept, notifying error handlers...")
-                secureChannelInitListener.onError(e)
                 isRunning = false
             }
         }
@@ -103,7 +124,7 @@ class TLSServer<CC : Idscp2Connection>(
             try {
                 serverSocket.close()
             } catch (e: IOException) {
-                LOG.warn("Could not close TLS server socket", e)
+                LOG.warn("Cannot close TLS server socket", e)
             }
         }
     }
@@ -173,7 +194,7 @@ class TLSServer<CC : Idscp2Connection>(
         val socketFactory = sslContext.serverSocketFactory
         serverSocket = socketFactory.createServerSocket(nativeTlsConfiguration.serverPort)
         // Set timeout for serverSocket.accept()
-        serverSocket.soTimeout = nativeTlsConfiguration.serverSocketTimeout
+        serverSocket.soTimeout = nativeTlsConfiguration.socketTimeout
         val sslServerSocket = serverSocket as SSLServerSocket
 
         // Set TLS constraints

@@ -20,18 +20,14 @@
 package de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection
 
 import de.fhg.aisec.ids.idscp2.idscp_core.FastLatch
-import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
 import de.fhg.aisec.ids.idscp2.idscp_core.error.Idscp2Exception
 import de.fhg.aisec.ids.idscp2.idscp_core.error.Idscp2NotConnectedException
 import de.fhg.aisec.ids.idscp2.idscp_core.error.Idscp2TimeoutException
 import de.fhg.aisec.ids.idscp2.idscp_core.error.Idscp2WouldBlockException
 import de.fhg.aisec.ids.idscp2.idscp_core.fsm.FSM
-import de.fhg.aisec.ids.idscp2.idscp_core.secure_channel.SecureChannel
 import org.slf4j.LoggerFactory
 import java.util.Collections
 import java.util.HashSet
-import java.util.UUID
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.locks.ReentrantLock
 
 /**
@@ -41,25 +37,18 @@ import java.util.concurrent.locks.ReentrantLock
  * @author Michael Lux (michael.lux@aisec.fraunhofer.de)
  */
 class Idscp2ConnectionImpl(
-    secureChannel: SecureChannel,
-    configuration: Idscp2Configuration
+    private val fsm: FSM,
+    override val id: String
 ) : Idscp2Connection {
-    private val fsm: FSM = FSM(
-        this,
-        secureChannel,
-        configuration.dapsDriver,
-        configuration.attestationConfig,
-        configuration.ackTimeoutDelay,
-        configuration.handshakeTimeoutDelay
-    )
-    override val id: String = UUID.randomUUID().toString()
+
     private val connectionListeners = Collections.synchronizedSet(HashSet<Idscp2ConnectionListener>())
     private val messageListeners = Collections.synchronizedSet(HashSet<Idscp2MessageListener>())
-    private val messageLatch = FastLatch()
+    private val connectionListenerLatch = FastLatch()
     private var closed = false
     private var closedLock = ReentrantLock(true)
+
     override fun unlockMessaging() {
-        messageLatch.unlock()
+        connectionListenerLatch.unlock()
     }
 
     /**
@@ -69,6 +58,11 @@ class Idscp2ConnectionImpl(
         if (LOG.isInfoEnabled) {
             LOG.info("Closing connection {}...", id)
         }
+
+        // we have to unlock connection listeners to avoid deadlocks with onError()
+        // which would block the closedLock until connection listeners are available
+        // to avoid error loss
+        connectionListenerLatch.unlock()
 
         /*
          * When closing the connection, also the secure channel and its sockets
@@ -169,7 +163,7 @@ class Idscp2ConnectionImpl(
 
     override fun onMessage(msg: ByteArray) {
         // When unlock is called, although not synchronized, this will eventually stop blocking.
-        messageLatch.await()
+        connectionListenerLatch.await()
         if (LOG.isDebugEnabled) {
             LOG.debug("Received new IDSCP Message")
         }
@@ -182,6 +176,7 @@ class Idscp2ConnectionImpl(
 
             // check if connection has been closed, then we do not want to pass errors to the user
             if (!closed) {
+                connectionListenerLatch.await()
                 connectionListeners.forEach { idscp2ConnectionListener: Idscp2ConnectionListener ->
                     idscp2ConnectionListener.onError(t)
                 }
@@ -192,6 +187,7 @@ class Idscp2ConnectionImpl(
     }
 
     override fun onClose() {
+        connectionListenerLatch.await() // we have to ensure to keep track of closures
         if (LOG.isInfoEnabled) {
             LOG.info("Connection with id {} is closing, notify listeners...", id)
         }
@@ -234,19 +230,5 @@ class Idscp2ConnectionImpl(
 
     companion object {
         private val LOG = LoggerFactory.getLogger(Idscp2ConnectionImpl::class.java)
-    }
-
-    init {
-        secureChannel.setFsm(fsm)
-        if (LOG.isDebugEnabled) {
-            LOG.debug("A new IDSCP2 connection with id {} was created, starting handshake...", id)
-        }
-//        if (LOG.isTraceEnabled) {
-//            LOG.trace("Stack Trace of Idscp2Connection {} constructor:\n"
-//                    + Arrays.stream(Thread.currentThread().stackTrace)
-//                    .skip(1).map { obj: StackTraceElement -> obj.toString() }.collect(Collectors.joining("\n")), id)
-//        }
-        // Schedule IDSCP handshake asynchronously
-        CompletableFuture.runAsync { fsm.startIdscpHandshake() }
     }
 }

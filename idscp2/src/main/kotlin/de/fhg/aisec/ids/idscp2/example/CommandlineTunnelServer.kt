@@ -79,10 +79,6 @@ class CommandlineTunnelServer : Idscp2EndpointListener<Idscp2Connection> {
         }
     }
 
-    override fun onError(t: Throwable) {
-        LOG.error("Server endpoint error occurred", t)
-    }
-
     companion object {
         private val LOG = LoggerFactory.getLogger(CommandlineTunnelServer::class.java)
     }

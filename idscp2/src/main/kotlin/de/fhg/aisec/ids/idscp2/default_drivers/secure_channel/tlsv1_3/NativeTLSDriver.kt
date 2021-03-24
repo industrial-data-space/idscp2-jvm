@@ -23,12 +23,11 @@ import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.client.TLS
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.server.TLSServer
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2Connection
-import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server.SecureChannelInitListener
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server.ServerConnectionListener
 import de.fhg.aisec.ids.idscp2.idscp_core.drivers.SecureChannelDriver
 import de.fhg.aisec.ids.idscp2.idscp_core.drivers.SecureServer
 import de.fhg.aisec.ids.idscp2.idscp_core.error.Idscp2Exception
-import de.fhg.aisec.ids.idscp2.idscp_core.secure_channel.SecureChannel
+import de.fhg.aisec.ids.idscp2.idscp_core.fsm.FSM
 import java.util.concurrent.CompletableFuture
 
 /**
@@ -41,7 +40,7 @@ class NativeTLSDriver<CC : Idscp2Connection> : SecureChannelDriver<CC, NativeTls
      * Performs an asynchronous client connect to a TLS server.
      */
     override fun connect(
-        connectionFactory: (SecureChannel, Idscp2Configuration) -> CC,
+        connectionFactory: (FSM, String) -> CC,
         configuration: Idscp2Configuration,
         secureChannelConfig: NativeTlsConfiguration
     ): CompletableFuture<CC> {
@@ -50,7 +49,7 @@ class NativeTLSDriver<CC : Idscp2Connection> : SecureChannelDriver<CC, NativeTls
             val tlsClient = TLSClient(connectionFactory, configuration, secureChannelConfig, connectionFuture)
             tlsClient.connect(secureChannelConfig.host, secureChannelConfig.serverPort)
         } catch (e: Exception) {
-            connectionFuture.completeExceptionally(Idscp2Exception("Call to connect() has failed", e))
+            connectionFuture.completeExceptionally(Idscp2Exception("Cannot securely connect to TLS server", e))
         }
         return connectionFuture
     }
@@ -62,12 +61,13 @@ class NativeTLSDriver<CC : Idscp2Connection> : SecureChannelDriver<CC, NativeTls
      * @throws Idscp2Exception If any error occurred during server creation/start
      */
     override fun listen(
-        channelInitListener: SecureChannelInitListener<CC>,
-        serverListenerPromise: CompletableFuture<ServerConnectionListener<CC>>,
-        secureChannelConfig: NativeTlsConfiguration
+        connectionListenerPromise: CompletableFuture<ServerConnectionListener<CC>>,
+        secureChannelConfig: NativeTlsConfiguration,
+        serverConfiguration: Idscp2Configuration,
+        connectionFactory: (FSM, String) -> CC
     ): SecureServer {
         return try {
-            TLSServer(secureChannelConfig, channelInitListener, serverListenerPromise)
+            TLSServer(connectionListenerPromise, secureChannelConfig, serverConfiguration, connectionFactory)
         } catch (e: Exception) {
             throw Idscp2Exception("Error while trying to to start SecureServer", e)
         }

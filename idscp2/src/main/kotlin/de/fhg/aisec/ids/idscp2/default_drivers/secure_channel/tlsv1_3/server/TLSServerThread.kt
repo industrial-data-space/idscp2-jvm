@@ -22,10 +22,12 @@ package de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.server
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.TLSSessionVerificationHelper
 import de.fhg.aisec.ids.idscp2.idscp_core.FastLatch
+import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2Connection
-import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server.SecureChannelInitListener
-import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server.ServerConnectionListener
 import de.fhg.aisec.ids.idscp2.idscp_core.drivers.SecureChannelEndpoint
+import de.fhg.aisec.ids.idscp2.idscp_core.error.Idscp2Exception
+import de.fhg.aisec.ids.idscp2.idscp_core.fsm.AsyncIdscp2Factory
+import de.fhg.aisec.ids.idscp2.idscp_core.fsm.FSM
 import de.fhg.aisec.ids.idscp2.idscp_core.secure_channel.SecureChannel
 import de.fhg.aisec.ids.idscp2.idscp_core.secure_channel.SecureChannelListener
 import org.slf4j.LoggerFactory
@@ -53,32 +55,36 @@ import javax.net.ssl.SSLSocket
  */
 class TLSServerThread<CC : Idscp2Connection> internal constructor(
     private val sslSocket: SSLSocket,
-    private val configCallback: SecureChannelInitListener<CC>,
-    private val serverListenerPromise: CompletableFuture<ServerConnectionListener<CC>>,
-    private val nativeTlsConfiguration: NativeTlsConfiguration
-) :
-    Thread(), HandshakeCompletedListener, SecureChannelEndpoint, Closeable {
-    @Volatile
-    private var running = true
+    private val connectionFuture: CompletableFuture<CC>,
+    private val nativeTlsConfiguration: NativeTlsConfiguration,
+    private val serverConfiguration: Idscp2Configuration,
+    private val connectionFactory: (FSM, String) -> CC
+) : Thread(), HandshakeCompletedListener, SecureChannelEndpoint, Closeable {
+
+    @Volatile private var running = true
     private val `in`: DataInputStream
     private val out: DataOutputStream
-    private val channelListenerPromise = CompletableFuture<SecureChannelListener>()
+    private val listenerPromise = CompletableFuture<SecureChannelListener>()
     private val tlsVerificationLatch = FastLatch()
+
     override fun run() {
         // first run the tls handshake to enforce catching every error occurred during the handshake
-        // before reading from buffer. Else if there exists any non-catched exception during handshake
-        // the thread would wait forever in onError() until handshakeCompleteListener is called
+        // before reading from buffer
         try {
             sslSocket.startHandshake()
-            // Wait for TLS session verification
+
+            // Wait for TLS session verification to ensure socket listener is not available before
+            // connection is trusted
             tlsVerificationLatch.await()
         } catch (e: Exception) {
-            LOG.warn("Exception occurred during SSL handshake. Quiting server thread...", e)
-            onError(e)
             running = false
+            connectionFuture.completeExceptionally(
+                Idscp2Exception("TLS handshake failed", e)
+            )
+            return
         }
 
-        // wait for new data while running
+        // TLS connection established, run socket listener
         var buf: ByteArray
         while (running) {
             try {
@@ -91,7 +97,7 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
             } catch (e: EOFException) {
                 onClose()
                 running = false
-            } catch (e: IOException) {
+            } catch (e: Exception) {
                 onError(e)
                 running = false
             }
@@ -104,8 +110,7 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
             out.close()
             `in`.close()
             sslSocket.close()
-        } catch (ignore: IOException) {
-        }
+        } catch (ignore: IOException) {}
     }
 
     override fun send(bytes: ByteArray): Boolean {
@@ -119,32 +124,27 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
                 out.write(bytes)
                 out.flush()
                 true
-            } catch (e: IOException) {
+            } catch (e: Exception) {
                 LOG.warn("Server could not send data", e)
-                closeSockets()
                 false
             }
         }
     }
 
     private fun onClose() {
-        channelListenerPromise.thenAccept { obj: SecureChannelListener -> obj.onClose() }
+        listenerPromise.thenAccept { obj: SecureChannelListener -> obj.onClose() }
     }
 
     private fun onError(t: Throwable) {
-        channelListenerPromise.thenAccept { secureChannelListener: SecureChannelListener ->
-            secureChannelListener.onError(
-                t
-            )
-        }
+        listenerPromise.thenAccept { obj: SecureChannelListener -> obj.onError(t) }
+    }
+
+    fun onMessage(bytes: ByteArray) {
+        listenerPromise.thenAccept { listener: SecureChannelListener -> listener.onMessage(bytes) }
     }
 
     override fun close() {
         safeStop()
-    }
-
-    fun onMessage(bytes: ByteArray) {
-        channelListenerPromise.thenAccept { listener: SecureChannelListener -> listener.onMessage(bytes) }
     }
 
     private fun safeStop() {
@@ -159,17 +159,17 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
             LOG.trace("TLS Handshake was successful")
         }
 
-        val sslSession = handshakeCompletedEvent.session
-
-        // get peer certificate
-        val certificates = sslSession.peerCertificates
-        if (certificates.isEmpty()) {
-            throw SSLPeerUnverifiedException("Missing peer certificate")
-        }
-        val peerCert = certificates[0] as X509Certificate
-
-        // verify tls session on application layer: hostname verification, certificate validity
         try {
+            val sslSession = handshakeCompletedEvent.session
+
+            // get peer certificate
+            val certificates = sslSession.peerCertificates
+            if (certificates.isEmpty()) {
+                throw SSLPeerUnverifiedException("Missing peer certificate")
+            }
+            val peerCert = certificates[0] as X509Certificate
+
+            // verify tls session on application layer: hostname verification, certificate validity
             TLSSessionVerificationHelper.verifyTlsSession(
                 sslSession.peerHost, sslSession.peerPort, peerCert,
                 nativeTlsConfiguration.hostnameVerificationEnabled
@@ -177,18 +177,25 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
             if (LOG.isTraceEnabled) {
                 LOG.trace("TLS session is valid")
             }
-        } catch (e: SSLPeerUnverifiedException) {
-            LOG.warn("TLS session is not valid. Close TLS connection", e)
-            running = false // set running false before tlsVerificationLatch is decremented
-            return
+
+            // provide secure channel to IDSCP2 Config and register secure channel as listener
+            val secureChannel = SecureChannel(this, peerCert)
+            listenerPromise.complete(secureChannel)
+
+            // initiate idscp2 connection
+            AsyncIdscp2Factory.initiateIdscp2Connection(
+                secureChannel, serverConfiguration, connectionFactory,
+                connectionFuture
+            )
+        } catch (e: Exception) {
+            running = false // set running false before tlsVerificationLatch is decremented, this will cleanup the server thread
+            connectionFuture.completeExceptionally(
+                Idscp2Exception("TLS session was not valid", e)
+            )
         } finally {
+            // unblock listener thread
             tlsVerificationLatch.unlock()
         }
-
-        // provide secure channel to IDSCP2 Config and register secure channel as listener
-        val secureChannel = SecureChannel(this, peerCert)
-        channelListenerPromise.complete(secureChannel)
-        configCallback.onSecureChannel(secureChannel, serverListenerPromise)
     }
 
     companion object {
@@ -197,7 +204,7 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
 
     init {
         // Set timeout for blocking read
-        sslSocket.soTimeout = 5000
+        sslSocket.soTimeout = nativeTlsConfiguration.socketTimeout
         `in` = DataInputStream(sslSocket.inputStream)
         out = DataOutputStream(sslSocket.outputStream)
     }

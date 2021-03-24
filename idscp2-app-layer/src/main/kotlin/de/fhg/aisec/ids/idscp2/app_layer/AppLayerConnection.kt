@@ -23,11 +23,10 @@ import com.google.protobuf.ByteString
 import de.fhg.aisec.ids.idscp2.app_layer.listeners.GenericMessageListener
 import de.fhg.aisec.ids.idscp2.app_layer.listeners.IdsMessageListener
 import de.fhg.aisec.ids.idscp2.app_layer.messages.AppLayer
-import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2Connection
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2ConnectionImpl
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2MessageListener
-import de.fhg.aisec.ids.idscp2.idscp_core.secure_channel.SecureChannel
+import de.fhg.aisec.ids.idscp2.idscp_core.fsm.FSM
 import de.fraunhofer.iais.eis.Message
 import org.slf4j.LoggerFactory
 import java.util.Collections
@@ -75,8 +74,8 @@ class AppLayerConnection private constructor(private val idscp2Connection: Idscp
     private val idsMessageListeners: MutableSet<IdsMessageListener> =
         Collections.synchronizedSet(LinkedHashSet())
 
-    constructor(secureChannel: SecureChannel, settings: Idscp2Configuration) :
-        this(Idscp2ConnectionImpl(secureChannel, settings)) {
+    constructor(fsm: FSM, id: String) :
+        this(Idscp2ConnectionImpl(fsm, id)) {
             idscp2Connection.addMessageListener(idscp2MessageListener)
         }
 

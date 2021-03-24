@@ -21,7 +21,6 @@ package de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.client
 
 import java.io.DataInputStream
 import java.io.EOFException
-import java.io.IOException
 import java.io.InputStream
 import java.net.SocketTimeoutException
 
@@ -56,11 +55,14 @@ class InputListenerThread(inputStream: InputStream, private var listener: DataAv
             } catch (e: EOFException) {
                 listener.onClose()
                 running = false
-            } catch (e: IOException) {
+            } catch (e: Exception) {
                 listener.onError(e)
                 running = false
             }
         }
+        try {
+            dataInputStream.close()
+        } catch (ignore: Exception) {}
     }
 
     fun safeStop() {
