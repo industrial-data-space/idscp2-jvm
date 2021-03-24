@@ -21,7 +21,6 @@ package de.fhg.aisec.ids.camel.idscp2.processors
 
 import de.fhg.aisec.ids.camel.idscp2.Constants.IDSCP2_HEADER
 import de.fhg.aisec.ids.camel.idscp2.UsageControlMaps
-import de.fhg.aisec.ids.camel.idscp2.Utils
 import de.fhg.aisec.ids.camel.idscp2.Utils.SERIALIZER
 import de.fraunhofer.iais.eis.ContractAgreementBuilder
 import de.fraunhofer.iais.eis.ContractAgreementMessageBuilder
@@ -57,16 +56,14 @@ class ContractResponseProcessor : Processor {
         if (!contractOfferIsAccepted) {
             createContractRejectionMessage(exchange, contractResponseMessage.id)
         } else {
-            ContractAgreementMessageBuilder().run {
-                Utils.initMessageBuilder(this)
-                _correlationMessage_(contractResponseMessage.id)
-                build().let {
+            ContractAgreementMessageBuilder()
+                ._correlationMessage_(contractResponseMessage.id)
+                .let {
                     if (LOG.isDebugEnabled) {
                         LOG.debug("Serialization Header: {}", SERIALIZER.serialize(it))
                     }
                     exchange.message.setHeader(IDSCP2_HEADER, it)
                 }
-            }
 
             val contractAgreement = ContractAgreementBuilder()
                 ._consumer_(contractOfferReceived.consumer)
@@ -100,16 +97,14 @@ class ContractResponseProcessor : Processor {
         if (LOG.isDebugEnabled) {
             LOG.debug("Constructing ContractRejectionMessage")
         }
-        ContractRejectionMessageBuilder().run {
-            Utils.initMessageBuilder(this)
-            _correlationMessage_(correlationId)
-            build().let {
+        ContractRejectionMessageBuilder()
+            ._correlationMessage_(correlationId)
+            .let {
                 if (LOG.isDebugEnabled) {
                     LOG.debug("Serialization Header: {}", SERIALIZER.serialize(it))
                 }
                 exchange.message.setHeader(IDSCP2_HEADER, it)
             }
-        }
     }
 
     companion object {

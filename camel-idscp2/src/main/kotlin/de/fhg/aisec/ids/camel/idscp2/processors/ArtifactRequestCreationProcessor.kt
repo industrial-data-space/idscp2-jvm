@@ -21,7 +21,6 @@ package de.fhg.aisec.ids.camel.idscp2.processors
 
 import de.fhg.aisec.ids.camel.idscp2.Constants.ARTIFACT_URI_PROPERTY
 import de.fhg.aisec.ids.camel.idscp2.Constants.IDSCP2_HEADER
-import de.fhg.aisec.ids.camel.idscp2.Utils
 import de.fhg.aisec.ids.camel.idscp2.Utils.SERIALIZER
 import de.fraunhofer.iais.eis.ArtifactRequestMessageBuilder
 import org.apache.camel.Exchange
@@ -35,8 +34,7 @@ class ArtifactRequestCreationProcessor : Processor {
         if (LOG.isDebugEnabled) {
             LOG.debug("[IN] ${this::class.java.simpleName}")
         }
-        val requestMessage = ArtifactRequestMessageBuilder().run {
-            Utils.initMessageBuilder(this)
+        ArtifactRequestMessageBuilder().run {
             exchange.getProperty(ARTIFACT_URI_PROPERTY)?.let {
                 if (it is URI) {
                     it
@@ -46,14 +44,12 @@ class ArtifactRequestCreationProcessor : Processor {
             }?.let {
                 _requestedArtifact_(it)
             }
-            build()
-        }
-
-        requestMessage.let {
-            if (LOG.isDebugEnabled) {
-                LOG.debug("Serialisation header: {}", SERIALIZER.serialize(it))
+            let {
+                if (LOG.isDebugEnabled) {
+                    LOG.debug("Serialisation header: {}", SERIALIZER.serialize(it))
+                }
+                exchange.message.setHeader(IDSCP2_HEADER, it)
             }
-            exchange.message.setHeader(IDSCP2_HEADER, it)
         }
     }
 

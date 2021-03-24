@@ -21,6 +21,7 @@ package de.fhg.aisec.ids.camel.idscp2.server
 
 import de.fhg.aisec.ids.camel.idscp2.Constants.IDSCP2_HEADER
 import de.fhg.aisec.ids.camel.idscp2.UsageControlMaps
+import de.fhg.aisec.ids.camel.idscp2.Utils
 import de.fhg.aisec.ids.idscp2.app_layer.AppLayerConnection
 import de.fhg.aisec.ids.idscp2.app_layer.listeners.GenericMessageListener
 import de.fhg.aisec.ids.idscp2.app_layer.listeners.IdsMessageListener
@@ -76,7 +77,10 @@ class Idscp2ServerConsumer(private val endpoint: Idscp2ServerEndpoint, processor
                 val responseBody = it.getBody(ByteArray::class.java)
                 if (responseBody != null || responseHeader != null) {
                     if (endpoint.useIdsMessages) {
-                        connection.sendIdsMessage(responseHeader?.let { responseHeader as Message }, responseBody)
+                        connection.sendIdsMessage(
+                            responseHeader?.let { Utils.finalizeMessage(responseHeader, connection) },
+                            responseBody
+                        )
                     } else {
                         connection.sendGenericMessage(responseHeader?.toString(), responseBody)
                     }

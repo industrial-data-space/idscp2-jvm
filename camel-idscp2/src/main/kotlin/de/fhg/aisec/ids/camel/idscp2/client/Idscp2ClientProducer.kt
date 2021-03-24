@@ -21,8 +21,8 @@ package de.fhg.aisec.ids.camel.idscp2.client
 
 import de.fhg.aisec.ids.camel.idscp2.Constants.IDSCP2_HEADER
 import de.fhg.aisec.ids.camel.idscp2.UsageControlMaps
+import de.fhg.aisec.ids.camel.idscp2.Utils
 import de.fhg.aisec.ids.idscp2.app_layer.AppLayerConnection
-import de.fraunhofer.iais.eis.Message
 import org.apache.camel.Exchange
 import org.apache.camel.support.DefaultProducer
 import org.slf4j.LoggerFactory
@@ -67,7 +67,10 @@ class Idscp2ClientProducer(private val endpoint: Idscp2ClientEndpoint) : Default
                                     connection.addIdsMessageListener { _, responseHeader, responsePayload ->
                                         responseHandler(responseHeader, responsePayload)
                                     }
-                                    connection.sendIdsMessage(header?.let { header as Message }, body)
+                                    connection.sendIdsMessage(
+                                        header?.let { Utils.finalizeMessage(it, connection) },
+                                        body
+                                    )
                                 } else {
                                     connection.addGenericMessageListener { _, responseHeader, responsePayload ->
                                         responseHandler(responseHeader, responsePayload)
@@ -78,7 +81,10 @@ class Idscp2ClientProducer(private val endpoint: Idscp2ClientEndpoint) : Default
                             }
                         } else {
                             if (endpoint.useIdsMessages) {
-                                connection.sendIdsMessage(header?.let { header as Message }, body)
+                                connection.sendIdsMessage(
+                                    header?.let { Utils.finalizeMessage(it, connection) },
+                                    body
+                                )
                             } else {
                                 connection.sendGenericMessage(header?.toString(), body)
                             }

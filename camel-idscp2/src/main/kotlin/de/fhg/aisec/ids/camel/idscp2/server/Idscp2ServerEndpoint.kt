@@ -30,7 +30,6 @@ import de.fhg.aisec.ids.idscp2.idscp_core.api.Idscp2EndpointListener
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.AttestationConfig
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2ConnectionListener
-import de.fraunhofer.iais.eis.Message
 import org.apache.camel.Processor
 import org.apache.camel.Producer
 import org.apache.camel.spi.UriEndpoint
@@ -118,11 +117,14 @@ class Idscp2ServerEndpoint(uri: String?, private val remaining: String, componen
     @Synchronized
     fun sendMessage(header: Any?, body: ByteArray?) {
         server?.let { server ->
-            server.allConnections.forEach {
+            server.allConnections.forEach { connection ->
                 if (useIdsMessages) {
-                    it.sendIdsMessage(header?.let { header as Message }, body)
+                    connection.sendIdsMessage(
+                        header?.let { Utils.finalizeMessage(it, connection) },
+                        body
+                    )
                 } else {
-                    it.sendGenericMessage(header?.toString(), body)
+                    connection.sendGenericMessage(header?.toString(), body)
                 }
             }
         }

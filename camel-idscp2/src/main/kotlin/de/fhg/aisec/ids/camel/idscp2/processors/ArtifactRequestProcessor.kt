@@ -61,10 +61,9 @@ class ArtifactRequestProcessor : Processor {
         } else {
             // Proceed normally and send ArtifactResponseMessage
             ArtifactResponseMessageBuilder().run {
-                Utils.initMessageBuilder(this)
                 _correlationMessage_(artifactRequestMessage.id)
                 _transferContract_(usedContract)
-                build().let {
+                let {
                     if (LOG.isDebugEnabled) {
                         LOG.debug("Serialisation header: {}", SERIALIZER.serialize(it))
                     }
@@ -99,17 +98,15 @@ class ArtifactRequestProcessor : Processor {
         if (LOG.isDebugEnabled) {
             LOG.debug("Constructing RejectionMessage for requested artifact: {}", rejectionReason)
         }
-        val rejectionMessageBuilder = RejectionMessageBuilder()
-        Utils.initMessageBuilder(rejectionMessageBuilder)
-        rejectionMessageBuilder
+        RejectionMessageBuilder()
             ._correlationMessage_(artifactRequestMessage.correlationMessage)
             ._rejectionReason_(rejectionReason)
-        rejectionMessageBuilder.build().let {
-            if (LOG.isDebugEnabled) {
-                LOG.debug("Serialisation header: {}", SERIALIZER.serialize(it))
+            .let {
+                if (LOG.isDebugEnabled) {
+                    LOG.debug("Serialisation header: {}", SERIALIZER.serialize(it))
+                }
+                exchange.message.setHeader(IDSCP2_HEADER, it)
             }
-            exchange.message.setHeader(IDSCP2_HEADER, it)
-        }
     }
 
     companion object {

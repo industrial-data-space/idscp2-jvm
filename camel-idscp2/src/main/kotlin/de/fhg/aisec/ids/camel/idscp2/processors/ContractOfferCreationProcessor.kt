@@ -22,7 +22,6 @@ package de.fhg.aisec.ids.camel.idscp2.processors
 import de.fhg.aisec.ids.camel.idscp2.Constants
 import de.fhg.aisec.ids.camel.idscp2.Constants.CONTAINER_URI_PROPERTY
 import de.fhg.aisec.ids.camel.idscp2.Constants.IDSCP2_HEADER
-import de.fhg.aisec.ids.camel.idscp2.Utils
 import de.fhg.aisec.ids.camel.idscp2.Utils.SERIALIZER
 import de.fraunhofer.iais.eis.BinaryOperator
 import de.fraunhofer.iais.eis.Constraint
@@ -47,9 +46,7 @@ class ContractOfferCreationProcessor : Processor {
             LOG.debug("[IN] ${this::class.java.simpleName}")
         }
 
-        val contractOfferMessageBuilder = ContractOfferMessageBuilder()
-        Utils.initMessageBuilder(contractOfferMessageBuilder)
-        contractOfferMessageBuilder.build().let {
+        ContractOfferMessageBuilder().let {
             if (LOG.isDebugEnabled) {
                 LOG.debug("Serialization header: {}", SERIALIZER.serialize(it))
             }

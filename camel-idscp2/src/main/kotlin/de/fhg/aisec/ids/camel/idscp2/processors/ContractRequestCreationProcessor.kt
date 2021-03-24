@@ -39,9 +39,7 @@ class ContractRequestCreationProcessor : Processor {
             LOG.debug("[IN] ${this::class.java.simpleName}")
         }
 
-        val requestMessageBuilder = ContractRequestMessageBuilder()
-        Utils.initMessageBuilder(requestMessageBuilder)
-        requestMessageBuilder.build().let {
+        ContractRequestMessageBuilder().let {
             if (LOG.isDebugEnabled) LOG.debug("Serialization header: {}", SERIALIZER.serialize(it))
             exchange.message.setHeader(IDSCP2_HEADER, it)
         }
