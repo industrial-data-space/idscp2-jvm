@@ -65,7 +65,7 @@ class ArtifactRequestProcessor : Processor {
                 _transferContract_(usedContract)
                 let {
                     if (LOG.isDebugEnabled) {
-                        LOG.debug("Serialisation header: {}", SERIALIZER.serialize(it))
+                        LOG.debug("Serialisation header: {}", SERIALIZER.serialize(it.build()))
                     }
                     exchange.message.setHeader(IDSCP2_HEADER, it)
                 }
@@ -103,7 +103,7 @@ class ArtifactRequestProcessor : Processor {
             ._rejectionReason_(rejectionReason)
             .let {
                 if (LOG.isDebugEnabled) {
-                    LOG.debug("Serialisation header: {}", SERIALIZER.serialize(it))
+                    LOG.debug("Serialisation header: {}", SERIALIZER.serialize(it.build()))
                 }
                 exchange.message.setHeader(IDSCP2_HEADER, it)
             }

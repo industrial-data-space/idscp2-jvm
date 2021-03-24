@@ -60,7 +60,7 @@ class ContractResponseProcessor : Processor {
                 ._correlationMessage_(contractResponseMessage.id)
                 .let {
                     if (LOG.isDebugEnabled) {
-                        LOG.debug("Serialization Header: {}", SERIALIZER.serialize(it))
+                        LOG.debug("Serialization Header: {}", SERIALIZER.serialize(it.build()))
                     }
                     exchange.message.setHeader(IDSCP2_HEADER, it)
                 }
@@ -101,7 +101,7 @@ class ContractResponseProcessor : Processor {
             ._correlationMessage_(correlationId)
             .let {
                 if (LOG.isDebugEnabled) {
-                    LOG.debug("Serialization Header: {}", SERIALIZER.serialize(it))
+                    LOG.debug("Serialization Header: {}", SERIALIZER.serialize(it.build()))
                 }
                 exchange.message.setHeader(IDSCP2_HEADER, it)
             }

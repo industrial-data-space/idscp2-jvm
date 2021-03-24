@@ -55,7 +55,7 @@ class ResourceUpdateCreationProcessor : Processor {
             ._transferContract_(usedContract)
             .let {
                 if (LOG.isDebugEnabled) {
-                    LOG.debug("Serialisation header: {}", SERIALIZER.serialize(it))
+                    LOG.debug("Serialisation header: {}", SERIALIZER.serialize(it.build()))
                 }
                 exchange.message.setHeader(IDSCP2_HEADER, it)
             }

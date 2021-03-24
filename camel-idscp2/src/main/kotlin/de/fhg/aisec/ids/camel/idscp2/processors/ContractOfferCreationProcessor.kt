@@ -48,7 +48,7 @@ class ContractOfferCreationProcessor : Processor {
 
         ContractOfferMessageBuilder().let {
             if (LOG.isDebugEnabled) {
-                LOG.debug("Serialization header: {}", SERIALIZER.serialize(it))
+                LOG.debug("Serialization header: {}", SERIALIZER.serialize(it.build()))
             }
             exchange.message.setHeader(IDSCP2_HEADER, it)
         }

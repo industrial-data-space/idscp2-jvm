@@ -60,7 +60,7 @@ class ContractOfferProcessor : Processor {
                 _correlationMessage_(contractOfferMessage.id)
                 let {
                     if (LOG.isDebugEnabled) {
-                        LOG.debug("Serialization Header: {}", SERIALIZER.serialize(it))
+                        LOG.debug("Serialization Header: {}", SERIALIZER.serialize(it.build()))
                     }
                     exchange.message.setHeader(IDSCP2_HEADER, it)
                 }
@@ -102,7 +102,7 @@ class ContractOfferProcessor : Processor {
             ._correlationMessage_(correlationId)
             .let {
                 if (LOG.isDebugEnabled) {
-                    LOG.debug("Serialization Header: {}", SERIALIZER.serialize(it))
+                    LOG.debug("Serialization Header: {}", SERIALIZER.serialize(it.build()))
                 }
                 exchange.message.setHeader(IDSCP2_HEADER, it)
             }
