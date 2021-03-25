@@ -1,7 +1,6 @@
 Bundle-Name: IDS :: IDSCP2
 Bundle-Description: IDSCP2 protocol implementation
 Export-Package:\
-    kotlinx.coroutines*,\
     de.fhg.aisec.ids.idscp2*
 Import-Package:\
     !android.os*,\

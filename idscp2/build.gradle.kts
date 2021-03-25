@@ -33,7 +33,7 @@ val api by configurations
 val testImplementation by configurations
 
 dependencies {
-    api("org.jetbrains.kotlinx", "kotlinx-coroutines-core", libraryVersions["kotlinxCoroutines"])
+    api("org.jetbrains.kotlinx", "kotlinx-coroutines-core-jvm", libraryVersions["kotlinxCoroutines"])
 
     api("org.bouncycastle", "bcprov-jdk15on", libraryVersions["bouncycastle"])
 
