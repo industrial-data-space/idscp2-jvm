@@ -55,9 +55,6 @@ object AsyncIdscp2Factory {
         // create the id for the future connection, it is used in the FSM for better logging readability
         val id: String = UUID.randomUUID().toString()
 
-        // create connection future for fsm
-        val connectionFutureFsm = CompletableFuture<Idscp2Connection>()
-
         // create the FSM for the connection
         val fsm = FSM(
             secureChannel,
@@ -66,7 +63,7 @@ object AsyncIdscp2Factory {
             configuration.ackTimeoutDelay,
             configuration.handshakeTimeoutDelay,
             id,
-            connectionFutureFsm
+            connectionFuture.thenApply { it as Idscp2Connection }
         )
 
         // register FSM to secure channel, pass peer certificate to FSM
@@ -90,7 +87,6 @@ object AsyncIdscp2Factory {
                 // create the connection, complete the future and register it to the fsm as listener
                 val connection: CC = connectionFactory(fsm, id)
                 connectionFuture.complete(connection)
-                connectionFutureFsm.complete(connection)
 
                 // close the connection if it was cancelled
                 if (connectionFuture.isCancelled) {
@@ -99,7 +95,6 @@ object AsyncIdscp2Factory {
             } catch (e: Idscp2HandshakeException) {
                 // idscp2 handshake failed
                 connectionFuture.completeExceptionally(e)
-                connectionFutureFsm.completeExceptionally(e)
             }
         }
         return true
