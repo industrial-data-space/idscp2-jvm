@@ -60,7 +60,7 @@ object RatVerifierDriverRegistry {
         driverConfig: VC?
     ) {
         if (LOG.isDebugEnabled) {
-            LOG.debug("Register '{}' driver to RAT prover registry", instance)
+            LOG.debug("Register '{}' driver to RAT verifier registry", instance)
         }
         drivers[instance] = DriverWrapper(driverFactory, driverConfig)
     }
@@ -70,7 +70,7 @@ object RatVerifierDriverRegistry {
      */
     fun unregisterDriver(instance: String) {
         if (LOG.isDebugEnabled) {
-            LOG.debug("Register '{}' driver from RAT prover registry", instance)
+            LOG.debug("Register '{}' driver from RAT verifier registry", instance)
         }
         drivers.remove(instance)
     }
