@@ -81,7 +81,7 @@ subprojects {
     // define some Bill of Materials (BOM) for all subprojects
     dependencies {
         // Logging API
-        api("org.slf4j", "slf4j-simple", libraryVersions["slf4j"])
+        api("org.slf4j", "slf4j-api", libraryVersions["slf4j"])
 
         // Needed for kotlin modules, provided at runtime via kotlin-osgi-bundle in karaf-features-ids
         api("org.jetbrains.kotlin", "kotlin-stdlib-jdk8", libraryVersions["kotlin"])
