@@ -143,6 +143,7 @@ subprojects {
         }
 
         repositories {
+            // mavenLocal()
             maven {
                 url = uri(
                     if (version.toString().endsWith("SNAPSHOT")) {
