@@ -1,6 +1,6 @@
 /*-
  * ========================LICENSE_START=================================
- * idscp2
+ * idscp2-examples
  * %%
  * Copyright (C) 2021 Fraunhofer AISEC
  * %%

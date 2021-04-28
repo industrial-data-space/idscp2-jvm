@@ -1,6 +1,6 @@
 /*-
  * ========================LICENSE_START=================================
- * idscp2
+ * idscp2-examples
  * %%
  * Copyright (C) 2021 Fraunhofer AISEC
  * %%
@@ -23,20 +23,21 @@ import de.fhg.aisec.ids.idscp2.default_drivers.rat.dummy.RatProverDummy
 import de.fhg.aisec.ids.idscp2.default_drivers.rat.dummy.RatVerifierDummy
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTLSDriver
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
-import de.fhg.aisec.ids.idscp2.idscp_core.api.Idscp2EndpointListener
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2Connection
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2ConnectionAdapter
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2ConnectionImpl
-import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server.Idscp2ServerFactory
 import de.fhg.aisec.ids.idscp2.idscp_core.rat_registry.RatProverDriverRegistry
 import de.fhg.aisec.ids.idscp2.idscp_core.rat_registry.RatVerifierDriverRegistry
 import org.slf4j.LoggerFactory
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.CompletableFuture
 
-class CommandlineTunnelServer : Idscp2EndpointListener<Idscp2Connection> {
+class Idscp2ClientInitiator {
+    private lateinit var connectionFuture: CompletableFuture<Idscp2Connection>
+
     fun init(configuration: Idscp2Configuration, nativeTlsConfiguration: NativeTlsConfiguration) {
-        LOG.info("setting up IDSCP listener")
+
         // create secure channel driver
         val secureChannelDriver = NativeTLSDriver<Idscp2Connection>()
 
@@ -49,37 +50,34 @@ class CommandlineTunnelServer : Idscp2EndpointListener<Idscp2Connection> {
             RatVerifierDummy.RAT_VERIFIER_DUMMY_ID, ::RatVerifierDummy, null
         )
 
-        // create server config
-        val serverConfig = Idscp2ServerFactory(
-            ::Idscp2ConnectionImpl,
-            this,
-            configuration,
-            secureChannelDriver,
-            nativeTlsConfiguration
-        )
+        // connect to idscp2 server
+        connectionFuture = secureChannelDriver.connect(::Idscp2ConnectionImpl, configuration, nativeTlsConfiguration)
+        connectionFuture.thenAccept { connection: Idscp2Connection ->
+            LOG.info("Client: New connection with id " + connection.id)
+            connection.addConnectionListener(object : Idscp2ConnectionAdapter() {
+                override fun onError(t: Throwable) {
+                    LOG.error("Client connection error occurred", t)
+                }
 
-        @Suppress("UNUSED_VARIABLE") val idscp2Server = serverConfig.listen()
-    }
-
-    override fun onConnection(connection: Idscp2Connection) {
-        LOG.info("Server: New connection with id " + connection.id)
-
-        connection.addConnectionListener(object : Idscp2ConnectionAdapter() {
-            override fun onError(t: Throwable) {
-                LOG.error("Server connection error occurred", t)
+                override fun onClose() {
+                    LOG.info("Client: Connection with id " + connection.id + " has been closed")
+                }
+            })
+            connection.addMessageListener { c: Idscp2Connection, data: ByteArray ->
+                LOG.info("Received ping message: " + String(data, StandardCharsets.UTF_8))
+                c.close()
             }
-
-            override fun onClose() {
-                LOG.info("Server: Connection with id " + connection.id + " has been closed")
-            }
-        })
-
-        connection.addMessageListener { _: Idscp2Connection, data: ByteArray ->
-            LOG.info("Received message: ${String(data, StandardCharsets.UTF_8)}".trimIndent())
+            connection.unlockMessaging()
+            LOG.info("Send PING ...")
+            connection.nonBlockingSend("PING".toByteArray(StandardCharsets.UTF_8))
+            LOG.info("Local DAT: " + String(connection.localDynamicAttributeToken, StandardCharsets.UTF_8))
+        }.exceptionally { t: Throwable? ->
+            LOG.error("Client endpoint error occurred", t)
+            null
         }
     }
 
     companion object {
-        private val LOG = LoggerFactory.getLogger(CommandlineTunnelServer::class.java)
+        private val LOG = LoggerFactory.getLogger(Idscp2ClientInitiator::class.java)
     }
 }

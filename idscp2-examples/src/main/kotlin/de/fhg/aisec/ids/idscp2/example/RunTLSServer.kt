@@ -1,6 +1,6 @@
 /*-
  * ========================LICENSE_START=================================
- * idscp2
+ * idscp2-examples
  * %%
  * Copyright (C) 2021 Fraunhofer AISEC
  * %%
@@ -28,23 +28,24 @@ import de.fhg.aisec.ids.idscp2.default_drivers.rat.dummy.RatVerifierDummy
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.AttestationConfig
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
+import de.fhg.aisec.ids.idscp2.idscp_core.drivers.DapsDriver
 import java.nio.file.Paths
 import java.util.Objects
 
-object RunTLSClient {
+object RunTLSServer {
     @JvmStatic
-    fun main(args: Array<String>) {
+    fun main(argv: Array<String>) {
 
         val keyStorePath = Paths.get(
             Objects.requireNonNull(
-                RunTLSClient::class.java.classLoader
-                    .getResource("ssl/consumer-keystore.p12")
+                RunTLSServer::class.java.classLoader
+                    .getResource("ssl/provider-keystore.p12")
             ).path
         )
 
         val trustStorePath = Paths.get(
             Objects.requireNonNull(
-                RunTLSClient::class.java.classLoader
+                RunTLSServer::class.java.classLoader
                     .getResource("ssl/truststore.p12")
             ).path
         )
@@ -55,12 +56,12 @@ object RunTLSClient {
             .setRatTimeoutDelay(300 * 1000) // 300 seconds
             .build()
 
-        // create daps driver
+        // create daps config
         val securityRequirements = SecurityRequirements.Builder()
             .setRequiredSecurityLevel(SecurityProfile.TRUSTED)
             .build()
 
-        val dapsDriver = AisecDapsDriver(
+        val dapsDriver: DapsDriver = AisecDapsDriver(
             AisecDapsDriverConfig.Builder()
                 .setKeyStorePath(keyStorePath)
                 .setTrustStorePath(trustStorePath)
@@ -69,23 +70,19 @@ object RunTLSClient {
                 .build()
         )
 
-        // create idscp2 config
         val settings = Idscp2Configuration.Builder()
-            .setAckTimeoutDelay(500) //  500 ms
-            .setHandshakeTimeoutDelay(5 * 1000) // 5 seconds
             .setAttestationConfig(localAttestationConfig)
             .setDapsDriver(dapsDriver)
             .build()
 
-        // create secureChannel config
         val nativeTlsConfiguration = NativeTlsConfiguration.Builder()
             .setKeyStorePath(keyStorePath)
             .setTrustStorePath(trustStorePath)
             .setCertificateAlias("1.0.1")
-            .setHost("provider-core")
+            .setHost("consumer-core")
             .build()
 
-        val initiator = Idscp2ClientInitiator()
+        val initiator = Idscp2ServerInitiator()
         initiator.init(settings, nativeTlsConfiguration)
     }
 }
