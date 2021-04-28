@@ -24,12 +24,10 @@ import de.fhg.aisec.ids.camel.idscp2.Constants.CONTAINER_URI_PROPERTY
 import de.fhg.aisec.ids.camel.idscp2.Constants.IDSCP2_HEADER
 import de.fhg.aisec.ids.camel.idscp2.Utils.SERIALIZER
 import de.fraunhofer.iais.eis.BinaryOperator
-import de.fraunhofer.iais.eis.Constraint
 import de.fraunhofer.iais.eis.ConstraintBuilder
 import de.fraunhofer.iais.eis.ContractOfferBuilder
 import de.fraunhofer.iais.eis.ContractOfferMessageBuilder
 import de.fraunhofer.iais.eis.LeftOperand
-import de.fraunhofer.iais.eis.Permission
 import de.fraunhofer.iais.eis.PermissionBuilder
 import org.apache.camel.Exchange
 import org.apache.camel.Processor
@@ -70,20 +68,20 @@ class ContractOfferCreationProcessor : Processor {
         }
         val contractOffer = ContractOfferBuilder()
             ._permission_(
-                ArrayList<Permission>().also { pl ->
-                    pl += PermissionBuilder()
+                arrayListOf(
+                    PermissionBuilder()
                         ._target_(artifactUri)
                         ._constraint_(
-                            ArrayList<Constraint>().also { cl ->
-                                cl += ConstraintBuilder()
+                            arrayListOf(
+                                ConstraintBuilder()
                                     ._leftOperand_(LeftOperand.SYSTEM)
                                     ._operator_(BinaryOperator.SAME_AS)
                                     ._rightOperandReference_(containerUri)
                                     .build()
-                            }
+                            )
                         )
                         .build()
-                }
+                )
             )
             .build()
 

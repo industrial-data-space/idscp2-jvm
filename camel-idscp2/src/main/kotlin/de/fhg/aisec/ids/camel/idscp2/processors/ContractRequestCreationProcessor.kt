@@ -23,9 +23,9 @@ import de.fhg.aisec.ids.camel.idscp2.Constants.ARTIFACT_URI_PROPERTY
 import de.fhg.aisec.ids.camel.idscp2.Constants.IDSCP2_HEADER
 import de.fhg.aisec.ids.camel.idscp2.Utils
 import de.fhg.aisec.ids.camel.idscp2.Utils.SERIALIZER
+import de.fraunhofer.iais.eis.Action
 import de.fraunhofer.iais.eis.ContractRequestBuilder
 import de.fraunhofer.iais.eis.ContractRequestMessageBuilder
-import de.fraunhofer.iais.eis.Permission
 import de.fraunhofer.iais.eis.PermissionBuilder
 import org.apache.camel.Exchange
 import org.apache.camel.Processor
@@ -62,11 +62,12 @@ class ContractRequestCreationProcessor : Processor {
             ._contractEnd_(contractDate?.apply { year += 1 })
             // Request permission for (unrestricted?) usage of an artifact, identified by URI
             ._permission_(
-                ArrayList<Permission>().also { pl ->
-                    pl += PermissionBuilder()
+                arrayListOf(
+                    PermissionBuilder()
                         ._target_(artifactUri)
+                        ._action_(arrayListOf(Action.USE))
                         .build()
-                }
+                )
             )
             .build()
         SERIALIZER.serialize(contractRequest).let {
