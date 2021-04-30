@@ -1,6 +1,7 @@
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.yaml.snakeyaml.Yaml
+import com.google.protobuf.gradle.*
 
 buildscript {
     repositories {
@@ -163,7 +164,14 @@ subprojects {
 
     signing {
         useGpgCmd()
+
         sign(publishing.publications.getByName("idscp2Library"))
+    }
+
+    tasks.withType<Sign>().configureEach {
+        onlyIf{
+            gradle.taskGraph.hasTask("publish")
+        }
     }
 
     apply(plugin = "com.github.jk1.dependency-license-report")

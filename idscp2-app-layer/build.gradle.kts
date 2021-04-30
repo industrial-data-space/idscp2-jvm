@@ -1,4 +1,5 @@
 import com.google.protobuf.gradle.protobuf
+import com.google.protobuf.gradle.protoc
 import org.gradle.plugins.ide.idea.model.IdeaModel
 
 @Suppress("UNCHECKED_CAST")
@@ -11,9 +12,20 @@ apply(plugin = "com.google.protobuf")
 apply(plugin = "idea")
 
 val generatedProtoBaseDir = "$projectDir/generated"
+val os: OperatingSystem = org.gradle.nativeplatform.platform.internal.DefaultNativePlatform.getCurrentOperatingSystem()
+val arch: Architecture = org.gradle.nativeplatform.platform.internal.DefaultNativePlatform.getCurrentArchitecture()
 
 protobuf {
     generatedFilesBaseDir = generatedProtoBaseDir
+
+    if(os.isMacOsX && arch.name == "aarch64") { // needs to be changed to "arm-v8" for gradle 7.0
+        // protoc needs to be available in the system, e.g. via homebrew
+    } else {
+        protoc {
+            // Download from repositories
+            artifact = "com.google.protobuf:protoc:3.9.2"
+        }
+    }
 }
 
 tasks.named("clean") {
