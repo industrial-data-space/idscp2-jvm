@@ -10,7 +10,7 @@ kotlinxCoroutines: "1.4.3"
 infomodel: "4.0.0"
 
 # For javax.xml.bind support in newer java versions
-camel: "3.0.1"
+camel: "3.9.0"
 
 slf4j: "1.7.30"
 
