@@ -27,7 +27,6 @@ import io.jsonwebtoken.SignatureAlgorithm
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody
 import org.bouncycastle.asn1.ASN1OctetString
 import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier
 import org.bouncycastle.asn1.x509.Extension
@@ -42,7 +41,6 @@ import org.jose4j.jwt.consumer.JwtConsumerBuilder
 import org.jose4j.keys.resolvers.HttpsJwksVerificationKeyResolver
 import org.json.JSONObject
 import org.slf4j.LoggerFactory
-import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.security.Key
 import java.security.KeyManagementException
@@ -51,7 +49,6 @@ import java.security.NoSuchAlgorithmException
 import java.security.cert.X509Certificate
 import java.time.Instant
 import java.util.Date
-import java.util.HashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import javax.net.ssl.SSLContext
@@ -157,9 +154,8 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
     }
 
     private fun syncGetToken(): ByteArray {
+        renewalLock.lock()
         try {
-            renewalLock.lock()
-
             if (NumericDate.now().isBefore(renewalTime)) {
                 // the current token is still valid
                 if (LOG.isDebugEnabled) {
@@ -194,7 +190,7 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
                 .compact()
 
             // build http client and request for DAPS
-            val formBody: RequestBody = FormBody.Builder()
+            val formBody = FormBody.Builder()
                 .add("grant_type", "client_credentials")
                 .add(
                     "client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
@@ -255,8 +251,12 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
 
             innerVerifyToken(token.toByteArray(StandardCharsets.UTF_8), null, localPeerCertificate, true)
             return token.toByteArray(StandardCharsets.UTF_8)
-        } catch (e: IOException) {
-            throw DatException("Error whilst retrieving DAT", e)
+        } catch (e: Exception) {
+            throw if (e is DatException) {
+                e
+            } else {
+                DatException("Error whilst retrieving DAT", e)
+            }
         } finally {
             renewalLock.unlock()
         }

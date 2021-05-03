@@ -233,7 +233,7 @@ class StateWaitForDatAndRat(
                 if (LOG.isDebugEnabled) {
                     LOG.debug("Peer is requesting a new DAT, followed by a re-attestation")
                 }
-                if (!fsm.sendFromFSM(Idscp2MessageHelper.createIdscpDatMessage(fsm.getDynamicAttributeToken))) {
+                if (!fsm.sendFromFSM(Idscp2MessageHelper.createIdscpDatMessage(fsm.dynamicAttributeToken))) {
                     LOG.warn("Cannot send Dat message")
                     return@Transition FSM.FsmResult(FSM.FsmResultCode.IO_ERROR, fsm.getState(FsmState.STATE_CLOSED))
                 }

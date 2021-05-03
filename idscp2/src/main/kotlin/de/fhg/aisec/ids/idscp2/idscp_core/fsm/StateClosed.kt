@@ -84,7 +84,7 @@ internal class StateClosed(
                 if (LOG.isTraceEnabled) {
                     LOG.trace("Get DAT Token vom DAT_DRIVER")
                 }
-                val dat = fsm.getDynamicAttributeToken
+                val dat = fsm.dynamicAttributeToken
 
                 if (LOG.isTraceEnabled) {
                     LOG.trace("Send IDSCP_HELLO")

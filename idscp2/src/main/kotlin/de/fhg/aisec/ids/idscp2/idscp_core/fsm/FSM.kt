@@ -41,7 +41,6 @@ import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import java.nio.charset.StandardCharsets
 import java.security.cert.X509Certificate
-import java.util.HashMap
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.locks.ReentrantLock
 
@@ -502,7 +501,7 @@ class FSM(
     /**
      * Get local Dat
      */
-    val getDynamicAttributeToken: ByteArray
+    val dynamicAttributeToken: ByteArray
         get() {
             return try {
                 // get token from DAPS driver, update inner connection token and return
