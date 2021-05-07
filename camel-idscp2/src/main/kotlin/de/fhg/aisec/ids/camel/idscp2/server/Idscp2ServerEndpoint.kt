@@ -75,6 +75,12 @@ class Idscp2ServerEndpoint(uri: String?, private val remaining: String, componen
 
     @UriParam(
         label = "security",
+        description = "Whether to verify the hostname of the client."
+    )
+    var tlsClientHostnameVerification: Boolean = true
+
+    @UriParam(
+        label = "security",
         description = "The alias of the DAPS key in the keystore provided by sslContextParameters",
         defaultValue = "1"
     )
@@ -192,6 +198,9 @@ class Idscp2ServerEndpoint(uri: String?, private val remaining: String, componen
         val secureChannelConfigBuilder = NativeTlsConfiguration.Builder()
             .setHost(host)
             .setServerPort(port)
+        if (!tlsClientHostnameVerification) {
+            secureChannelConfigBuilder.unsafeDisableHostnameVerification()
+        }
 
         @Suppress("DEPRECATION")
         (transportSslContextParameters ?: sslContextParameters)?.let {

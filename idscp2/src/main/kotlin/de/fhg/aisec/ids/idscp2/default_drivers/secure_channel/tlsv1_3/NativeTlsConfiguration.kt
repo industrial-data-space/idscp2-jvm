@@ -103,7 +103,7 @@ class NativeTlsConfiguration {
             return this
         }
 
-        fun dangerDisableHostnameVerification(): Builder {
+        fun unsafeDisableHostnameVerification(): Builder {
             config.hostnameVerificationEnabled = false
             return this
         }

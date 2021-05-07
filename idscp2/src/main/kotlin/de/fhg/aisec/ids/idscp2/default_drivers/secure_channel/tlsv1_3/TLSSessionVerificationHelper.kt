@@ -55,7 +55,14 @@ object TLSSessionVerificationHelper {
      * Throws SSlPeerUnverifiedException if peer certificate is not secure for this peer
      */
     @Throws(SSLPeerUnverifiedException::class)
-    fun verifyTlsSession(host: String, port: Int, peerCert: X509Certificate, hostnameVerificationEnabled: Boolean) {
+    @JvmOverloads
+    fun verifyTlsSession(
+        host: String,
+        port: Int,
+        peerCert: X509Certificate,
+        hostnameVerificationEnabled: Boolean,
+        peerIsServer: Boolean = true
+    ) {
         if (LOG.isTraceEnabled) {
             LOG.trace("Connected to {}:{}", host, port)
         }
@@ -144,7 +151,17 @@ object TLSSessionVerificationHelper {
                     }
                 }
             } else {
-                LOG.warn("DANGER: TLS Hostname Verification is disabled.")
+                if (peerIsServer) {
+                    LOG.warn(
+                        "DANGER: TLS server hostname verification of is disabled. " +
+                            "This is strongly discouraged except for testing purposes!."
+                    )
+                } else {
+                    LOG.info(
+                        "Client hostname verification is disabled. " +
+                            "This may reduce connection security, please consider enabling it when applicable."
+                    )
+                }
             }
 
             // check certificate validity for now and at least one day

@@ -172,7 +172,8 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
             // verify tls session on application layer: hostname verification, certificate validity
             TLSSessionVerificationHelper.verifyTlsSession(
                 sslSession.peerHost, sslSession.peerPort, peerCert,
-                nativeTlsConfiguration.hostnameVerificationEnabled
+                nativeTlsConfiguration.hostnameVerificationEnabled,
+                false
             )
             if (LOG.isTraceEnabled) {
                 LOG.trace("TLS session is valid")
