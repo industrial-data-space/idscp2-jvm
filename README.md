@@ -1,4 +1,4 @@
-# IDSCPv2 (JVM)
+# IDSCP2 (JVM)
 
 [![build](https://github.com/industrial-data-space/idscp2-java/actions/workflows/build.yml/badge.svg)](https://github.com/industrial-data-space/idscp2-java/actions/workflows/build.yml)
 
