@@ -112,20 +112,29 @@ class Idscp2ClientEndpoint(uri: String?, private val remaining: String, componen
         description = "Max attempts to connect to the IDSCP2 server",
         defaultValue = "3"
     )
-    var maxRetries: Int = 3
+    var maxRetries: Long = 3
 
     @UriParam(
         label = "client",
-        description = "Delay after an failed connection attempt to the server",
+        description = "Delay after an failed connection attempt to the server, in milliseconds",
         defaultValue = "5000"
     )
     var retryDelayMs: Long = 5000
 
+    @UriParam(
+        label = "client",
+        description = "Timeout when waiting for a response, in milliseconds",
+        defaultValue = "5000"
+    )
+    var responseTimeout: Long = 5000
+
     private fun makeConnectionInternal(): CompletableFuture<AppLayerConnection> {
         return secureChannelDriver.connect(::AppLayerConnection, clientConfiguration, secureChannelConfig)
             .thenApply { c ->
-                c.addIdsMessageListener { connection, header, _ ->
-                    header?.let { UsageControlMaps.setConnectionContract(connection, it.transferContract) }
+                if (useIdsMessages) {
+                    c.addIdsMessageListener { connection, header, _ ->
+                        header?.let { UsageControlMaps.setConnectionContract(connection, it.transferContract) }
+                    }
                 }
                 c
             }

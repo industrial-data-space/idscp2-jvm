@@ -30,6 +30,7 @@ import de.fhg.aisec.ids.idscp2.idscp_core.api.Idscp2EndpointListener
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.AttestationConfig
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2ConnectionListener
+import org.apache.camel.Consumer
 import org.apache.camel.Processor
 import org.apache.camel.Producer
 import org.apache.camel.spi.UriEndpoint
@@ -38,7 +39,6 @@ import org.apache.camel.support.DefaultEndpoint
 import org.apache.camel.support.jsse.SSLContextParameters
 import org.slf4j.LoggerFactory
 import java.nio.file.Paths
-import java.util.HashSet
 import java.util.regex.Pattern
 
 @UriEndpoint(
@@ -142,7 +142,7 @@ class Idscp2ServerEndpoint(uri: String?, private val remaining: String, componen
     }
 
     @Synchronized
-    override fun createConsumer(processor: Processor): org.apache.camel.Consumer {
+    override fun createConsumer(processor: Processor): Consumer {
         return Idscp2ServerConsumer(this, processor)
     }
 
@@ -250,7 +250,7 @@ class Idscp2ServerEndpoint(uri: String?, private val remaining: String, componen
 
         secureChannelConfig = secureChannelConfigBuilder.build()
 
-        (component as Idscp2ServerComponent).getServer(serverConfiguration, secureChannelConfig).let {
+        (component as Idscp2ServerComponent).getServer(serverConfiguration, secureChannelConfig, useIdsMessages).let {
             server = it
             // Add this endpoint to this server's Idscp2EndpointListener set
             it.listeners += this

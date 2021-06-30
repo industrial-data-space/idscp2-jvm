@@ -27,6 +27,8 @@ import org.apache.camel.Exchange
 import org.apache.camel.support.DefaultProducer
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
@@ -43,10 +45,11 @@ class Idscp2ClientProducer(private val endpoint: Idscp2ClientEndpoint) : Default
             val header = message.getHeader(IDSCP2_HEADER)
             val body = message.getBody(ByteArray::class.java)
             if (header != null || body != null) {
-                for (t in 1..endpoint.maxRetries) {
+                for (t in 1L..endpoint.maxRetries) {
                     try {
                         // If connectionFuture completed exceptionally, recreate Connection
-                        if (connectionFuture.isCompletedExceptionally) {
+                        if (connectionFuture.isCompletedExceptionally || t > 1) {
+                            endpoint.releaseConnection(connectionFuture)
                             connectionFuture = endpoint.makeConnection()
                                 .also { c -> c.thenAccept { it.unlockMessaging() } }
                         }
@@ -77,7 +80,11 @@ class Idscp2ClientProducer(private val endpoint: Idscp2ClientEndpoint) : Default
                                     }
                                     connection.sendGenericMessage(header?.toString(), body)
                                 }
-                                condition.await()
+                                if (!condition.await(endpoint.responseTimeout, TimeUnit.MILLISECONDS)) {
+                                    throw TimeoutException(
+                                        "Response was not received within ${endpoint.responseTimeout} ms"
+                                    )
+                                }
                             }
                         } else {
                             if (endpoint.useIdsMessages) {
@@ -100,9 +107,6 @@ class Idscp2ClientProducer(private val endpoint: Idscp2ClientEndpoint) : Default
                                     "reset connection and retry after ${endpoint.retryDelayMs} ms...",
                                 x
                             )
-                            endpoint.releaseConnection(connectionFuture)
-                            connectionFuture = endpoint.makeConnection()
-                                .also { c -> c.thenAccept { it.unlockMessaging() } }
                             Thread.sleep(endpoint.retryDelayMs)
                         }
                     }

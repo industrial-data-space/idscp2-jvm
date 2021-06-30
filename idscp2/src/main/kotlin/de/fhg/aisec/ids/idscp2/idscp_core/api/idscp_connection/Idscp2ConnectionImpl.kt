@@ -27,7 +27,6 @@ import de.fhg.aisec.ids.idscp2.idscp_core.error.Idscp2WouldBlockException
 import de.fhg.aisec.ids.idscp2.idscp_core.fsm.FSM
 import org.slf4j.LoggerFactory
 import java.util.Collections
-import java.util.HashSet
 import java.util.concurrent.locks.ReentrantLock
 
 /**
@@ -165,7 +164,7 @@ class Idscp2ConnectionImpl(
         // When unlock is called, although not synchronized, this will eventually stop blocking.
         connectionListenerLatch.await()
         if (LOG.isDebugEnabled) {
-            LOG.debug("Received new IDSCP Message")
+            LOG.debug("Received new IDSCP Message, notifying {} listeners", messageListeners.size)
         }
         messageListeners.forEach { l: Idscp2MessageListener -> l.onMessage(this, msg) }
     }

@@ -52,8 +52,11 @@ class Idscp2ServerComponent : DefaultComponent() {
     }
 
     @Synchronized
-    fun getServer(serverConfiguration: Idscp2Configuration, nativeTlsConfiguration: NativeTlsConfiguration) =
-        servers.computeIfAbsent(serverConfiguration) { CamelIdscp2Server(it, nativeTlsConfiguration) }
+    fun getServer(
+        serverConfiguration: Idscp2Configuration,
+        nativeTlsConfiguration: NativeTlsConfiguration,
+        useIdsMessages: Boolean
+    ) = servers.computeIfAbsent(serverConfiguration) { CamelIdscp2Server(it, nativeTlsConfiguration, useIdsMessages) }
 
     @Synchronized
     fun freeServer(serverConfiguration: Idscp2Configuration) = servers.release(serverConfiguration)

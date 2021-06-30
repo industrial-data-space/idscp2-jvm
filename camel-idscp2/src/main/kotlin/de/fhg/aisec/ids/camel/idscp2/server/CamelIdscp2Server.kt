@@ -28,9 +28,12 @@ import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server.Idscp2Server
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server.Idscp2ServerFactory
 import java.util.Collections
-import java.util.HashSet
 
-class CamelIdscp2Server(serverConfiguration: Idscp2Configuration, nativeTlsConfiguration: NativeTlsConfiguration) :
+class CamelIdscp2Server(
+    serverConfiguration: Idscp2Configuration,
+    nativeTlsConfiguration: NativeTlsConfiguration,
+    private val useIdsMessages: Boolean
+) :
     Idscp2EndpointListener<AppLayerConnection> {
     private val server: Idscp2Server<AppLayerConnection>
     val listeners: MutableSet<Idscp2EndpointListener<AppLayerConnection>> = Collections.synchronizedSet(HashSet())
@@ -47,9 +50,11 @@ class CamelIdscp2Server(serverConfiguration: Idscp2Configuration, nativeTlsConfi
     }
 
     override fun onConnection(connection: AppLayerConnection) {
-        connection.addIdsMessageListener { c, header, _ ->
-            header?.let {
-                UsageControlMaps.setConnectionContract(c, it.transferContract)
+        if (useIdsMessages) {
+            connection.addIdsMessageListener { c, header, _ ->
+                header?.let {
+                    UsageControlMaps.setConnectionContract(c, it.transferContract)
+                }
             }
         }
         listeners.forEach { it.onConnection(connection) }
