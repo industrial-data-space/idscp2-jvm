@@ -135,7 +135,7 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
         val akiOc = ASN1OctetString.getInstance(rawAuthorityKeyIdentifier)
         val aki = AuthorityKeyIdentifier.getInstance(akiOc.octets)
         val authorityKeyIdentifier = aki.keyIdentifier
-        val akiResult = encodeHexString(authorityKeyIdentifier, true).toUpperCase()
+        val akiResult = encodeHexString(authorityKeyIdentifier, true).uppercase()
 
         // GET 2.5.29.14	SubjectKeyIdentifier
         val skiOid = Extension.subjectKeyIdentifier.id
@@ -143,7 +143,7 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
         val ski0c = ASN1OctetString.getInstance(rawSubjectKeyIdentifier)
         val ski = SubjectKeyIdentifier.getInstance(ski0c.octets)
         val subjectKeyIdentifier = ski.keyIdentifier
-        val skiResult = encodeHexString(subjectKeyIdentifier, true).toUpperCase()
+        val skiResult = encodeHexString(subjectKeyIdentifier, true).uppercase()
 
         if (LOG.isDebugEnabled) {
             LOG.debug("AKI: $akiResult")
@@ -165,11 +165,11 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
             }
 
             // request a new token from the DAPS
-            LOG.info("Retrieving Dynamic Attribute Token from Daps ...")
-
+            if (LOG.isInfoEnabled) {
+                LOG.info("Retrieving Dynamic Attribute Token from DAPS ...")
+            }
             if (LOG.isDebugEnabled) {
                 LOG.debug("ConnectorUUID: $connectorUUID")
-                LOG.debug("Retrieving Dynamic Attribute Token...")
             }
 
             // create signed JWT
@@ -251,7 +251,7 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
 
             innerVerifyToken(token.toByteArray(StandardCharsets.UTF_8), null, localPeerCertificate, true)
             return token.toByteArray(StandardCharsets.UTF_8)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             throw if (e is DatException) {
                 e
             } else {
@@ -382,7 +382,7 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
                 val sha256 = MessageDigest.getInstance("SHA-256")
                 sha256.update(certificate.encoded)
                 val digest = sha256.digest()
-                peerCertFingerprint = encodeHexString(digest, false).toLowerCase()
+                peerCertFingerprint = encodeHexString(digest, false).lowercase()
             } catch (e: Exception) {
                 throw DatException("Cannot calculate peer certificate fingerprint", e)
             }

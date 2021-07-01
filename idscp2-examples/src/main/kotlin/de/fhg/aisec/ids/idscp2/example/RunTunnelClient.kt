@@ -35,7 +35,7 @@ object RunTunnelClient {
         val localAttestationConfig = AttestationConfig.Builder()
             .setSupportedRatSuite(arrayOf(RatProverDummy.RAT_PROVER_DUMMY_ID))
             .setExpectedRatSuite(arrayOf(RatVerifierDummy.RAT_VERIFIER_DUMMY_ID))
-            .setRatTimeoutDelay(70 * 1000) // 70 seconds
+            .setRatTimeoutDelay(70 * 1000L) // 70 seconds
             .build()
 
         // create daps driver
@@ -43,7 +43,7 @@ object RunTunnelClient {
 
         val config = Idscp2Configuration.Builder()
             .setAckTimeoutDelay(500) //  500 ms
-            .setHandshakeTimeoutDelay(5 * 1000) // 5 seconds
+            .setHandshakeTimeoutDelay(5 * 1000L) // 5 seconds
             .setAttestationConfig(localAttestationConfig)
             .setDapsDriver(dapsDriver)
             .build()

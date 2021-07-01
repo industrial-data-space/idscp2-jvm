@@ -1,10 +1,10 @@
 # Versions for modules that will be released as libraries
-idscp2: "0.4.4"
+idscp2: "0.4.5"
 ktlint: "0.41.0"
 
 # Kotlin library/compiler version
-kotlin: "1.4.31"
-kotlinxCoroutines: "1.4.3"
+kotlin: "1.5.20"
+kotlinxCoroutines: "1.5.0"
 
 # The used version of the infomodel from IESE
 infomodel: "4.0.0"
@@ -14,17 +14,17 @@ camel: "3.0.1"
 
 slf4j: "1.7.30"
 
-guava: "30.1-jre"
+guava: "30.1.1-jre"
 junit4: "4.13.2"
-mockito: "3.8.0"
-awaitility: "4.0.3"
+mockito: "3.11.2"
+awaitility: "4.1.0"
 
 protobuf: "3.15.5"
 
-bouncycastle: "1.68"
+bouncycastle: "1.69"
 
 # Needed for token manager to assemble JWTs
 jsonwebtoken: "0.11.2"
 okhttp: "4.9.1"
-orgJson: "20201115"
-jose4j: "0.7.6"
+orgJson: "20210307"
+jose4j: "0.7.8"

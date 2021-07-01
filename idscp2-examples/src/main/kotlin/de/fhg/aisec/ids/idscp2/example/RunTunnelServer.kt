@@ -36,7 +36,7 @@ object RunTunnelServer {
         val localAttestationConfig = AttestationConfig.Builder()
             .setSupportedRatSuite(arrayOf(RatProverDummy.RAT_PROVER_DUMMY_ID))
             .setExpectedRatSuite(arrayOf(RatVerifierDummy.RAT_VERIFIER_DUMMY_ID))
-            .setRatTimeoutDelay(60 * 1000) // 60 seconds
+            .setRatTimeoutDelay(60 * 1000L) // 60 seconds
             .build()
 
         val dapsDriver: DapsDriver = NullDaps()

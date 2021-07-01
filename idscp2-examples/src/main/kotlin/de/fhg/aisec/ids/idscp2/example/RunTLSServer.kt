@@ -53,7 +53,7 @@ object RunTLSServer {
         val localAttestationConfig = AttestationConfig.Builder()
             .setSupportedRatSuite(arrayOf(RatProverDummy.RAT_PROVER_DUMMY_ID))
             .setExpectedRatSuite(arrayOf(RatVerifierDummy.RAT_VERIFIER_DUMMY_ID))
-            .setRatTimeoutDelay(300 * 1000) // 300 seconds
+            .setRatTimeoutDelay(300 * 1000L) // 300 seconds
             .build()
 
         // create daps config
