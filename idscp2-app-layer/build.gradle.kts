@@ -41,3 +41,8 @@ dependencies {
     api("de.fraunhofer.iais.eis.ids.infomodel", "java", libraryVersions["infomodel"])
     api("de.fraunhofer.iais.eis.ids", "infomodel-serializer", libraryVersions["infomodel"])
 }
+
+tasks.named("spotlessKotlin") {
+    dependsOn(tasks.named("generateProto"))
+    dependsOn(tasks.named("generateTestProto"))
+}

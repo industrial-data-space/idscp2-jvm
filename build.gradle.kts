@@ -15,7 +15,7 @@ plugins {
     java
     signing
     `maven-publish`
-    id("com.google.protobuf") version "0.8.15"
+    id("com.google.protobuf") version "0.8.16"
     // WARNING: Versions 5.2.x onwards export java.* packages, which is not allowed in Felix OSGi Resolver!
     // See http://karaf.922171.n3.nabble.com/Manifest-import-problems-td4059042.html
     id("biz.aQute.bnd") version "5.1.2" apply false

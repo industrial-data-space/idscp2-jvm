@@ -50,3 +50,8 @@ dependencies {
     testImplementation("junit", "junit", libraryVersions["junit4"])
     testImplementation("org.mockito", "mockito-core", libraryVersions["mockito"])
 }
+
+tasks.named("spotlessKotlin") {
+    dependsOn(tasks.named("generateProto"))
+    dependsOn(tasks.named("generateTestProto"))
+}
