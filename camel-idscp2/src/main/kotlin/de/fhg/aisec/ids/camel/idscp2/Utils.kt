@@ -25,6 +25,8 @@ import de.fraunhofer.iais.eis.DynamicAttributeTokenBuilder
 import de.fraunhofer.iais.eis.Message
 import de.fraunhofer.iais.eis.TokenFormat
 import de.fraunhofer.iais.eis.ids.jsonld.Serializer
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.util.GregorianCalendar
@@ -33,6 +35,7 @@ import javax.xml.datatype.XMLGregorianCalendar
 
 object Utils {
     val SERIALIZER: Serializer by lazy { Serializer() }
+    val LOG: Logger = LoggerFactory.getLogger(Utils::class.java)
 
     lateinit var maintainerUrlProducer: () -> URI
     lateinit var connectorUrlProducer: () -> URI
@@ -45,23 +48,35 @@ object Utils {
         )
     }
 
-    fun finalizeMessage(builder: Any, connection: Idscp2Connection): Message {
+    fun finalizeMessage(messageOrBuilder: Any, connection: Idscp2Connection): Message {
+        if (messageOrBuilder is Message) {
+            if (LOG.isDebugEnabled) {
+                LOG.debug(
+                    "Object passed to finalizeMessage is already a Message, " +
+                        "no methods will be called."
+                )
+            }
+            return messageOrBuilder
+        }
         try {
-            builder::class.java.apply {
+            if (LOG.isDebugEnabled) {
+                LOG.debug("Finalizing IDS MessageBuilder object...")
+            }
+            messageOrBuilder::class.java.apply {
                 getMethod("_securityToken_", DynamicAttributeToken::class.java)
                     .invoke(
-                        builder,
+                        messageOrBuilder,
                         DynamicAttributeTokenBuilder()
                             ._tokenFormat_(TokenFormat.JWT)
                             ._tokenValue_(String(connection.localDynamicAttributeToken, StandardCharsets.UTF_8))
                             .build()
                     )
-                getMethod("_senderAgent_", URI::class.java).invoke(builder, maintainerUrlProducer())
-                getMethod("_issuerConnector_", URI::class.java).invoke(builder, connectorUrlProducer())
+                getMethod("_senderAgent_", URI::class.java).invoke(messageOrBuilder, maintainerUrlProducer())
+                getMethod("_issuerConnector_", URI::class.java).invoke(messageOrBuilder, connectorUrlProducer())
                 getMethod("_issued_", XMLGregorianCalendar::class.java)
-                    .invoke(builder, createGregorianCalendarTimestamp(System.currentTimeMillis()))
-                getMethod("_modelVersion_", String::class.java).invoke(builder, infomodelVersion)
-                val message = getMethod("build").invoke(builder)
+                    .invoke(messageOrBuilder, createGregorianCalendarTimestamp(System.currentTimeMillis()))
+                getMethod("_modelVersion_", String::class.java).invoke(messageOrBuilder, infomodelVersion)
+                val message = getMethod("build").invoke(messageOrBuilder)
                 if (message !is Message) {
                     throw CamelIdscp2Exception(
                         "InfoModel message build failed! build() did not return a Message object!"
@@ -75,6 +90,12 @@ object Utils {
                     "properly initialized. This is a mandatory requirement for initialization " +
                     "of IDSCP Messages within the IDSCP2 Camel Adapter!",
                 upa
+            )
+        } catch (t: Throwable) {
+            throw CamelIdscp2Exception(
+                "Failed to finalize IDS MessageBuilder, " +
+                    "the object passed as IDSCP2 header must be an IDS Message or an IDS MessageBuilder.",
+                t
             )
         }
     }
