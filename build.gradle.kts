@@ -7,7 +7,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("org.yaml:snakeyaml:1.26")
+        classpath("org.yaml:snakeyaml:1.29")
     }
 }
 
@@ -40,7 +40,6 @@ allprojects {
 
     repositories {
         mavenCentral()
-        jcenter()
         // References IAIS repository that contains the infomodel artifacts
         maven("https://maven.iais.fraunhofer.de/artifactory/eis-ids-public/")
     }

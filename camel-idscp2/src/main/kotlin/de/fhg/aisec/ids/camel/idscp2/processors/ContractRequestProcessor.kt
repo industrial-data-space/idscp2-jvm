@@ -21,6 +21,7 @@ package de.fhg.aisec.ids.camel.idscp2.processors
 
 import de.fhg.aisec.ids.camel.idscp2.Constants.CONTAINER_URI_PROPERTY
 import de.fhg.aisec.ids.camel.idscp2.Constants.IDSCP2_HEADER
+import de.fhg.aisec.ids.camel.idscp2.Utils
 import de.fhg.aisec.ids.camel.idscp2.Utils.SERIALIZER
 import de.fraunhofer.iais.eis.BinaryOperator
 import de.fraunhofer.iais.eis.ConstraintBuilder
@@ -72,13 +73,19 @@ class ContractRequestProcessor : Processor {
                 URI.create(it.toString())
             }
         }
+        val contractDate = Utils.createGregorianCalendarTimestamp(System.currentTimeMillis())
         val contractOffer = ContractOfferBuilder()
+            ._contractDate_(contractDate)
+            ._contractStart_(contractDate)
+            // Contract end one year in the future
+            ._contractEnd_(contractDate.apply { year += 1 })
+            // Request permission for (unrestricted?) usage of an artifact, identified by URI
             ._permission_(
-                arrayListOf(
+                listOf(
                     PermissionBuilder()
                         ._target_(requestedArtifact)
                         ._constraint_(
-                            arrayListOf(
+                            listOf(
                                 ConstraintBuilder()
                                     ._leftOperand_(LeftOperand.SYSTEM)
                                     ._operator_(BinaryOperator.SAME_AS)

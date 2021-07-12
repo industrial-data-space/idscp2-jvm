@@ -42,7 +42,7 @@ object Utils {
     lateinit var infomodelVersion: String
     var dapsUrlProducer: () -> String = { Constants.DEFAULT_DAPS_URL }
 
-    fun createGregorianCalendarTimestamp(timeInput: Long): XMLGregorianCalendar? {
+    fun createGregorianCalendarTimestamp(timeInput: Long): XMLGregorianCalendar {
         return DatatypeFactory.newInstance().newXMLGregorianCalendar(
             GregorianCalendar().apply { timeInMillis = timeInput }
         )

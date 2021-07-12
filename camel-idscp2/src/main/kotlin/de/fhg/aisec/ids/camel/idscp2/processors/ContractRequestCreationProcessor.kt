@@ -59,13 +59,13 @@ class ContractRequestCreationProcessor : Processor {
             ._contractDate_(contractDate)
             ._contractStart_(contractDate)
             // Contract end one year in the future
-            ._contractEnd_(contractDate?.apply { year += 1 })
+            ._contractEnd_(contractDate.apply { year += 1 })
             // Request permission for (unrestricted?) usage of an artifact, identified by URI
             ._permission_(
-                arrayListOf(
+                listOf(
                     PermissionBuilder()
                         ._target_(artifactUri)
-                        ._action_(arrayListOf(Action.USE))
+                        ._action_(listOf(Action.USE))
                         .build()
                 )
             )

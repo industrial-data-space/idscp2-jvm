@@ -68,11 +68,11 @@ class ContractOfferCreationProcessor : Processor {
         }
         val contractOffer = ContractOfferBuilder()
             ._permission_(
-                arrayListOf(
+                listOf(
                     PermissionBuilder()
                         ._target_(artifactUri)
                         ._constraint_(
-                            arrayListOf(
+                            listOf(
                                 ConstraintBuilder()
                                     ._leftOperand_(LeftOperand.SYSTEM)
                                     ._operator_(BinaryOperator.SAME_AS)
