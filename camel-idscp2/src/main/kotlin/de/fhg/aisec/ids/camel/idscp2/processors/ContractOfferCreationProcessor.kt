@@ -22,6 +22,7 @@ package de.fhg.aisec.ids.camel.idscp2.processors
 import de.fhg.aisec.ids.camel.idscp2.Constants
 import de.fhg.aisec.ids.camel.idscp2.Constants.CONTAINER_URI_PROPERTY
 import de.fhg.aisec.ids.camel.idscp2.Constants.IDSCP2_HEADER
+import de.fhg.aisec.ids.camel.idscp2.Utils
 import de.fhg.aisec.ids.camel.idscp2.Utils.SERIALIZER
 import de.fraunhofer.iais.eis.BinaryOperator
 import de.fraunhofer.iais.eis.ConstraintBuilder
@@ -66,7 +67,13 @@ class ContractOfferCreationProcessor : Processor {
                 URI.create(it.toString())
             }
         }
+        val contractDate = Utils.createGregorianCalendarTimestamp(System.currentTimeMillis())
         val contractOffer = ContractOfferBuilder()
+            ._contractDate_(contractDate)
+            ._contractStart_(contractDate)
+            // Contract end one year in the future
+            ._contractEnd_(contractDate.apply { year += 1 })
+            // Permission for data processing inside a specific system (docker container)
             ._permission_(
                 listOf(
                     PermissionBuilder()

@@ -79,7 +79,7 @@ class ContractRequestProcessor : Processor {
             ._contractStart_(contractDate)
             // Contract end one year in the future
             ._contractEnd_(contractDate.apply { year += 1 })
-            // Request permission for (unrestricted?) usage of an artifact, identified by URI
+            // Permission for data processing inside a specific system (docker container)
             ._permission_(
                 listOf(
                     PermissionBuilder()
