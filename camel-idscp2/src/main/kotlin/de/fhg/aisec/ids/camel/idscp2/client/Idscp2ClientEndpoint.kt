@@ -108,6 +108,21 @@ class Idscp2ClientEndpoint(uri: String?, private val remaining: String, componen
     var useIdsMessages: Boolean = false
 
     @UriParam(
+        label = "common",
+        description = "Locally supported Remote Attestation Suite IDs, separated by \"|\"",
+        defaultValue = RatProverDummy.RAT_PROVER_DUMMY_ID
+    )
+    var supportedRatSuites: String = RatProverDummy.RAT_PROVER_DUMMY_ID
+
+    @UriParam(
+        label = "common",
+        description = "Expected Remote Attestation Suite IDs, separated by \"|\", " +
+            "each communication peer must support at least one",
+        defaultValue = RatVerifierDummy.RAT_VERIFIER_DUMMY_ID
+    )
+    var expectedRatSuites: String = RatVerifierDummy.RAT_VERIFIER_DUMMY_ID
+
+    @UriParam(
         label = "client",
         description = "Max attempts to connect to the IDSCP2 server",
         defaultValue = "3"
@@ -170,8 +185,8 @@ class Idscp2ClientEndpoint(uri: String?, private val remaining: String, componen
 
         // create attestation config
         val localAttestationConfig = AttestationConfig.Builder()
-            .setSupportedRatSuite(arrayOf(RatProverDummy.RAT_PROVER_DUMMY_ID))
-            .setExpectedRatSuite(arrayOf(RatVerifierDummy.RAT_VERIFIER_DUMMY_ID))
+            .setSupportedRatSuite(supportedRatSuites.split('|').toTypedArray())
+            .setExpectedRatSuite(expectedRatSuites.split('|').toTypedArray())
             .setRatTimeoutDelay(dapsRatTimeoutDelay ?: AttestationConfig.DEFAULT_RAT_TIMEOUT_DELAY.toLong())
             .build()
 

@@ -100,6 +100,21 @@ class Idscp2ServerEndpoint(uri: String?, private val remaining: String, componen
     )
     var useIdsMessages: Boolean = false
 
+    @UriParam(
+        label = "common",
+        description = "Locally supported Remote Attestation Suite IDs, separated by \"|\"",
+        defaultValue = RatProverDummy.RAT_PROVER_DUMMY_ID
+    )
+    var supportedRatSuites: String = RatProverDummy.RAT_PROVER_DUMMY_ID
+
+    @UriParam(
+        label = "common",
+        description = "Expected Remote Attestation Suite IDs, separated by \"|\", " +
+            "each communication peer must support at least one",
+        defaultValue = RatVerifierDummy.RAT_VERIFIER_DUMMY_ID
+    )
+    var expectedRatSuites: String = RatVerifierDummy.RAT_VERIFIER_DUMMY_ID
+
     @Synchronized
     fun addConsumer(consumer: Idscp2ServerConsumer) {
         consumers.add(consumer)
@@ -185,8 +200,8 @@ class Idscp2ServerEndpoint(uri: String?, private val remaining: String, componen
 
         // create attestation config
         val localAttestationConfig = AttestationConfig.Builder()
-            .setSupportedRatSuite(arrayOf(RatProverDummy.RAT_PROVER_DUMMY_ID))
-            .setExpectedRatSuite(arrayOf(RatVerifierDummy.RAT_VERIFIER_DUMMY_ID))
+            .setSupportedRatSuite(supportedRatSuites.split('|').toTypedArray())
+            .setExpectedRatSuite(expectedRatSuites.split('|').toTypedArray())
             .setRatTimeoutDelay(dapsRatTimeoutDelay)
             .build()
 
