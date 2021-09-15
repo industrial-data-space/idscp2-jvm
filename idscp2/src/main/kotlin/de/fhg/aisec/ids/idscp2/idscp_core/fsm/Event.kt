@@ -48,7 +48,7 @@ class Event {
     }
 
     /**
-     * Create an event with an Idscpv2 Message
+     * Create an event with an Idscp2 Message
      */
     constructor(idscpMessage: IdscpMessage) {
         key = idscpMessage.messageCase.number
@@ -57,13 +57,13 @@ class Event {
     }
 
     /**
-     * Create an event for outgoing RatProver, RatVerifier, IdscpData messages
+     * Create an event for outgoing RaProver, RaVerifier, IdscpData messages
      *
      * throws an IllegalStateException if this event is requested for other purposes
      */
     constructor(controlMessage: InternalControlMessage, idscpMessage: IdscpMessage) {
-        if (controlMessage == InternalControlMessage.RAT_PROVER_MSG ||
-            controlMessage == InternalControlMessage.RAT_VERIFIER_MSG ||
+        if (controlMessage == InternalControlMessage.RA_PROVER_MSG ||
+            controlMessage == InternalControlMessage.RA_VERIFIER_MSG ||
             controlMessage == InternalControlMessage.SEND_DATA
         ) {
             key = controlMessage.value
@@ -72,8 +72,8 @@ class Event {
             this.controlMessage = controlMessage
         } else {
             throw IllegalStateException(
-                "This constructor must only be used by RAT_PROVER, " +
-                    "RAT_VERIFIER for message passing and for SEND_DATA, encountered $controlMessage"
+                "This constructor must only be used by RA_PROVER, " +
+                    "RA_VERIFIER for message passing and for SEND_DATA, encountered $controlMessage"
             )
         }
     }

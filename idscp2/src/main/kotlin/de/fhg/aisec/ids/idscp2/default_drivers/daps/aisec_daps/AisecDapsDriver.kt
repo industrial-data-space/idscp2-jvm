@@ -278,7 +278,7 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
     }
 
     /**
-     * Public verifyToken API, used from the IDSCPv2 protocol. Security requirements are used from the DAPS config
+     * Public verifyToken API, used from the IDSCP2 protocol. Security requirements are used from the DAPS config
      * Peer certificate is used for verifying DAT subject
      *
      * @return The number of seconds this DAT is valid

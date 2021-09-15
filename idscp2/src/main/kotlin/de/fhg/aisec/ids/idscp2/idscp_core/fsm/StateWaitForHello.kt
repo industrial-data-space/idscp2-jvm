@@ -29,11 +29,11 @@ import org.slf4j.LoggerFactory
 
 /**
  * The Wait_For_Hello State of the FSM of the IDSCP2 protocol.
- * Waits for the Idscpv2 Hellp Message that contains the protocol version, the supported and
+ * Waits for the Idscp2 Hellp Message that contains the protocol version, the supported and
  * expected remote attestation cipher suites and the dynamic attribute token (DAT) of the peer.
  *
  *
- * Goes into the WAIT_FOR_RAT State when valid Rat mechanisms were found and the DAT is valid
+ * Goes into the WAIT_FOR_RA State when valid RA mechanisms were found and the DAT is valid
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
@@ -65,10 +65,10 @@ class StateWaitForHello(
          * onICM: stop --> {send IDSCP_CLOSE} ---> STATE_CLOSED
          * onICM: timeout --> {send IDSCP_CLOSE} ---> STATE_CLOSED
          * onMessage: IDSCP_CLOSE---> {} ---> STATE_CLOSED
-         * onMessage: IDSCP_HELLO (no rat match) ---> {send IDSCP_CLOSE} ---> STATE_CLOSED
+         * onMessage: IDSCP_HELLO (no ra match) ---> {send IDSCP_CLOSE} ---> STATE_CLOSED
          * onMessage: IDSCP_HELLO (invalid DAT) ---> {send IDSCP_CLOSE} ---> STATE_CLOSED
-         * onMessage: IDSCP_HELLO (SUCCESS) ---> {verify DAT, match RAT, set DAT Timeout, start RAT P&V,
-         *                                        set handshake_timeout} ---> STATE_WAIT_FOR_RAT
+         * onMessage: IDSCP_HELLO (SUCCESS) ---> {verify DAT, match RA, set DAT Timeout, start RA P&V,
+         *                                        set handshake_timeout} ---> STATE_WAIT_FOR_RA
          * ALL_OTHER_MESSAGES ---> {} ---> STATE_WAIT_FOR_HELLO
          * --------------------------------------------------- */
         addTransition(
@@ -106,12 +106,12 @@ class StateWaitForHello(
         )
 
         addTransition(
-            InternalControlMessage.REPEAT_RAT.value,
+            InternalControlMessage.REPEAT_RA.value,
             Transition {
-                // nothing to to, result should be okay since RAT will be done in the next
+                // nothing to to, result should be okay since RA will be done in the next
                 // state for the first time
                 if (LOG.isTraceEnabled) {
-                    LOG.trace("Received REPEAT_RAT signal from user")
+                    LOG.trace("Received REPEAT_RA signal from user")
                 }
                 FSM.FsmResult(FSM.FsmResultCode.OK, this)
             }
@@ -152,30 +152,30 @@ class StateWaitForHello(
                 }
 
                 if (LOG.isTraceEnabled) {
-                    LOG.trace("Calculate Rat mechanisms")
+                    LOG.trace("Calculate RA mechanisms")
                 }
-                val proverMechanism = fsm.getRatProverMechanism(
+                val proverMechanism = fsm.getRaProverMechanism(
                     attestationConfig.supportedAttestationSuite,
-                    idscpHello.expectedRatSuiteList.toTypedArray()
+                    idscpHello.expectedRaSuiteList.toTypedArray()
                 )
 
                 if (proverMechanism == null) {
-                    LOG.warn("No match for RAT prover mechanism")
+                    LOG.warn("No match for RA prover mechanism")
                     return@Transition FSM.FsmResult(
-                        FSM.FsmResultCode.RAT_NEGOTIATION_ERROR,
+                        FSM.FsmResultCode.RA_NEGOTIATION_ERROR,
                         fsm.getState(FsmState.STATE_CLOSED)
                     )
                 }
 
-                val verifierMechanism = fsm.getRatVerifierMechanism(
+                val verifierMechanism = fsm.getRaVerifierMechanism(
                     attestationConfig.expectedAttestationSuite,
-                    idscpHello.supportedRatSuiteList.toTypedArray()
+                    idscpHello.supportedRaSuiteList.toTypedArray()
                 )
 
                 if (verifierMechanism == null) {
-                    LOG.warn("No match for RAT verifier mechanism")
+                    LOG.warn("No match for RA verifier mechanism")
                     return@Transition FSM.FsmResult(
-                        FSM.FsmResultCode.RAT_NEGOTIATION_ERROR,
+                        FSM.FsmResultCode.RA_NEGOTIATION_ERROR,
                         fsm.getState(FsmState.STATE_CLOSED)
                     )
                 }
@@ -229,21 +229,21 @@ class StateWaitForHello(
                 }
                 fsm.setPeerDat(remoteDat)
                 datTimer.resetTimeout(datValidityPeriod * 1000)
-                fsm.setRatMechanisms(proverMechanism, verifierMechanism)
+                fsm.setRaMechanisms(proverMechanism, verifierMechanism)
 
                 if (LOG.isTraceEnabled) {
-                    LOG.debug("Start RAT Prover and Verifier")
+                    LOG.debug("Start RA Prover and Verifier")
                 }
-                if (!fsm.restartRatVerifierDriver()) {
-                    LOG.warn("Cannot run Rat verifier, close idscp connection")
-                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RAT_ERROR, fsm.getState(FsmState.STATE_CLOSED))
+                if (!fsm.restartRaVerifierDriver()) {
+                    LOG.warn("Cannot run RA verifier, close idscp connection")
+                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RA_ERROR, fsm.getState(FsmState.STATE_CLOSED))
                 }
-                if (!fsm.restartRatProverDriver()) {
-                    LOG.warn("Cannot run Rat prover, close idscp connection")
-                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RAT_ERROR, fsm.getState(FsmState.STATE_CLOSED))
+                if (!fsm.restartRaProverDriver()) {
+                    LOG.warn("Cannot run RA prover, close idscp connection")
+                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RA_ERROR, fsm.getState(FsmState.STATE_CLOSED))
                 }
 
-                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_RAT))
+                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_RA))
             }
         )
 

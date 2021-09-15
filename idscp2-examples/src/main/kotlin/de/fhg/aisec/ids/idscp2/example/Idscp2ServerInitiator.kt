@@ -19,8 +19,8 @@
  */
 package de.fhg.aisec.ids.idscp2.example
 
-import de.fhg.aisec.ids.idscp2.default_drivers.rat.dummy.RatProverDummy
-import de.fhg.aisec.ids.idscp2.default_drivers.rat.dummy.RatVerifierDummy
+import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaProverDummy
+import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaVerifierDummy
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTLSDriver
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.Idscp2EndpointListener
@@ -29,8 +29,8 @@ import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2Connection
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2ConnectionAdapter
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2ConnectionImpl
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server.Idscp2ServerFactory
-import de.fhg.aisec.ids.idscp2.idscp_core.rat_registry.RatProverDriverRegistry
-import de.fhg.aisec.ids.idscp2.idscp_core.rat_registry.RatVerifierDriverRegistry
+import de.fhg.aisec.ids.idscp2.idscp_core.ra_registry.RaProverDriverRegistry
+import de.fhg.aisec.ids.idscp2.idscp_core.ra_registry.RaVerifierDriverRegistry
 import org.slf4j.LoggerFactory
 import java.nio.charset.StandardCharsets
 
@@ -40,13 +40,13 @@ class Idscp2ServerInitiator : Idscp2EndpointListener<Idscp2Connection> {
         // create secure channel driver
         val secureChannelDriver = NativeTLSDriver<Idscp2Connection>()
 
-        // register rat drivers
-        RatProverDriverRegistry.registerDriver(
-            RatProverDummy.RAT_PROVER_DUMMY_ID, ::RatProverDummy, null
+        // register ra drivers
+        RaProverDriverRegistry.registerDriver(
+            RaProverDummy.RA_PROVER_DUMMY_ID, ::RaProverDummy, null
         )
 
-        RatVerifierDriverRegistry.registerDriver(
-            RatVerifierDummy.RAT_VERIFIER_DUMMY_ID, ::RatVerifierDummy, null
+        RaVerifierDriverRegistry.registerDriver(
+            RaVerifierDummy.RA_VERIFIER_DUMMY_ID, ::RaVerifierDummy, null
         )
 
         // create server config

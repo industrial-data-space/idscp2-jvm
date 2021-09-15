@@ -23,21 +23,27 @@ import de.fhg.aisec.ids.idscp2.idscp_core.fsm.InternalControlMessage
 import java.security.cert.X509Certificate
 
 /**
- * An FSM Listener Interface for the RatProver driver implemented by the FSM to restrict FSM API to
- * the RatProver drivers class of the IDSCP2
+ * An FSM Listener Interface for the RaVerifier driver implemented by the FSM to restrict FSM API to
+ * the RaVerifier drivers class of the IDSCP2
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
-interface RatProverFsmListener {
+interface RaVerifierFsmListener {
 
     /**
-     * A method for providing RatProver messages from the RatProverDriver implementation to the FSM
+     * A method for providing RaVerifier messages from the RaVerifierDriver implementation to the
+     * FSM
      */
-    fun onRatProverMessage(controlMessage: InternalControlMessage)
-    fun onRatProverMessage(controlMessage: InternalControlMessage, ratMessage: ByteArray)
+    fun onRaVerifierMessage(controlMessage: InternalControlMessage)
+    fun onRaVerifierMessage(controlMessage: InternalControlMessage, raMessage: ByteArray)
 
     /**
-     * Access the remote peer transport certificate from the RAT prover
+     * Access the remote peer DAT from the RA verifier
+     */
+    val remotePeerDat: ByteArray
+
+    /**
+     * Access the remote peer transport certificate from the RA verifier
      */
     val remotePeerCertificate: X509Certificate?
 }

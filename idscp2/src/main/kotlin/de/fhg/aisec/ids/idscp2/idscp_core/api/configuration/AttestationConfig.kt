@@ -32,24 +32,24 @@ class AttestationConfig {
         private set
     lateinit var expectedAttestationSuite: Array<String>
         private set
-    var ratTimeoutDelay = DEFAULT_RAT_TIMEOUT_DELAY.toInt().toLong() // in ms
+    var raTimeoutDelay = DEFAULT_RA_TIMEOUT_DELAY.toInt().toLong() // in ms
         private set
 
     class Builder {
         private val config = AttestationConfig()
 
-        fun setSupportedRatSuite(suite: Array<String>): Builder {
+        fun setSupportedRaSuite(suite: Array<String>): Builder {
             config.supportedAttestationSuite = suite
             return this
         }
 
-        fun setExpectedRatSuite(suite: Array<String>): Builder {
+        fun setExpectedRaSuite(suite: Array<String>): Builder {
             config.expectedAttestationSuite = suite
             return this
         }
 
-        fun setRatTimeoutDelay(delay: Long): Builder {
-            config.ratTimeoutDelay = delay
+        fun setRaTimeoutDelay(delay: Long): Builder {
+            config.raTimeoutDelay = delay
             return this
         }
 
@@ -64,17 +64,17 @@ class AttestationConfig {
         val that = other as AttestationConfig
         return supportedAttestationSuite.contentEquals(that.supportedAttestationSuite) &&
             expectedAttestationSuite.contentEquals(that.expectedAttestationSuite) &&
-            ratTimeoutDelay == that.ratTimeoutDelay
+            raTimeoutDelay == that.raTimeoutDelay
     }
 
     override fun hashCode(): Int {
         return Objects.hash(
             supportedAttestationSuite.contentHashCode(),
-            expectedAttestationSuite.contentHashCode(), ratTimeoutDelay
+            expectedAttestationSuite.contentHashCode(), raTimeoutDelay
         )
     }
 
     companion object {
-        const val DEFAULT_RAT_TIMEOUT_DELAY = "3600000" // in ms: 1 hour
+        const val DEFAULT_RA_TIMEOUT_DELAY = "3600000" // in ms: 1 hour
     }
 }

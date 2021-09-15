@@ -20,8 +20,8 @@
 package de.fhg.aisec.ids.idscp2.example
 
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.null_daps.NullDaps
-import de.fhg.aisec.ids.idscp2.default_drivers.rat.dummy.RatProverDummy
-import de.fhg.aisec.ids.idscp2.default_drivers.rat.dummy.RatVerifierDummy
+import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaProverDummy
+import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaVerifierDummy
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.AttestationConfig
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
@@ -33,9 +33,9 @@ object RunTunnelClient {
     fun main(args: Array<String>) {
 
         val localAttestationConfig = AttestationConfig.Builder()
-            .setSupportedRatSuite(arrayOf(RatProverDummy.RAT_PROVER_DUMMY_ID))
-            .setExpectedRatSuite(arrayOf(RatVerifierDummy.RAT_VERIFIER_DUMMY_ID))
-            .setRatTimeoutDelay(70 * 1000L) // 70 seconds
+            .setSupportedRaSuite(arrayOf(RaProverDummy.RA_PROVER_DUMMY_ID))
+            .setExpectedRaSuite(arrayOf(RaVerifierDummy.RA_VERIFIER_DUMMY_ID))
+            .setRaTimeoutDelay(70 * 1000L) // 70 seconds
             .build()
 
         // create daps driver

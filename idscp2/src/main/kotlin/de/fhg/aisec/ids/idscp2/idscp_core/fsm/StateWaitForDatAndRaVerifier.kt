@@ -27,14 +27,14 @@ import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpMessage
 import org.slf4j.LoggerFactory
 
 /**
- * The Wait_For_Dat_And_Rat_Verifier State of the FSM of the IDSCP2 protocol.
+ * The Wait_For_Dat_And_Ra_Verifier State of the FSM of the IDSCP2 protocol.
  * Wait for a new dynamic attribute token from the peer, since the old one is not valid anymore
- * and waits for the RatVerifier after successful verification of the Dat to decide if the IDSCP2
+ * and waits for the RaVerifier after successful verification of the Dat to decide if the IDSCP2
  * connection will be established
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
-class StateWaitForDatAndRatVerifier(
+class StateWaitForDatAndRaVerifier(
     fsm: FSM,
     handshakeTimer: StaticTimer,
     datTimer: DynamicTimer,
@@ -47,24 +47,24 @@ class StateWaitForDatAndRatVerifier(
     }
 
     companion object {
-        private val LOG = LoggerFactory.getLogger(StateWaitForDatAndRatVerifier::class.java)
+        private val LOG = LoggerFactory.getLogger(StateWaitForDatAndRaVerifier::class.java)
     }
 
     init {
 
         /*---------------------------------------------------
-         * STATE_WAIT_FOR_DAT_AND_RAT_VERIFIER - Transition Description
+         * STATE_WAIT_FOR_DAT_AND_RA_VERIFIER - Transition Description
          * ---------------------------------------------------
          * onICM: stop ---> {send IDSCP_CLOSE} ---> STATE_CLOSED
          * onICM: error ---> {} ---> STATE_CLOSED
          * onICM: timeout ---> {send IDSCP_CLOSE} ---> STATE_CLOSED
-         * onMessage: IDSCP_ACK ---> {cancel Ack flag} ---> STATE_WAIT_FOR_RAT
+         * onMessage: IDSCP_ACK ---> {cancel Ack flag} ---> STATE_WAIT_FOR_RA
          * onMessage: IDSCP_CLOSE ---> {} ---> STATE_CLOSED
-         * onMessage: IDSCP_DAT(success) --> {verify DAT, set det_timeout, start RAT_VERIFIER} ---> STATE_WAIT_FOR_RAT_VERIFEIER
+         * onMessage: IDSCP_DAT(success) --> {verify DAT, set det_timeout, start RA_VERIFIER} ---> STATE_WAIT_FOR_RA_VERIFEIER
          * onMessage: IDSCP_DAT(failed) --> {verify DAT, send IDSCP_CLOSE} ---> STATE_CLOSED
-         * onMessage: IDSCP_DAT_EXPIRED ---> {send IDSCP_DAT, start IDSCP_PROVER} ---> STATE_WAIT_FOR_DAT_AND_RAT
-         * onMessage: IDSCP_RE_RAT ---> {start IDSCP_PROVER} ---> STATE_WAIT_FOR_DAT_AND_RAT
-         * ALL_OTHER_MESSAGES ---> {} ---> STATE_WAIT_FOR_DAT_AND_RAT_VERIFIER
+         * onMessage: IDSCP_DAT_EXPIRED ---> {send IDSCP_DAT, start IDSCP_PROVER} ---> STATE_WAIT_FOR_DAT_AND_RA
+         * onMessage: IDSCP_RE_RA ---> {start IDSCP_PROVER} ---> STATE_WAIT_FOR_DAT_AND_RA
+         * ALL_OTHER_MESSAGES ---> {} ---> STATE_WAIT_FOR_DAT_AND_RA_VERIFIER
          * --------------------------------------------------- */
         addTransition(
             InternalControlMessage.IDSCP_STOP.value,
@@ -91,7 +91,7 @@ class StateWaitForDatAndRatVerifier(
         )
 
         addTransition(
-            InternalControlMessage.REPEAT_RAT.value,
+            InternalControlMessage.REPEAT_RA.value,
             Transition {
                 FSM.FsmResult(FSM.FsmResultCode.OK, this)
             }
@@ -170,13 +170,13 @@ class StateWaitForDatAndRatVerifier(
                 fsm.setPeerDat(dat)
                 datTimer.resetTimeout(datValidityPeriod * 1000)
 
-                // start RAT Verifier
-                if (!fsm.restartRatVerifierDriver()) {
-                    LOG.warn("Cannot run Rat verifier, close idscp connection")
-                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RAT_ERROR, fsm.getState(FsmState.STATE_CLOSED))
+                // start RA Verifier
+                if (!fsm.restartRaVerifierDriver()) {
+                    LOG.warn("Cannot run RA verifier, close idscp connection")
+                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RA_ERROR, fsm.getState(FsmState.STATE_CLOSED))
                 }
 
-                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_RAT_VERIFIER))
+                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_RA_VERIFIER))
             }
         )
 
@@ -190,25 +190,25 @@ class StateWaitForDatAndRatVerifier(
                     LOG.warn("Cannot send DAT message")
                     return@Transition FSM.FsmResult(FSM.FsmResultCode.IO_ERROR, fsm.getState(FsmState.STATE_CLOSED))
                 }
-                if (!fsm.restartRatProverDriver()) {
-                    LOG.warn("Cannot run Rat prover, close idscp connection")
-                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RAT_ERROR, fsm.getState(FsmState.STATE_CLOSED))
+                if (!fsm.restartRaProverDriver()) {
+                    LOG.warn("Cannot run RA prover, close idscp connection")
+                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RA_ERROR, fsm.getState(FsmState.STATE_CLOSED))
                 }
-                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_DAT_AND_RAT))
+                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_DAT_AND_RA))
             }
         )
 
         addTransition(
-            IdscpMessage.IDSCPRERAT_FIELD_NUMBER,
+            IdscpMessage.IDSCPRERA_FIELD_NUMBER,
             Transition {
                 if (LOG.isDebugEnabled) {
                     LOG.debug("Peer is requesting a re-attestation")
                 }
-                if (!fsm.restartRatProverDriver()) {
-                    LOG.warn("Cannot run Rat prover, close idscp connection")
-                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RAT_ERROR, fsm.getState(FsmState.STATE_CLOSED))
+                if (!fsm.restartRaProverDriver()) {
+                    LOG.warn("Cannot run RA prover, close idscp connection")
+                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RA_ERROR, fsm.getState(FsmState.STATE_CLOSED))
                 }
-                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_DAT_AND_RAT))
+                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_DAT_AND_RA))
             }
         )
 

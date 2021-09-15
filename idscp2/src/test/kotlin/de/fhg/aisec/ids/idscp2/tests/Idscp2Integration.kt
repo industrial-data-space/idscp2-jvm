@@ -30,14 +30,14 @@ import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2ConnectionI
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server.Idscp2Server
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server.Idscp2ServerFactory
 import de.fhg.aisec.ids.idscp2.idscp_core.drivers.DapsDriver
-import de.fhg.aisec.ids.idscp2.idscp_core.drivers.RatProverDriver
-import de.fhg.aisec.ids.idscp2.idscp_core.drivers.RatVerifierDriver
+import de.fhg.aisec.ids.idscp2.idscp_core.drivers.RaProverDriver
+import de.fhg.aisec.ids.idscp2.idscp_core.drivers.RaVerifierDriver
 import de.fhg.aisec.ids.idscp2.idscp_core.error.DatException
 import de.fhg.aisec.ids.idscp2.idscp_core.fsm.InternalControlMessage
-import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RatProverFsmListener
-import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RatVerifierFsmListener
-import de.fhg.aisec.ids.idscp2.idscp_core.rat_registry.RatProverDriverRegistry
-import de.fhg.aisec.ids.idscp2.idscp_core.rat_registry.RatVerifierDriverRegistry
+import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RaProverFsmListener
+import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RaVerifierFsmListener
+import de.fhg.aisec.ids.idscp2.idscp_core.ra_registry.RaProverDriverRegistry
+import de.fhg.aisec.ids.idscp2.idscp_core.ra_registry.RaVerifierDriverRegistry
 import org.awaitility.Awaitility.await
 import org.junit.After
 import org.junit.Assert
@@ -100,12 +100,12 @@ class Idscp2Integration {
         }
     }
 
-    class CustomRatConfig(val delay: Long)
+    class CustomRaConfig(val delay: Long)
 
     /**
-     * Some custom RAT drivers
+     * Some custom RA drivers
      */
-    class RatVerifierAcceptor(fsmListener: RatVerifierFsmListener) : RatVerifierDriver<CustomRatConfig>(fsmListener) {
+    class RaVerifierAcceptor(fsmListener: RaVerifierFsmListener) : RaVerifierDriver<CustomRaConfig>(fsmListener) {
         private val queue: BlockingQueue<ByteArray> = LinkedBlockingQueue()
         private var delay: Long = 0
         override fun delegate(message: ByteArray) {
@@ -118,20 +118,20 @@ class Idscp2Integration {
                 sleep(delay)
             } catch (e: InterruptedException) {
                 if (running) {
-                    fsmListener.onRatVerifierMessage(InternalControlMessage.RAT_VERIFIER_FAILED)
+                    fsmListener.onRaVerifierMessage(InternalControlMessage.RA_VERIFIER_FAILED)
                 }
                 return
             }
-            fsmListener.onRatVerifierMessage(InternalControlMessage.RAT_VERIFIER_MSG, "".toByteArray())
-            fsmListener.onRatVerifierMessage(InternalControlMessage.RAT_VERIFIER_OK)
+            fsmListener.onRaVerifierMessage(InternalControlMessage.RA_VERIFIER_MSG, "".toByteArray())
+            fsmListener.onRaVerifierMessage(InternalControlMessage.RA_VERIFIER_OK)
         }
 
-        override fun setConfig(config: CustomRatConfig) {
+        override fun setConfig(config: CustomRaConfig) {
             delay = config.delay
         }
     }
 
-    class RatVerifierRejector(fsmListener: RatVerifierFsmListener) : RatVerifierDriver<CustomRatConfig>(fsmListener) {
+    class RaVerifierRejector(fsmListener: RaVerifierFsmListener) : RaVerifierDriver<CustomRaConfig>(fsmListener) {
         private val queue: BlockingQueue<ByteArray> = LinkedBlockingQueue()
         private var delay: Long = 0
         override fun delegate(message: ByteArray) {
@@ -144,20 +144,20 @@ class Idscp2Integration {
                 sleep(delay)
             } catch (e: InterruptedException) {
                 if (running) {
-                    fsmListener.onRatVerifierMessage(InternalControlMessage.RAT_VERIFIER_FAILED)
+                    fsmListener.onRaVerifierMessage(InternalControlMessage.RA_VERIFIER_FAILED)
                 }
                 return
             }
-            fsmListener.onRatVerifierMessage(InternalControlMessage.RAT_VERIFIER_MSG, "".toByteArray())
-            fsmListener.onRatVerifierMessage(InternalControlMessage.RAT_VERIFIER_FAILED)
+            fsmListener.onRaVerifierMessage(InternalControlMessage.RA_VERIFIER_MSG, "".toByteArray())
+            fsmListener.onRaVerifierMessage(InternalControlMessage.RA_VERIFIER_FAILED)
         }
 
-        override fun setConfig(config: CustomRatConfig) {
+        override fun setConfig(config: CustomRaConfig) {
             delay = config.delay
         }
     }
 
-    class RatProverAcceptor(fsmListener: RatProverFsmListener) : RatProverDriver<CustomRatConfig>(fsmListener) {
+    class RaProverAcceptor(fsmListener: RaProverFsmListener) : RaProverDriver<CustomRaConfig>(fsmListener) {
         private val queue: BlockingQueue<ByteArray> = LinkedBlockingQueue()
         private var delay: Long = 0
         override fun delegate(message: ByteArray) {
@@ -165,25 +165,25 @@ class Idscp2Integration {
         }
 
         override fun run() {
-            fsmListener.onRatProverMessage(InternalControlMessage.RAT_PROVER_MSG, "".toByteArray())
+            fsmListener.onRaProverMessage(InternalControlMessage.RA_PROVER_MSG, "".toByteArray())
             try {
                 queue.take()
                 sleep(delay)
             } catch (e: InterruptedException) {
                 if (running) {
-                    fsmListener.onRatProverMessage(InternalControlMessage.RAT_PROVER_FAILED)
+                    fsmListener.onRaProverMessage(InternalControlMessage.RA_PROVER_FAILED)
                 }
                 return
             }
-            fsmListener.onRatProverMessage(InternalControlMessage.RAT_PROVER_OK)
+            fsmListener.onRaProverMessage(InternalControlMessage.RA_PROVER_OK)
         }
 
-        override fun setConfig(config: CustomRatConfig) {
+        override fun setConfig(config: CustomRaConfig) {
             delay = config.delay
         }
     }
 
-    class RatProverRejector(fsmListener: RatProverFsmListener) : RatProverDriver<CustomRatConfig>(fsmListener) {
+    class RaProverRejector(fsmListener: RaProverFsmListener) : RaProverDriver<CustomRaConfig>(fsmListener) {
         private val queue: BlockingQueue<ByteArray> = LinkedBlockingQueue()
         private var delay: Long = 0
         override fun delegate(message: ByteArray) {
@@ -191,20 +191,20 @@ class Idscp2Integration {
         }
 
         override fun run() {
-            fsmListener.onRatProverMessage(InternalControlMessage.RAT_PROVER_MSG, "".toByteArray())
+            fsmListener.onRaProverMessage(InternalControlMessage.RA_PROVER_MSG, "".toByteArray())
             try {
                 queue.take()
                 sleep(delay)
             } catch (e: InterruptedException) {
                 if (running) {
-                    fsmListener.onRatProverMessage(InternalControlMessage.RAT_PROVER_FAILED)
+                    fsmListener.onRaProverMessage(InternalControlMessage.RA_PROVER_FAILED)
                 }
                 return
             }
-            fsmListener.onRatProverMessage(InternalControlMessage.RAT_PROVER_FAILED)
+            fsmListener.onRaProverMessage(InternalControlMessage.RA_PROVER_FAILED)
         }
 
-        override fun setConfig(config: CustomRatConfig) {
+        override fun setConfig(config: CustomRaConfig) {
             delay = config.delay
         }
     }
@@ -213,15 +213,15 @@ class Idscp2Integration {
         dapsDriver: DapsDriver,
         ackDelay: Long,
         handshakeDelay: Long,
-        ratDelay: Long,
+        raDelay: Long,
         proverSuite: Array<String>,
         verifierSuite: Array<String>
     ): Idscp2Configuration {
 
         val attestationConfig = AttestationConfig.Builder()
-            .setRatTimeoutDelay(ratDelay)
-            .setExpectedRatSuite(verifierSuite)
-            .setSupportedRatSuite(proverSuite)
+            .setRaTimeoutDelay(raDelay)
+            .setExpectedRaSuite(verifierSuite)
+            .setSupportedRaSuite(proverSuite)
             .build()
 
         return Idscp2Configuration.Builder()
@@ -262,8 +262,8 @@ class Idscp2Integration {
     @After
     fun cleanupTest() {
         idscpServer.terminate()
-        RatProverDriverRegistry.unregisterDriver("NullRat")
-        RatVerifierDriverRegistry.unregisterDriver("NullRat")
+        RaProverDriverRegistry.unregisterDriver("NullRa")
+        RaVerifierDriverRegistry.unregisterDriver("NullRa")
     }
 
     /**
@@ -319,7 +319,7 @@ class Idscp2Integration {
         serverConfig: Idscp2Configuration,
         clientTlsConfig: NativeTlsConfiguration,
         serverTlsConfig: NativeTlsConfiguration,
-        reRatOrDat: Boolean
+        reRaOrDat: Boolean
     ) {
 
         val connectionLatch = CountDownLatch(2)
@@ -385,7 +385,7 @@ class Idscp2Integration {
         // wait until connected
         await().until { clientConnection.isConnected && serverConnection.isConnected }
 
-        if (reRatOrDat) {
+        if (reRaOrDat) {
 
             // ensure re-attestation takes place
             await().until { !clientConnection.isConnected && !serverConnection.isConnected }
@@ -399,20 +399,20 @@ class Idscp2Integration {
             clientConnection.blockingSend("TWO".toByteArray(StandardCharsets.UTF_8), 2000, 100)
 
             // start a remote attestation from the client
-            clientConnection.repeatRat()
+            clientConnection.repeatRa()
             assert(!clientConnection.isConnected)
 
-            // wait until repeat RAT is done
+            // wait until repeat RA is done
             await().until { clientConnection.isConnected && serverConnection.isConnected }
 
             // send from server to client
             serverConnection.blockingSend("THREE".toByteArray(StandardCharsets.UTF_8), 2000, 100)
 
-            // repeat RAT from server
-            serverConnection.repeatRat()
+            // repeat RA from server
+            serverConnection.repeatRa()
             assert(!serverConnection.isConnected)
 
-            // wait until repeat RAT is done
+            // wait until repeat RA is done
             await().until { clientConnection.isConnected && serverConnection.isConnected }
 
             // send one message from client and one from server
@@ -441,20 +441,20 @@ class Idscp2Integration {
         // create client config
         val clientIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
-        // register RAT drivers in shared Registry
-        RatProverDriverRegistry.registerDriver("NullRat", ::RatProverAcceptor, CustomRatConfig(100))
-        RatVerifierDriverRegistry.registerDriver("NullRat", ::RatVerifierAcceptor, CustomRatConfig(100))
+        // register RA drivers in shared Registry
+        RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, CustomRaConfig(100))
+        RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierAcceptor, CustomRaConfig(100))
 
         expectHandshakeSuccess(clientIdscpConfig, serverIdscpConfig, clientTlsConfig, serverTlsConfig, false)
     }
@@ -462,7 +462,7 @@ class Idscp2Integration {
     /**
      * Test connection failure due to handshake timeout client
      *
-     * We add a RAT verifier delay to ensure that the handshake takes much longer than the allowed handshake delay
+     * We add a RA verifier delay to ensure that the handshake takes much longer than the allowed handshake delay
      */
     @Test(timeout = 20000)
     fun testIdscp2HandshakeTimeoutClient() {
@@ -470,19 +470,19 @@ class Idscp2Integration {
         // create client config
         val clientIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 100, 5, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
-        RatProverDriverRegistry.registerDriver("NullRat", ::RatProverAcceptor, CustomRatConfig(100))
-        RatVerifierDriverRegistry.registerDriver("NullRat", ::RatVerifierAcceptor, CustomRatConfig(100))
+        RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, CustomRaConfig(100))
+        RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierAcceptor, CustomRaConfig(100))
 
         expectHandshakeFailure(clientIdscpConfig, serverIdscpConfig, clientTlsConfig, serverTlsConfig)
     }
@@ -490,7 +490,7 @@ class Idscp2Integration {
     /**
      * Test connection failure due to handshake timeout server
      *
-     * We add a RAT verifier delay to ensure that the handshake takes much longer than the allowed handshake delay
+     * We add a RA verifier delay to ensure that the handshake takes much longer than the allowed handshake delay
      */
     @Test(timeout = 20000)
     fun testIdscp2HandshakeTimeoutServer() {
@@ -498,19 +498,19 @@ class Idscp2Integration {
         // create client config
         val clientIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 100, 5, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
-        RatProverDriverRegistry.registerDriver("NullRat", ::RatProverAcceptor, CustomRatConfig(100))
-        RatVerifierDriverRegistry.registerDriver("NullRat", ::RatVerifierAcceptor, CustomRatConfig(100))
+        RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, CustomRaConfig(100))
+        RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierAcceptor, CustomRaConfig(100))
 
         expectHandshakeFailure(clientIdscpConfig, serverIdscpConfig, clientTlsConfig, serverTlsConfig)
     }
@@ -524,128 +524,128 @@ class Idscp2Integration {
         // create client config
         val clientIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 1, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 500, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
-        // register RAT drivers in shared Registry
-        RatProverDriverRegistry.registerDriver("NullRat", ::RatProverAcceptor, CustomRatConfig(100))
-        RatVerifierDriverRegistry.registerDriver("NullRat", ::RatVerifierAcceptor, CustomRatConfig(100))
+        // register RA drivers in shared Registry
+        RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, CustomRaConfig(100))
+        RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierAcceptor, CustomRaConfig(100))
 
         expectHandshakeSuccess(clientIdscpConfig, serverIdscpConfig, clientTlsConfig, serverTlsConfig, false)
     }
 
     /**
-     * Test re-rat triggered by timeout on client side
+     * Test re-ra triggered by timeout on client side
      */
     @Test(timeout = 30000)
-    fun testIdscp2RatTimeoutClient() {
+    fun testIdscp2RaTimeoutClient() {
 
-        val ratTimeout: Long = 750
-        val ratDriverDelay: Long = 500
+        val raTimeout: Long = 750
+        val raDriverDelay: Long = 500
 
         // create client config
         val clientIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 100, 5000, ratTimeout,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            DapsAcceptor(3600), 100, 5000, raTimeout,
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
-        // register RAT drivers in shared Registry
-        RatProverDriverRegistry.registerDriver("NullRat", ::RatProverAcceptor, CustomRatConfig(ratDriverDelay))
-        RatVerifierDriverRegistry.registerDriver("NullRat", ::RatVerifierAcceptor, CustomRatConfig(ratDriverDelay))
+        // register RA drivers in shared Registry
+        RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, CustomRaConfig(raDriverDelay))
+        RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierAcceptor, CustomRaConfig(raDriverDelay))
 
         expectHandshakeSuccess(clientIdscpConfig, serverIdscpConfig, clientTlsConfig, serverTlsConfig, true)
     }
 
     /**
-     * Test re-rat triggered by timeout on server side
+     * Test re-ra triggered by timeout on server side
      */
     @Test(timeout = 30000)
-    fun testIdscp2RatTimeoutServer() {
+    fun testIdscp2RaTimeoutServer() {
 
-        val ratTimeout: Long = 750
-        val ratDriverDelay: Long = 500
+        val raTimeout: Long = 750
+        val raDriverDelay: Long = 500
 
         // create client config
         val clientIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 100, 5000, ratTimeout,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            DapsAcceptor(3600), 100, 5000, raTimeout,
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
-        // register RAT drivers in shared Registry
-        RatProverDriverRegistry.registerDriver("NullRat", ::RatProverAcceptor, CustomRatConfig(ratDriverDelay))
-        RatVerifierDriverRegistry.registerDriver("NullRat", ::RatVerifierAcceptor, CustomRatConfig(ratDriverDelay))
+        // register RA drivers in shared Registry
+        RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, CustomRaConfig(raDriverDelay))
+        RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierAcceptor, CustomRaConfig(raDriverDelay))
 
         expectHandshakeSuccess(clientIdscpConfig, serverIdscpConfig, clientTlsConfig, serverTlsConfig, true)
     }
 
     /**
-     * Test connection failure due to RAT mismatch
+     * Test connection failure due to RA mismatch
      */
     @Test(timeout = 20000)
-    fun testIdscp2RatMismatch() {
+    fun testIdscp2RaMismatch() {
 
         // create client config
         val clientIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NullRat"), arrayOf("NullRat")
+            arrayOf("NullRa"), arrayOf("NullRa")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NoNullRat"), arrayOf("NoNullRat")
+            arrayOf("NoNullRa"), arrayOf("NoNullRa")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
-        // register RAT drivers in shared Registry
-        RatProverDriverRegistry.registerDriver("NullRat", ::RatProverAcceptor, null)
-        RatVerifierDriverRegistry.registerDriver("NullRat", ::RatVerifierAcceptor, null)
+        // register RA drivers in shared Registry
+        RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, null)
+        RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierAcceptor, null)
 
         expectHandshakeFailure(clientIdscpConfig, serverIdscpConfig, clientTlsConfig, serverTlsConfig)
     }
 
     /**
-     * Test connection failure due to empty RAT registry
+     * Test connection failure due to empty RA registry
      */
     @Test(timeout = 30000)
-    fun testIdscp2EmptyRatRegistry() {
+    fun testIdscp2EmptyRaRegistry() {
 
         // create client config
         val clientIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
@@ -661,19 +661,19 @@ class Idscp2Integration {
         // create client config
         val clientIdscpConfig = createIdscp2Config(
             DapsRejector(), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
-        RatProverDriverRegistry.registerDriver("NullRat", ::RatProverAcceptor, null)
-        RatVerifierDriverRegistry.registerDriver("NullRat", ::RatVerifierAcceptor, null)
+        RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, null)
+        RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierAcceptor, null)
 
         expectHandshakeFailure(clientIdscpConfig, serverIdscpConfig, clientTlsConfig, serverTlsConfig)
     }
@@ -686,19 +686,19 @@ class Idscp2Integration {
         // create client config
         val clientIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
             DapsRejector(), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
-        RatProverDriverRegistry.registerDriver("NullRat", ::RatProverAcceptor, null)
-        RatVerifierDriverRegistry.registerDriver("NullRat", ::RatVerifierAcceptor, null)
+        RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, null)
+        RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierAcceptor, null)
 
         expectHandshakeFailure(clientIdscpConfig, serverIdscpConfig, clientTlsConfig, serverTlsConfig)
     }
@@ -712,19 +712,19 @@ class Idscp2Integration {
         // create client config
         val clientIdscpConfig = createIdscp2Config(
             InvalidDaps(), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
-        RatProverDriverRegistry.registerDriver("NullRat", ::RatProverAcceptor, null)
-        RatVerifierDriverRegistry.registerDriver("NullRat", ::RatVerifierAcceptor, null)
+        RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, null)
+        RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierAcceptor, null)
 
         expectHandshakeFailure(clientIdscpConfig, serverIdscpConfig, clientTlsConfig, serverTlsConfig)
     }
@@ -738,19 +738,19 @@ class Idscp2Integration {
         // create client config
         val clientIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
             InvalidDaps(), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
-        RatProverDriverRegistry.registerDriver("NullRat", ::RatProverAcceptor, null)
-        RatVerifierDriverRegistry.registerDriver("NullRat", ::RatVerifierAcceptor, null)
+        RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, null)
+        RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierAcceptor, null)
 
         expectHandshakeFailure(clientIdscpConfig, serverIdscpConfig, clientTlsConfig, serverTlsConfig)
     }
@@ -764,20 +764,20 @@ class Idscp2Integration {
         // create client config
         val clientIdscpConfig = createIdscp2Config(
             DapsAcceptor(2), 500, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 500, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
-        // register RAT drivers in shared Registry
-        RatProverDriverRegistry.registerDriver("NullRat", ::RatProverAcceptor, CustomRatConfig(200))
-        RatVerifierDriverRegistry.registerDriver("NullRat", ::RatVerifierAcceptor, CustomRatConfig(200))
+        // register RA drivers in shared Registry
+        RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, CustomRaConfig(200))
+        RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierAcceptor, CustomRaConfig(200))
 
         expectHandshakeSuccess(clientIdscpConfig, serverIdscpConfig, clientTlsConfig, serverTlsConfig, false)
     }
@@ -791,95 +791,95 @@ class Idscp2Integration {
         // create client config
         val clientIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 500, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
             DapsAcceptor(2), 500, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
-        // register RAT drivers in shared Registry
-        RatProverDriverRegistry.registerDriver("NullRat", ::RatProverAcceptor, CustomRatConfig(200))
-        RatVerifierDriverRegistry.registerDriver("NullRat", ::RatVerifierAcceptor, CustomRatConfig(200))
+        // register RA drivers in shared Registry
+        RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, CustomRaConfig(200))
+        RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierAcceptor, CustomRaConfig(200))
 
         expectHandshakeSuccess(clientIdscpConfig, serverIdscpConfig, clientTlsConfig, serverTlsConfig, false)
     }
 
     /**
-     * Test connection failure due to RAT verifier failure
+     * Test connection failure due to RA verifier failure
      */
     @Test(timeout = 20000)
-    fun testIdscp2RatVerifierRejector() {
+    fun testIdscp2RaVerifierRejector() {
         // create client config
         val clientIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 500, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 500, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
-        RatProverDriverRegistry.registerDriver("NullRat", ::RatProverAcceptor, null)
-        RatVerifierDriverRegistry.registerDriver("NullRat", ::RatVerifierRejector, null)
+        RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, null)
+        RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierRejector, null)
 
         expectHandshakeFailure(clientIdscpConfig, serverIdscpConfig, clientTlsConfig, serverTlsConfig)
     }
 
     /**
-     * Test connection failure due to RAT prover failure
+     * Test connection failure due to RA prover failure
      */
     @Test(timeout = 20000)
-    fun testIdscp2RatProverRejector() {
+    fun testIdscp2RaProverRejector() {
         // create client config
         val clientIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 500, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 500, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
-        RatProverDriverRegistry.registerDriver("NullRat", ::RatProverRejector, null)
-        RatVerifierDriverRegistry.registerDriver("NullRat", ::RatVerifierAcceptor, null)
+        RaProverDriverRegistry.registerDriver("NullRa", ::RaProverRejector, null)
+        RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierAcceptor, null)
 
         expectHandshakeFailure(clientIdscpConfig, serverIdscpConfig, clientTlsConfig, serverTlsConfig)
     }
 
     /**
-     * Test connection failure due to RAT verifier and prover failure
+     * Test connection failure due to RA verifier and prover failure
      */
     @Test(timeout = 20000)
-    fun testIdscp2RatRejectors() {
+    fun testIdscp2RaRejectors() {
         // create client config
         val clientIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 500, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
             DapsAcceptor(3600), 500, 5000, 3600000,
-            arrayOf("NotUsed", "NullRat"), arrayOf("NullRat", "NotUsed")
+            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
-        RatProverDriverRegistry.registerDriver("NullRat", ::RatProverRejector, null)
-        RatVerifierDriverRegistry.registerDriver("NullRat", ::RatVerifierRejector, null)
+        RaProverDriverRegistry.registerDriver("NullRa", ::RaProverRejector, null)
+        RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierRejector, null)
 
         expectHandshakeFailure(clientIdscpConfig, serverIdscpConfig, clientTlsConfig, serverTlsConfig)
     }

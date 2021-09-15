@@ -17,21 +17,21 @@
  * limitations under the License.
  * =========================LICENSE_END==================================
  */
-package de.fhg.aisec.ids.idscp2.default_drivers.rat.dummy
+package de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy
 
-import de.fhg.aisec.ids.idscp2.idscp_core.drivers.RatVerifierDriver
+import de.fhg.aisec.ids.idscp2.idscp_core.drivers.RaVerifierDriver
 import de.fhg.aisec.ids.idscp2.idscp_core.fsm.InternalControlMessage
-import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RatVerifierFsmListener
+import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RaVerifierFsmListener
 import org.slf4j.LoggerFactory
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 
 /**
- * A RatVerifier dummy that exchanges messages with a remote RatProver dummy
+ * A RaVerifier dummy that exchanges messages with a remote RaProver dummy
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
-class RatVerifierDummy(fsmListener: RatVerifierFsmListener) : RatVerifierDriver<Unit>(fsmListener) {
+class RaVerifierDummy(fsmListener: RaVerifierFsmListener) : RaVerifierDriver<Unit>(fsmListener) {
     private val queue: BlockingQueue<ByteArray> = LinkedBlockingQueue()
     override fun delegate(message: ByteArray) {
         queue.add(message)
@@ -53,23 +53,23 @@ class RatVerifierDummy(fsmListener: RatVerifierFsmListener) : RatVerifierDriver<
                 if (LOG.isDebugEnabled) {
                     LOG.debug("Verifier receives, send something")
                 }
-                fsmListener.onRatVerifierMessage(
-                    InternalControlMessage.RAT_VERIFIER_MSG,
+                fsmListener.onRaVerifierMessage(
+                    InternalControlMessage.RA_VERIFIER_MSG,
                     "test".toByteArray()
                 )
                 if (--countDown == 0) break
             } catch (e: InterruptedException) {
                 if (running) {
-                    fsmListener.onRatVerifierMessage(InternalControlMessage.RAT_VERIFIER_FAILED)
+                    fsmListener.onRaVerifierMessage(InternalControlMessage.RA_VERIFIER_FAILED)
                 }
                 return
             }
         }
-        fsmListener.onRatVerifierMessage(InternalControlMessage.RAT_VERIFIER_OK)
+        fsmListener.onRaVerifierMessage(InternalControlMessage.RA_VERIFIER_OK)
     }
 
     companion object {
-        const val RAT_VERIFIER_DUMMY_ID = "Dummy"
-        private val LOG = LoggerFactory.getLogger(RatVerifierDummy::class.java)
+        const val RA_VERIFIER_DUMMY_ID = "Dummy"
+        private val LOG = LoggerFactory.getLogger(RaVerifierDummy::class.java)
     }
 }

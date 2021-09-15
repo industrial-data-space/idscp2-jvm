@@ -23,15 +23,15 @@ import com.google.protobuf.InvalidProtocolBufferException
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.AttestationConfig
 import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2Connection
 import de.fhg.aisec.ids.idscp2.idscp_core.drivers.DapsDriver
-import de.fhg.aisec.ids.idscp2.idscp_core.drivers.RatProverDriver
-import de.fhg.aisec.ids.idscp2.idscp_core.drivers.RatVerifierDriver
+import de.fhg.aisec.ids.idscp2.idscp_core.drivers.RaProverDriver
+import de.fhg.aisec.ids.idscp2.idscp_core.drivers.RaVerifierDriver
 import de.fhg.aisec.ids.idscp2.idscp_core.error.Idscp2HandshakeException
-import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RatProverFsmListener
-import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RatVerifierFsmListener
+import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RaProverFsmListener
+import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RaVerifierFsmListener
 import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.ScFsmListener
 import de.fhg.aisec.ids.idscp2.idscp_core.messages.Idscp2MessageHelper
-import de.fhg.aisec.ids.idscp2.idscp_core.rat_registry.RatProverDriverRegistry
-import de.fhg.aisec.ids.idscp2.idscp_core.rat_registry.RatVerifierDriverRegistry
+import de.fhg.aisec.ids.idscp2.idscp_core.ra_registry.RaProverDriverRegistry
+import de.fhg.aisec.ids.idscp2.idscp_core.ra_registry.RaVerifierDriverRegistry
 import de.fhg.aisec.ids.idscp2.idscp_core.secure_channel.SecureChannel
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpAck
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpData
@@ -49,7 +49,7 @@ import java.util.concurrent.locks.ReentrantLock
  *
  *
  * Manages IDSCP2 Handshake, Re-Attestation, DAT-ReRequest and DAT-Re-Validation. Delivers
- * Internal Control Messages and Idscpv2Messages to the target receivers,
+ * Internal Control Messages and Idscp2Messages to the target receivers,
  * creates and manages the states and its transitions and implements security restriction to protect
  * the protocol against misuse and faulty, insecure or evil driver implementations.
  *
@@ -63,18 +63,18 @@ class FSM(
     handshakeTimeoutDelay: Long,
     private val connectionId: String,
     private val connection: CompletableFuture<Idscp2Connection>
-) : RatProverFsmListener, RatVerifierFsmListener, ScFsmListener {
+) : RaProverFsmListener, RaVerifierFsmListener, ScFsmListener {
     /*  -----------   IDSCP2 Protocol States   ---------- */
     private val states = HashMap<FsmState, State>()
 
     enum class FsmState {
         STATE_CLOSED,
         STATE_WAIT_FOR_HELLO,
-        STATE_WAIT_FOR_RAT,
-        STATE_WAIT_FOR_RAT_VERIFIER,
-        STATE_WAIT_FOR_RAT_PROVER,
-        STATE_WAIT_FOR_DAT_AND_RAT_VERIFIER,
-        STATE_WAIT_FOR_DAT_AND_RAT,
+        STATE_WAIT_FOR_RA,
+        STATE_WAIT_FOR_RA_VERIFIER,
+        STATE_WAIT_FOR_RA_PROVER,
+        STATE_WAIT_FOR_DAT_AND_RA_VERIFIER,
+        STATE_WAIT_FOR_DAT_AND_RA,
         STATE_ESTABLISHED,
         STATE_WAIT_FOR_ACK
     }
@@ -87,8 +87,8 @@ class FSM(
         MISSING_DAT("DAT is missing."),
         INVALID_DAT("DAT is invalid."),
         IO_ERROR("Secure channel not available."),
-        RAT_ERROR("RAT error occurred."),
-        RAT_NEGOTIATION_ERROR("Error during negotiation of RAT mechanisms."),
+        RA_ERROR("RA error occurred."),
+        RA_NEGOTIATION_ERROR("Error during negotiation of RA mechanisms."),
         WOULD_BLOCK("Operation would block until FSM is in state 'ESTABLISHED'"),
         NOT_CONNECTED("Protocol is not in a connected state at the moment."),
         IDSCP_DATA_NOT_CACHED("IdscpData must be buffered in the 'WAIT_FOR_ACK' state."),
@@ -101,27 +101,27 @@ class FSM(
     private var currentState: State
 
     /*  ----------------   end of states   --------------- */
-    var ratProverDriver: RatProverDriver<*>? = null
+    var raProverDriver: RaProverDriver<*>? = null
         private set
-    var ratVerifierDriver: RatVerifierDriver<*>? = null
+    var raVerifierDriver: RaVerifierDriver<*>? = null
         private set
 
     /**
-     * RAT Driver Thread ID to identify the driver threads and check if messages are provided by
+     * RA Driver Thread ID to identify the driver threads and check if messages are provided by
      * the current active driver or by any old driver, whose lifetime is already over
      *
      * Only one driver can be valid at a time
      */
-    private var currentRatProverId: String? = // avoid messages from old prover drivers
+    private var currentRaProverId: String? = // avoid messages from old prover drivers
         null
-    private var currentRatVerifierId: String? = // avoid messages from old verifier drivers
+    private var currentRaVerifierId: String? = // avoid messages from old verifier drivers
         null
 
     /**
-     * RAT Mechanisms, calculated during handshake in WAIT_FOR_HELLO_STATE
+     * RA Mechanisms, calculated during handshake in WAIT_FOR_HELLO_STATE
      */
-    private lateinit var proverMechanism: String // RAT prover mechanism
-    private lateinit var verifierMechanism: String // RAT Verifier mechanism
+    private lateinit var proverMechanism: String // RA prover mechanism
+    private lateinit var verifierMechanism: String // RA Verifier mechanism
 
     /**
      * A FIFO-fair synchronization lock for the finite state machine
@@ -135,7 +135,7 @@ class FSM(
     private val onMessageBlock = fsmIsBusy.newCondition()
 
     /**
-     * A condition for the idscpv2 handshake to wait until the handshake was successful and the
+     * A condition for the idscp2 handshake to wait until the handshake was successful and the
      * connection is established or the handshake failed and the fsm is locked forever
      */
     private val idscpHandshakeLock = fsmIsBusy.newCondition()
@@ -166,7 +166,7 @@ class FSM(
 
     /* ---------------------- Timers ---------------------- */
     private val datTimer: DynamicTimer
-    private val ratTimer: StaticTimer
+    private val raTimer: StaticTimer
     private val handshakeTimer: StaticTimer
     private val proverHandshakeTimer: StaticTimer
     private val verifierHandshakeTimer: StaticTimer
@@ -275,73 +275,73 @@ class FSM(
         }
     }
 
-    override fun onRatProverMessage(controlMessage: InternalControlMessage, ratMessage: ByteArray) {
-        processRatProverEvent(Event(controlMessage, Idscp2MessageHelper.createIdscpRatProverMessage(ratMessage)))
+    override fun onRaProverMessage(controlMessage: InternalControlMessage, raMessage: ByteArray) {
+        processRaProverEvent(Event(controlMessage, Idscp2MessageHelper.createIdscpRaProverMessage(raMessage)))
     }
 
-    override fun onRatProverMessage(controlMessage: InternalControlMessage) {
-        processRatProverEvent(Event(controlMessage))
+    override fun onRaProverMessage(controlMessage: InternalControlMessage) {
+        processRaProverEvent(Event(controlMessage))
     }
 
     /**
-     * API for RatProver to provide Prover Messages to the fsm
+     * API for RaProver to provide Prover Messages to the fsm
      *
      * The checkForFsmCycles method first checks for risky thread cycles that occur by incorrect
      * driver implementations
      *
      * Afterwards the fsm lock is requested
      *
-     * When the RatProverThread does not match the active prover tread id, the event will be
+     * When the RaProverThread does not match the active prover tread id, the event will be
      * ignored, else the event is provided to the fsm
      */
-    private fun processRatProverEvent(e: Event) {
+    private fun processRaProverEvent(e: Event) {
         // check for incorrect usage
         checkForFsmCycles()
 
         fsmIsBusy.lock()
         try {
-            if (Thread.currentThread().id.toString() == currentRatProverId) {
+            if (Thread.currentThread().id.toString() == currentRaProverId) {
                 feedEvent(e)
             } else {
-                LOG.warn("An old or unknown Thread (${Thread.currentThread().id}) calls onRatProverMessage()")
+                LOG.warn("An old or unknown Thread (${Thread.currentThread().id}) calls onRaProverMessage()")
             }
         } finally {
             fsmIsBusy.unlock()
         }
     }
 
-    override fun onRatVerifierMessage(controlMessage: InternalControlMessage, ratMessage: ByteArray) {
-        processRatVerifierEvent(Event(controlMessage, Idscp2MessageHelper.createIdscpRatVerifierMessage(ratMessage)))
+    override fun onRaVerifierMessage(controlMessage: InternalControlMessage, raMessage: ByteArray) {
+        processRaVerifierEvent(Event(controlMessage, Idscp2MessageHelper.createIdscpRaVerifierMessage(raMessage)))
     }
 
-    override fun onRatVerifierMessage(controlMessage: InternalControlMessage) {
-        processRatVerifierEvent(Event(controlMessage))
+    override fun onRaVerifierMessage(controlMessage: InternalControlMessage) {
+        processRaVerifierEvent(Event(controlMessage))
     }
 
     override val remotePeerDat: ByteArray
         get() = peerDat
 
     /**
-     * API for RatVerifier to provide Verifier Messages to the fsm
+     * API for RaVerifier to provide Verifier Messages to the fsm
      *
      * The checkForFsmCycles method first checks for risky thread cycles that occur by incorrect
      * driver implementations
      *
      * Afterwards the fsm lock is requested
      *
-     * When the RatVerifierDriver does not match the active verifier thread id, the event will be
+     * When the RaVerifierDriver does not match the active verifier thread id, the event will be
      * ignored, else the event is provided to the fsm
      */
-    private fun processRatVerifierEvent(e: Event) {
+    private fun processRaVerifierEvent(e: Event) {
         // check for incorrect usage
         checkForFsmCycles()
 
         fsmIsBusy.lock()
         try {
-            if (Thread.currentThread().id.toString() == currentRatVerifierId) {
+            if (Thread.currentThread().id.toString() == currentRaVerifierId) {
                 feedEvent(e)
             } else {
-                LOG.warn("An old or unknown Thread (${Thread.currentThread().id}) calls onRatVerifierMessage()")
+                LOG.warn("An old or unknown Thread (${Thread.currentThread().id}) calls onRaVerifierMessage()")
             }
         } finally {
             fsmIsBusy.unlock()
@@ -492,10 +492,10 @@ class FSM(
     }
 
     /**
-     * Repeat RAT Verification if remote peer, triggered by User
+     * Repeat RA Verification if remote peer, triggered by User
      */
-    fun repeatRat(): FsmResultCode {
-        return onUpperEvent(Event(InternalControlMessage.REPEAT_RAT))
+    fun repeatRa(): FsmResultCode {
+        return onUpperEvent(Event(InternalControlMessage.REPEAT_RA))
     }
 
     /**
@@ -535,74 +535,74 @@ class FSM(
     }
 
     /**
-     * Calculate the RatProver mechanism
+     * Calculate the RaProver mechanism
      *
      * The remote peer decides about its verifier mechanism, so we have to prefer remoteExpected list
      *
      * @return The String of the cipher or null if no match was found
      */
-    fun getRatProverMechanism(localSupportedProver: Array<String>, remoteExpectedVerifier: Array<String>): String? {
+    fun getRaProverMechanism(localSupportedProver: Array<String>, remoteExpectedVerifier: Array<String>): String? {
         if (localSupportedProver.isEmpty()) {
-            LOG.warn("Got empty RAT localSupportedProver suite")
+            LOG.warn("Got empty RA localSupportedProver suite")
             return null
         }
 
         if (remoteExpectedVerifier.isEmpty()) {
-            LOG.warn("Got empty RAT remoteExpectedVerifier suite")
+            LOG.warn("Got empty RA remoteExpectedVerifier suite")
             return null
         }
 
         if (LOG.isTraceEnabled) {
             LOG.trace(
-                "Calculate RAT prover mechanism for given local provers: {} " +
+                "Calculate RA prover mechanism for given local provers: {} " +
                     "and remote verifiers: {}",
                 localSupportedProver.contentToString(),
                 remoteExpectedVerifier.contentToString()
             )
         }
 
-        val match = matchRatMechanisms(remoteExpectedVerifier, localSupportedProver)
+        val match = matchRaMechanisms(remoteExpectedVerifier, localSupportedProver)
         if (LOG.isDebugEnabled) {
-            LOG.debug("RAT prover mechanism: '{}'", match)
+            LOG.debug("RA prover mechanism: '{}'", match)
         }
         return match
     }
 
     /**
-     * Calculate the RatVerifier mechanism
+     * Calculate the RaVerifier mechanism
      *
      * We have to decide our verifier mechanism, so we have to prefer localExpected list
      *
      * @return The String of the cipher or null if no match was found
      */
-    fun getRatVerifierMechanism(localExpectedVerifier: Array<String>, remoteSupportedProver: Array<String>): String? {
+    fun getRaVerifierMechanism(localExpectedVerifier: Array<String>, remoteSupportedProver: Array<String>): String? {
         if (localExpectedVerifier.isEmpty()) {
-            LOG.warn("Got empty RAT localExpectedVerifier suite")
+            LOG.warn("Got empty RA localExpectedVerifier suite")
             return null
         }
 
         if (remoteSupportedProver.isEmpty()) {
-            LOG.warn("Got empty RAT remoteSupportedProver suite")
+            LOG.warn("Got empty RA remoteSupportedProver suite")
             return null
         }
 
         if (LOG.isTraceEnabled) {
             LOG.trace(
-                "Calculate RAT verifier mechanism for given local verifiers: {} " +
+                "Calculate RA verifier mechanism for given local verifiers: {} " +
                     "and remote provers: {}",
                 localExpectedVerifier.contentToString(),
                 remoteSupportedProver.contentToString()
             )
         }
 
-        val match = matchRatMechanisms(localExpectedVerifier, remoteSupportedProver)
+        val match = matchRaMechanisms(localExpectedVerifier, remoteSupportedProver)
         if (LOG.isDebugEnabled) {
-            LOG.debug("RAT verifier mechanism: '{}'", match)
+            LOG.debug("RA verifier mechanism: '{}'", match)
         }
         return match
     }
 
-    private fun matchRatMechanisms(primary: Array<String>, secondary: Array<String>): String? {
+    private fun matchRaMechanisms(primary: Array<String>, secondary: Array<String>): String? {
         for (p in primary) {
             for (s in secondary) {
                 if (p == s) {
@@ -615,36 +615,36 @@ class FSM(
     }
 
     /**
-     * Stop current RatVerifier if active and start the RatVerifier from the
-     * RatVerifierDriver Registry that matches the verifier mechanism
+     * Stop current RaVerifier if active and start the RaVerifier from the
+     * RaVerifierDriver Registry that matches the verifier mechanism
      *
      * @return false if no match was found
      */
-    fun restartRatVerifierDriver(): Boolean {
+    fun restartRaVerifierDriver(): Boolean {
         // assume verifier mechanism is set
-        stopRatVerifierDriver()
-        ratVerifierDriver = RatVerifierDriverRegistry.startRatVerifierDriver(verifierMechanism, this)
-        return ratVerifierDriver?.let {
+        stopRaVerifierDriver()
+        raVerifierDriver = RaVerifierDriverRegistry.startRaVerifierDriver(verifierMechanism, this)
+        return raVerifierDriver?.let {
             // safe the thread ID
-            currentRatVerifierId = it.id.toString()
+            currentRaVerifierId = it.id.toString()
             if (LOG.isTraceEnabled) {
                 LOG.trace("Start verifier_handshake timeout")
             }
             verifierHandshakeTimer.resetTimeout()
             true
         } ?: run {
-            LOG.error("Cannot create instance of RAT_VERIFIER_DRIVER")
-            currentRatVerifierId = ""
+            LOG.error("Cannot create instance of RA_VERIFIER_DRIVER")
+            currentRaVerifierId = ""
             false
         }
     }
 
     /**
-     * Terminate the RatVerifierDriver
+     * Terminate the RaVerifierDriver
      */
-    fun stopRatVerifierDriver() {
+    fun stopRaVerifierDriver() {
         verifierHandshakeTimer.cancelTimeout()
-        ratVerifierDriver?.let {
+        raVerifierDriver?.let {
             if (it.isAlive) {
                 it.interrupt()
 
@@ -657,36 +657,36 @@ class FSM(
     }
 
     /**
-     * Stop current RatProver if active and start the RatProver from the
-     * RatProverDriver Registry that matches the prover mechanism
+     * Stop current RaProver if active and start the RaProver from the
+     * RaProverDriver Registry that matches the prover mechanism
      *
      * @return false if no match was found
      */
-    fun restartRatProverDriver(): Boolean {
+    fun restartRaProverDriver(): Boolean {
         // assume prover mechanism is set
-        stopRatProverDriver()
-        ratProverDriver = RatProverDriverRegistry.startRatProverDriver(proverMechanism, this)
-        return ratProverDriver?.let {
+        stopRaProverDriver()
+        raProverDriver = RaProverDriverRegistry.startRaProverDriver(proverMechanism, this)
+        return raProverDriver?.let {
             // Save the thread ID
-            currentRatProverId = it.id.toString()
+            currentRaProverId = it.id.toString()
             if (LOG.isTraceEnabled) {
                 LOG.trace("Start prover_handshake timeout")
             }
             proverHandshakeTimer.resetTimeout()
             true
         } ?: run {
-            LOG.error("Cannot create instance of RAT_PROVER_DRIVER")
-            currentRatProverId = ""
+            LOG.error("Cannot create instance of RA_PROVER_DRIVER")
+            currentRaProverId = ""
             false
         }
     }
 
     /**
-     * Terminate the RatProverDriver
+     * Terminate the RaProverDriver
      */
-    private fun stopRatProverDriver() {
+    private fun stopRaProverDriver() {
         proverHandshakeTimer.cancelTimeout()
-        ratProverDriver?.let {
+        raProverDriver?.let {
             if (it.isAlive) {
                 it.interrupt()
 
@@ -726,16 +726,16 @@ class FSM(
             LOG.trace("Clearing timeouts...")
         }
         datTimer.cancelTimeout()
-        ratTimer.cancelTimeout()
+        raTimer.cancelTimeout()
         handshakeTimer.cancelTimeout()
         ackTimer.cancelTimeout()
         if (LOG.isTraceEnabled) {
-            LOG.trace("Stopping RAT components...")
+            LOG.trace("Stopping RA components...")
         }
         // Cancels proverHandshakeTimer
-        stopRatProverDriver()
+        stopRaProverDriver()
         // Cancels verifierHandshakeTimer
-        stopRatVerifierDriver()
+        stopRaVerifierDriver()
 
         // Notify upper layer via handshake or closeListener
         if (!handshakeResultAvailable) {
@@ -772,7 +772,7 @@ class FSM(
         return states[state] ?: throw NoSuchElementException("State unknown")
     }
 
-    fun setRatMechanisms(proverMechanism: String, verifierMechanism: String) {
+    fun setRaMechanisms(proverMechanism: String, verifierMechanism: String) {
         this.proverMechanism = proverMechanism
         this.verifierMechanism = verifierMechanism
     }
@@ -855,21 +855,21 @@ class FSM(
             }
             onControlMessage(InternalControlMessage.DAT_TIMER_EXPIRED)
         }
-        val ratTimeoutHandler = Runnable {
+        val raTimeoutHandler = Runnable {
             if (LOG.isTraceEnabled) {
-                LOG.trace("RAT_TIMER_EXPIRED")
+                LOG.trace("RA_TIMER_EXPIRED")
             }
-            onControlMessage(InternalControlMessage.REPEAT_RAT)
+            onControlMessage(InternalControlMessage.REPEAT_RA)
         }
         val proverTimeoutHandler = Runnable {
             if (LOG.isTraceEnabled) {
-                LOG.trace("RAT_PROVER_HANDSHAKE_TIMER_EXPIRED")
+                LOG.trace("RA_PROVER_HANDSHAKE_TIMER_EXPIRED")
             }
             onControlMessage(InternalControlMessage.TIMEOUT)
         }
         val verifierTimeoutHandler = Runnable {
             if (LOG.isTraceEnabled) {
-                LOG.trace("RAT_VERIFIER_HANDSHAKE_TIMER_EXPIRED")
+                LOG.trace("RA_VERIFIER_HANDSHAKE_TIMER_EXPIRED")
             }
             onControlMessage(InternalControlMessage.TIMEOUT)
         }
@@ -884,7 +884,7 @@ class FSM(
         handshakeTimer = StaticTimer(fsmIsBusy, handshakeTimeoutHandler, handshakeTimeoutDelay)
         proverHandshakeTimer = StaticTimer(fsmIsBusy, proverTimeoutHandler, handshakeTimeoutDelay)
         verifierHandshakeTimer = StaticTimer(fsmIsBusy, verifierTimeoutHandler, handshakeTimeoutDelay)
-        ratTimer = StaticTimer(fsmIsBusy, ratTimeoutHandler, attestationConfig.ratTimeoutDelay)
+        raTimer = StaticTimer(fsmIsBusy, raTimeoutHandler, attestationConfig.raTimeoutDelay)
         ackTimer = StaticTimer(fsmIsBusy, ackTimeoutHandler, ackTimeoutDelay)
 
         /* ------------- FSM STATE Initialization -------------*/
@@ -894,26 +894,26 @@ class FSM(
         states[FsmState.STATE_WAIT_FOR_HELLO] = StateWaitForHello(
             this, handshakeTimer, datTimer, dapsDriver, attestationConfig
         )
-        states[FsmState.STATE_WAIT_FOR_RAT] = StateWaitForRat(
-            this, handshakeTimer, verifierHandshakeTimer, proverHandshakeTimer, ratTimer
+        states[FsmState.STATE_WAIT_FOR_RA] = StateWaitForRa(
+            this, handshakeTimer, verifierHandshakeTimer, proverHandshakeTimer, raTimer
         )
-        states[FsmState.STATE_WAIT_FOR_RAT_PROVER] = StateWaitForRatProver(
-            this, ratTimer, handshakeTimer, proverHandshakeTimer, ackTimer
+        states[FsmState.STATE_WAIT_FOR_RA_PROVER] = StateWaitForRaProver(
+            this, raTimer, handshakeTimer, proverHandshakeTimer, ackTimer
         )
-        states[FsmState.STATE_WAIT_FOR_RAT_VERIFIER] = StateWaitForRatVerifier(
-            this, ratTimer, handshakeTimer, verifierHandshakeTimer, ackTimer
+        states[FsmState.STATE_WAIT_FOR_RA_VERIFIER] = StateWaitForRaVerifier(
+            this, raTimer, handshakeTimer, verifierHandshakeTimer, ackTimer
         )
-        states[FsmState.STATE_WAIT_FOR_DAT_AND_RAT] = StateWaitForDatAndRat(
+        states[FsmState.STATE_WAIT_FOR_DAT_AND_RA] = StateWaitForDatAndRa(
             this, handshakeTimer, proverHandshakeTimer, datTimer, dapsDriver
         )
-        states[FsmState.STATE_WAIT_FOR_DAT_AND_RAT_VERIFIER] = StateWaitForDatAndRatVerifier(
+        states[FsmState.STATE_WAIT_FOR_DAT_AND_RA_VERIFIER] = StateWaitForDatAndRaVerifier(
             this, handshakeTimer, datTimer, dapsDriver
         )
         states[FsmState.STATE_ESTABLISHED] = StateEstablished(
-            this, ratTimer, handshakeTimer, ackTimer, nextSendAlternatingBit
+            this, raTimer, handshakeTimer, ackTimer, nextSendAlternatingBit
         )
         states[FsmState.STATE_WAIT_FOR_ACK] = StateWaitForAck(
-            this, ratTimer, handshakeTimer, ackTimer
+            this, raTimer, handshakeTimer, ackTimer
         )
 
         // Set initial state

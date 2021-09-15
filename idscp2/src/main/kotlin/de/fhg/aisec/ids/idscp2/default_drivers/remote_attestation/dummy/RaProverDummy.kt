@@ -17,23 +17,22 @@
  * limitations under the License.
  * =========================LICENSE_END==================================
  */
-package de.fhg.aisec.ids.idscp2.default_drivers.rat.`null`
+package de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy
 
-import de.fhg.aisec.ids.idscp2.idscp_core.drivers.RatProverDriver
+import de.fhg.aisec.ids.idscp2.idscp_core.drivers.RaProverDriver
 import de.fhg.aisec.ids.idscp2.idscp_core.fsm.InternalControlMessage
-import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RatProverFsmListener
+import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RaProverFsmListener
 import org.slf4j.LoggerFactory
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 
 /**
- * A RatProver that exchanges rat messages with a remote RatVerifier
+ * A RaProver dummy that exchanges ra messages with a remote RaVerifier
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
-class NullRatProver(fsmListener: RatProverFsmListener) : RatProverDriver<Unit>(fsmListener) {
+class RaProverDummy(fsmListener: RaProverFsmListener) : RaProverDriver<Unit>(fsmListener) {
     private val queue: BlockingQueue<ByteArray> = LinkedBlockingQueue()
-
     override fun delegate(message: ByteArray) {
         queue.add(message)
         if (LOG.isDebugEnabled) {
@@ -42,21 +41,34 @@ class NullRatProver(fsmListener: RatProverFsmListener) : RatProverDriver<Unit>(f
     }
 
     override fun run() {
-        fsmListener.onRatProverMessage(InternalControlMessage.RAT_PROVER_MSG, "".toByteArray())
-        try {
-            queue.take()
-        } catch (e: InterruptedException) {
-            if (running) {
-                LOG.warn("NullRatProver failed")
-                fsmListener.onRatProverMessage(InternalControlMessage.RAT_PROVER_FAILED)
+        var countDown = 2
+        while (running) {
+            try {
+                sleep(1000)
+                fsmListener.onRaProverMessage(
+                    InternalControlMessage.RA_PROVER_MSG,
+                    "test".toByteArray()
+                )
+                if (LOG.isDebugEnabled) {
+                    LOG.debug("Prover waits")
+                }
+                queue.take()
+                if (LOG.isDebugEnabled) {
+                    LOG.debug("Prover receives, send something")
+                }
+                if (--countDown == 0) break
+            } catch (e: InterruptedException) {
+                if (running) {
+                    fsmListener.onRaProverMessage(InternalControlMessage.RA_PROVER_FAILED)
+                }
+                return
             }
-            return
         }
-        fsmListener.onRatProverMessage(InternalControlMessage.RAT_PROVER_OK)
+        fsmListener.onRaProverMessage(InternalControlMessage.RA_PROVER_OK)
     }
 
     companion object {
-        const val NULL_RAT_PROVER_ID = "NullRat"
-        private val LOG = LoggerFactory.getLogger(NullRatProver::class.java)
+        const val RA_PROVER_DUMMY_ID = "Dummy"
+        private val LOG = LoggerFactory.getLogger(RaProverDummy::class.java)
     }
 }

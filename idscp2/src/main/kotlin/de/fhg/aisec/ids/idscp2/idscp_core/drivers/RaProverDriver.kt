@@ -19,36 +19,36 @@
  */
 package de.fhg.aisec.ids.idscp2.idscp_core.drivers
 
-import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RatVerifierFsmListener
+import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RaProverFsmListener
 import org.slf4j.LoggerFactory
 
 /**
- * An abstract RatVerifierDriver class that creates a rat verifier driver thread and verifier the
- * peer connector using remote attestation
+ * An abstract RaProverDriver class that creates a RA prover driver thread and proves itself to
+ * the peer connector using remote attestation
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
-abstract class RatVerifierDriver<in VC>(protected val fsmListener: RatVerifierFsmListener) : Thread() {
+abstract class RaProverDriver<in PC>(protected val fsmListener: RaProverFsmListener) : Thread() {
     protected var running = true
 
     /*
-     * Delegate the IDSCP2 message to the RatVerifier driver
+     * Delegate an IDSCP2 message to the RaProver driver
      */
     open fun delegate(message: ByteArray) {}
 
     /*
-     * Terminate and cancel the RatVerifier driver
+     * Terminate and cancel the RaProver driver
      */
     fun terminate() {
         running = false
         interrupt()
     }
 
-    open fun setConfig(config: VC) {
-        LOG.warn("Method 'setConfig' for RatVerifierDriver is not implemented")
+    open fun setConfig(config: PC) {
+        LOG.warn("Method 'setConfig' for RaProverDriver is not implemented")
     }
 
     companion object {
-        private val LOG = LoggerFactory.getLogger(RatVerifierDriver::class.java)
+        private val LOG = LoggerFactory.getLogger(RaProverDriver::class.java)
     }
 }

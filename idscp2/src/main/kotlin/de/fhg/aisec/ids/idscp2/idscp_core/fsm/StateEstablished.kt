@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory
  */
 class StateEstablished(
     fsm: FSM,
-    ratTimer: StaticTimer,
+    raTimer: StaticTimer,
     handshakeTimer: StaticTimer,
     ackTimer: StaticTimer,
     alternatingBit: AlternatingBit
@@ -57,12 +57,12 @@ class StateEstablished(
          * ---------------------------------------------------
          * onICM: error ---> {timeouts.cancel(), send IDSCP_CLOSE} ---> STATE_CLOSED
          * onICM: stop ---> {timeouts.cancel()} ---> STATE_CLOSED
-         * onICM: re_rat ---> {send IDSCP_RE_RAT, start RAT_VERIFIER} ---> STATE_WAIT_FOR_RAT_VERIFIER
+         * onICM: re_ra ---> {send IDSCP_RE_RA, start RA_VERIFIER} ---> STATE_WAIT_FOR_RA_VERIFIER
          * onICM: send_data ---> {send IDS_DATA} ---> STATE_WAIT_FOR_ACK / STATE_CLOSED
-         * onICM: dat_timeout ---> {send IDSCP_DAT_EXPIRED} ---> STATE_WAIT_FOR_DAT_AND_RAT_VERIFIER
+         * onICM: dat_timeout ---> {send IDSCP_DAT_EXPIRED} ---> STATE_WAIT_FOR_DAT_AND_RA_VERIFIER
          * onMessage: IDSCP_DATA ---> {delegate to connection} ---> STATE_ESTABLISHED
-         * onMessage: IDSCP_RERAT ---> {start RAT_PROVER} ---> STATE_WAIT_FOR_RAT_PROVER
-         * onMessage: IDSCP_DAT_EXPIRED ---> {send IDSCP_DAT, start RAT_PROVER} ---> STATE_WAIT_FOR_RAT_PROVER
+         * onMessage: IDSCP_RERA ---> {start RA_PROVER} ---> STATE_WAIT_FOR_RA_PROVER
+         * onMessage: IDSCP_DAT_EXPIRED ---> {send IDSCP_DAT, start RA_PROVER} ---> STATE_WAIT_FOR_RA_PROVER
          * onMessage: IDSCP_CLOSE ---> {timeouts.cancel()} ---> STATE_CLOSED
          * ALL_OTHER_MESSAGES ---> {} ---> STATE_ESTABLISHED
          * --------------------------------------------------- */
@@ -115,30 +115,30 @@ class StateEstablished(
             }
         )
         addTransition(
-            InternalControlMessage.REPEAT_RAT.value,
+            InternalControlMessage.REPEAT_RA.value,
             Transition {
                 if (LOG.isDebugEnabled) {
                     LOG.debug("Re-Attestation triggered")
                 }
                 if (LOG.isTraceEnabled) {
-                    LOG.trace("Send IDSCP_RERAT, start RAT_VERIFIER")
+                    LOG.trace("Send IDSCP_RERA, start RA_VERIFIER")
                 }
-                ratTimer.cancelTimeout()
-                if (!fsm.sendFromFSM(Idscp2MessageHelper.createIdscpReRatMessage(""))) {
-                    LOG.warn("Cannot send ReRat message")
+                raTimer.cancelTimeout()
+                if (!fsm.sendFromFSM(Idscp2MessageHelper.createIdscpReRaMessage(""))) {
+                    LOG.warn("Cannot send ReRa message")
                     return@Transition FSM.FsmResult(FSM.FsmResultCode.IO_ERROR, fsm.getState(FsmState.STATE_CLOSED))
                 }
-                if (!fsm.restartRatVerifierDriver()) {
-                    LOG.warn("Cannot run Rat verifier, close idscp connection")
-                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RAT_ERROR, fsm.getState(FsmState.STATE_CLOSED))
+                if (!fsm.restartRaVerifierDriver()) {
+                    LOG.warn("Cannot run Ra verifier, close idscp connection")
+                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RA_ERROR, fsm.getState(FsmState.STATE_CLOSED))
                 }
-                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_RAT_VERIFIER))
+                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_RA_VERIFIER))
             }
         )
         addTransition(
             InternalControlMessage.DAT_TIMER_EXPIRED.value,
             Transition {
-                ratTimer.cancelTimeout()
+                raTimer.cancelTimeout()
                 if (LOG.isDebugEnabled) {
                     LOG.debug("DAT expired, request new DAT from peer and trigger a re-attestation")
                 }
@@ -153,20 +153,20 @@ class StateEstablished(
                     LOG.trace("Set handshake timeout")
                 }
                 handshakeTimer.resetTimeout()
-                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_DAT_AND_RAT_VERIFIER))
+                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_DAT_AND_RA_VERIFIER))
             }
         )
         addTransition(
-            IdscpMessage.IDSCPRERAT_FIELD_NUMBER,
+            IdscpMessage.IDSCPRERA_FIELD_NUMBER,
             Transition {
                 if (LOG.isDebugEnabled) {
                     LOG.debug("Peer is requesting a re-attestation")
                 }
-                if (!fsm.restartRatProverDriver()) {
-                    LOG.warn("Cannot run Rat prover, close idscp connection")
-                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RAT_ERROR, fsm.getState(FsmState.STATE_CLOSED))
+                if (!fsm.restartRaProverDriver()) {
+                    LOG.warn("Cannot run Ra prover, close idscp connection")
+                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RA_ERROR, fsm.getState(FsmState.STATE_CLOSED))
                 }
-                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_RAT_PROVER))
+                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_RA_PROVER))
             }
         )
         addTransition(
@@ -179,11 +179,11 @@ class StateEstablished(
                     LOG.warn("Cannot send Dat message")
                     return@Transition FSM.FsmResult(FSM.FsmResultCode.IO_ERROR, fsm.getState(FsmState.STATE_CLOSED))
                 }
-                if (!fsm.restartRatProverDriver()) {
-                    LOG.warn("Cannot run Rat prover, close idscp connection")
-                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RAT_ERROR, fsm.getState(FsmState.STATE_CLOSED))
+                if (!fsm.restartRaProverDriver()) {
+                    LOG.warn("Cannot run Ra prover, close idscp connection")
+                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RA_ERROR, fsm.getState(FsmState.STATE_CLOSED))
                 }
-                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_RAT_PROVER))
+                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_RA_PROVER))
             }
         )
 

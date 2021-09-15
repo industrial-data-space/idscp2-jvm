@@ -20,12 +20,12 @@
 package de.fhg.aisec.ids.camel.idscp2.server
 
 import de.fhg.aisec.ids.camel.idscp2.RefCountingHashMap
-import de.fhg.aisec.ids.idscp2.default_drivers.rat.dummy.RatProverDummy
-import de.fhg.aisec.ids.idscp2.default_drivers.rat.dummy.RatVerifierDummy
+import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaProverDummy
+import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaVerifierDummy
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
-import de.fhg.aisec.ids.idscp2.idscp_core.rat_registry.RatProverDriverRegistry
-import de.fhg.aisec.ids.idscp2.idscp_core.rat_registry.RatVerifierDriverRegistry
+import de.fhg.aisec.ids.idscp2.idscp_core.ra_registry.RaProverDriverRegistry
+import de.fhg.aisec.ids.idscp2.idscp_core.ra_registry.RaVerifierDriverRegistry
 import org.apache.camel.Endpoint
 import org.apache.camel.spi.annotations.Component
 import org.apache.camel.support.DefaultComponent
@@ -37,11 +37,11 @@ class Idscp2ServerComponent : DefaultComponent() {
     }
 
     init {
-        RatProverDriverRegistry.registerDriver(
-            RatProverDummy.RAT_PROVER_DUMMY_ID, ::RatProverDummy, null
+        RaProverDriverRegistry.registerDriver(
+            RaProverDummy.RA_PROVER_DUMMY_ID, ::RaProverDummy, null
         )
-        RatVerifierDriverRegistry.registerDriver(
-            RatVerifierDummy.RAT_VERIFIER_DUMMY_ID, ::RatVerifierDummy, null
+        RaVerifierDriverRegistry.registerDriver(
+            RaVerifierDummy.RA_VERIFIER_DUMMY_ID, ::RaVerifierDummy, null
         )
     }
 

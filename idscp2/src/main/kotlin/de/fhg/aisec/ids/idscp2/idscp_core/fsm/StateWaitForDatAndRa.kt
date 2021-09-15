@@ -29,13 +29,13 @@ import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 
 /**
- * The Wait_For_Dat_And_Rat State of the FSM of the IDSCP2 protocol.
- * Waits for a new valid dynamic attribute token from the peer as well as for the RatProver and
- * RatVerifier to decide whether the connection will be established or not
+ * The Wait_For_Dat_And_Ra State of the FSM of the IDSCP2 protocol.
+ * Waits for a new valid dynamic attribute token from the peer as well as for the RaProver and
+ * RaVerifier to decide whether the connection will be established or not
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
-class StateWaitForDatAndRat(
+class StateWaitForDatAndRa(
     fsm: FSM,
     handshakeTimer: StaticTimer,
     proverHandshakeTimer: StaticTimer,
@@ -44,32 +44,32 @@ class StateWaitForDatAndRat(
 ) : State() {
     override fun runEntryCode(fsm: FSM) {
         if (LOG.isTraceEnabled) {
-            LOG.trace("Switched to state STATE_WAIT_FOR_DAT_AND_RAT")
+            LOG.trace("Switched to state STATE_WAIT_FOR_DAT_AND_RA")
         }
     }
 
     companion object {
-        private val LOG = LoggerFactory.getLogger(StateWaitForDatAndRat::class.java)
+        private val LOG = LoggerFactory.getLogger(StateWaitForDatAndRa::class.java)
     }
 
     init {
 
         /*---------------------------------------------------
-         * STATE_WAIT_FOR_DAT_AND_RAT - Transition Description
+         * STATE_WAIT_FOR_DAT_AND_RA - Transition Description
          * ---------------------------------------------------
-         * onICM: stop ---> {send IDSCP_CLOSE, stop RAT_PROVER} ---> STATE_CLOSED
-         * onICM: error ---> {stop RAT_PROVER} ---> STATE_CLOSED
-         * onICM: timeout ---> {send IDSCP_CLOSE, stop RAT_PROVER} ---> STATE_CLOSED
-         * onICM: rat_prover_ok ---> {} ---> STATE_WAIT_FOR_DAT_AND_RAT_VERIFIER
-         * onICM: rat_prover_failed ---> {send IDSCP_CLOSE} ---> STATE_CLOSED
-         * onICM: rat_prover_msg ---> {send IDSCP_RAT_PROVER} ---> STATE_WAIT_FOR_DAT_AND_RAT
-         * onMessage: IDSCP_ACK ---> {cancel Ack flag} ---> STATE_WAIT_FOR_RAT
-         * onMessage: IDSCP_CLOSE ---> {ratP.stop(), timeouts.stop()} ---> STATE_CLOSED
-         * onMessage: IDSCP_DAT(success) ---> {verify dat, start dat_timeout, start RAT_VERIFIER} ---> STATE_WAIT_FOR_RAT
-         * onMessage: IDSCP_DAT(failed) ---> {verify dat, send IDSCP_CLOSE, stop RAT_PROVER} ---> STATE_CLOSED
-         * onMessage: IDSCP_DAT_EXPIRED ---> {send IDSCP_DAT, restart RAT_PROVER} ---> STATE_WAIT_FOR_DAT_AND_RAT
-         * onMessage: IDSCP_RAT_VERIFIER ---> {delegate to RAT_PROVER} ---> STATE_WAIT_FOR_DAT_AND_RAT
-         * onMessage: IDSCP_RE_RAT ---> {restart RAT_PROVER} ---> STATE_WAIT_FOR_DAT_AND_RAT
+         * onICM: stop ---> {send IDSCP_CLOSE, stop RA_PROVER} ---> STATE_CLOSED
+         * onICM: error ---> {stop RA_PROVER} ---> STATE_CLOSED
+         * onICM: timeout ---> {send IDSCP_CLOSE, stop RA_PROVER} ---> STATE_CLOSED
+         * onICM: ra_prover_ok ---> {} ---> STATE_WAIT_FOR_DAT_AND_RA_VERIFIER
+         * onICM: ra_prover_failed ---> {send IDSCP_CLOSE} ---> STATE_CLOSED
+         * onICM: ra_prover_msg ---> {send IDSCP_RA_PROVER} ---> STATE_WAIT_FOR_DAT_AND_RA
+         * onMessage: IDSCP_ACK ---> {cancel Ack flag} ---> STATE_WAIT_FOR_RA
+         * onMessage: IDSCP_CLOSE ---> {raP.stop(), timeouts.stop()} ---> STATE_CLOSED
+         * onMessage: IDSCP_DAT(success) ---> {verify dat, start dat_timeout, start RA_VERIFIER} ---> STATE_WAIT_FOR_RA
+         * onMessage: IDSCP_DAT(failed) ---> {verify dat, send IDSCP_CLOSE, stop RA_PROVER} ---> STATE_CLOSED
+         * onMessage: IDSCP_DAT_EXPIRED ---> {send IDSCP_DAT, restart RA_PROVER} ---> STATE_WAIT_FOR_DAT_AND_RA
+         * onMessage: IDSCP_RA_VERIFIER ---> {delegate to RA_PROVER} ---> STATE_WAIT_FOR_DAT_AND_RA
+         * onMessage: IDSCP_RE_RA ---> {restart RA_PROVER} ---> STATE_WAIT_FOR_DAT_AND_RA
          * ALL_OTHER_MESSAGES ---> {} ---> STATE_ESTABLISHED
          * --------------------------------------------------- */
         addTransition(
@@ -97,7 +97,7 @@ class StateWaitForDatAndRat(
         )
 
         addTransition(
-            InternalControlMessage.REPEAT_RAT.value,
+            InternalControlMessage.REPEAT_RA.value,
             Transition {
                 FSM.FsmResult(FSM.FsmResultCode.OK, this)
             }
@@ -125,24 +125,24 @@ class StateWaitForDatAndRat(
         )
 
         addTransition(
-            InternalControlMessage.RAT_PROVER_OK.value,
+            InternalControlMessage.RA_PROVER_OK.value,
             Transition {
                 if (LOG.isTraceEnabled) {
-                    LOG.trace("Received RAT_PROVER OK")
+                    LOG.trace("Received RA_PROVER OK")
                 }
                 proverHandshakeTimer.cancelTimeout()
-                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_DAT_AND_RAT_VERIFIER))
+                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_DAT_AND_RA_VERIFIER))
             }
         )
 
         addTransition(
-            InternalControlMessage.RAT_PROVER_FAILED.value,
+            InternalControlMessage.RA_PROVER_FAILED.value,
             Transition {
-                LOG.warn("RAT_PROVER failed. Send IDSCP_CLOSE")
+                LOG.warn("RA_PROVER failed. Send IDSCP_CLOSE")
                 fsm.sendFromFSM(
                     Idscp2MessageHelper.createIdscpCloseMessage(
-                        "RAT_PROVER failed",
-                        CloseCause.RAT_PROVER_FAILED
+                        "RA_PROVER failed",
+                        CloseCause.RA_PROVER_FAILED
                     )
                 )
                 FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_CLOSED))
@@ -150,13 +150,13 @@ class StateWaitForDatAndRat(
         )
 
         addTransition(
-            InternalControlMessage.RAT_PROVER_MSG.value,
+            InternalControlMessage.RA_PROVER_MSG.value,
             Transition { event: Event ->
                 if (LOG.isTraceEnabled) {
-                    LOG.trace("Send IDSCP_RAT_PROVER")
+                    LOG.trace("Send IDSCP_RA_PROVER")
                 }
                 if (!fsm.sendFromFSM(event.idscpMessage)) {
-                    LOG.warn("Cannot send rat prover message")
+                    LOG.warn("Cannot send RA prover message")
                     return@Transition FSM.FsmResult(FSM.FsmResultCode.IO_ERROR, fsm.getState(FsmState.STATE_CLOSED))
                 }
                 FSM.FsmResult(FSM.FsmResultCode.OK, this)
@@ -217,13 +217,13 @@ class StateWaitForDatAndRat(
                 fsm.setPeerDat(dat)
                 datTimer.resetTimeout(datValidityPeriod * 1000)
 
-                // start RAT Verifier
-                if (!fsm.restartRatVerifierDriver()) {
-                    LOG.warn("Cannot run Rat verifier, close idscp connection")
-                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RAT_ERROR, fsm.getState(FsmState.STATE_CLOSED))
+                // start RA Verifier
+                if (!fsm.restartRaVerifierDriver()) {
+                    LOG.warn("Cannot run RA verifier, close idscp connection")
+                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RA_ERROR, fsm.getState(FsmState.STATE_CLOSED))
                 }
 
-                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_RAT))
+                FSM.FsmResult(FSM.FsmResultCode.OK, fsm.getState(FsmState.STATE_WAIT_FOR_RA))
             }
         )
 
@@ -237,35 +237,35 @@ class StateWaitForDatAndRat(
                     LOG.warn("Cannot send Dat message")
                     return@Transition FSM.FsmResult(FSM.FsmResultCode.IO_ERROR, fsm.getState(FsmState.STATE_CLOSED))
                 }
-                if (!fsm.restartRatProverDriver()) {
-                    LOG.warn("Cannot run Rat prover, close idscp connection")
-                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RAT_ERROR, fsm.getState(FsmState.STATE_CLOSED))
+                if (!fsm.restartRaProverDriver()) {
+                    LOG.warn("Cannot run RA prover, close idscp connection")
+                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RA_ERROR, fsm.getState(FsmState.STATE_CLOSED))
                 }
                 FSM.FsmResult(FSM.FsmResultCode.OK, this)
             }
         )
 
         addTransition(
-            IdscpMessage.IDSCPRATVERIFIER_FIELD_NUMBER,
+            IdscpMessage.IDSCPRAVERIFIER_FIELD_NUMBER,
             Transition { event: Event ->
                 if (LOG.isTraceEnabled) {
-                    LOG.trace("Delegate received IDSCP_RAT_VERIFIER to RAT_PROVER")
+                    LOG.trace("Delegate received IDSCP_RA_VERIFIER to RA_PROVER")
                 }
 
-                if (!event.idscpMessage.hasIdscpRatVerifier()) {
+                if (!event.idscpMessage.hasIdscpRaVerifier()) {
                     // this should never happen
-                    LOG.warn("IDSCP_RAT_VERIFIER Message not available")
-                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RAT_ERROR, fsm.getState(FsmState.STATE_CLOSED))
+                    LOG.warn("IDSCP_RA_VERIFIER Message not available")
+                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RA_ERROR, fsm.getState(FsmState.STATE_CLOSED))
                 }
 
-                fsm.ratProverDriver?.let {
+                fsm.raProverDriver?.let {
                     // Run in async fire-and-forget coroutine to avoid cycles caused by protocol misuse
                     GlobalScope.launch {
-                        it.delegate(event.idscpMessage.idscpRatVerifier.data.toByteArray())
+                        it.delegate(event.idscpMessage.idscpRaVerifier.data.toByteArray())
                     }
                 } ?: run {
-                    LOG.warn("RatProverDriver not available")
-                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RAT_ERROR, fsm.getState(FsmState.STATE_CLOSED))
+                    LOG.warn("RaProverDriver not available")
+                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RA_ERROR, fsm.getState(FsmState.STATE_CLOSED))
                 }
 
                 FSM.FsmResult(FSM.FsmResultCode.OK, this)
@@ -273,14 +273,14 @@ class StateWaitForDatAndRat(
         )
 
         addTransition(
-            IdscpMessage.IDSCPRERAT_FIELD_NUMBER,
+            IdscpMessage.IDSCPRERA_FIELD_NUMBER,
             Transition {
                 if (LOG.isDebugEnabled) {
                     LOG.debug("Peer is requesting a re-attestation")
                 }
-                if (!fsm.restartRatProverDriver()) {
-                    LOG.warn("Cannot run Rat prover, close idscp connection")
-                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RAT_ERROR, fsm.getState(FsmState.STATE_CLOSED))
+                if (!fsm.restartRaProverDriver()) {
+                    LOG.warn("Cannot run RA prover, close idscp connection")
+                    return@Transition FSM.FsmResult(FSM.FsmResultCode.RA_ERROR, fsm.getState(FsmState.STATE_CLOSED))
                 }
                 FSM.FsmResult(FSM.FsmResultCode.OK, this)
             }

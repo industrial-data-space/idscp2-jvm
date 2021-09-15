@@ -23,8 +23,8 @@ import de.fhg.aisec.ids.camel.idscp2.Utils
 import de.fhg.aisec.ids.idscp2.app_layer.AppLayerConnection
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.AisecDapsDriver
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.AisecDapsDriverConfig
-import de.fhg.aisec.ids.idscp2.default_drivers.rat.dummy.RatProverDummy
-import de.fhg.aisec.ids.idscp2.default_drivers.rat.dummy.RatVerifierDummy
+import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaProverDummy
+import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaVerifierDummy
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.Idscp2EndpointListener
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.AttestationConfig
@@ -91,7 +91,7 @@ class Idscp2ServerEndpoint(uri: String?, private val remaining: String, componen
         description = "The validity time of remote attestation and DAT in milliseconds",
         defaultValue = "600000"
     )
-    var dapsRatTimeoutDelay: Long = AttestationConfig.DEFAULT_RAT_TIMEOUT_DELAY.toLong()
+    var dapsRaTimeoutDelay: Long = AttestationConfig.DEFAULT_RA_TIMEOUT_DELAY.toLong()
 
     @UriParam(
         label = "common",
@@ -103,17 +103,17 @@ class Idscp2ServerEndpoint(uri: String?, private val remaining: String, componen
     @UriParam(
         label = "common",
         description = "Locally supported Remote Attestation Suite IDs, separated by \"|\"",
-        defaultValue = RatProverDummy.RAT_PROVER_DUMMY_ID
+        defaultValue = RaProverDummy.RA_PROVER_DUMMY_ID
     )
-    var supportedRatSuites: String = RatProverDummy.RAT_PROVER_DUMMY_ID
+    var supportedRaSuites: String = RaProverDummy.RA_PROVER_DUMMY_ID
 
     @UriParam(
         label = "common",
         description = "Expected Remote Attestation Suite IDs, separated by \"|\", " +
             "each communication peer must support at least one",
-        defaultValue = RatVerifierDummy.RAT_VERIFIER_DUMMY_ID
+        defaultValue = RaVerifierDummy.RA_VERIFIER_DUMMY_ID
     )
-    var expectedRatSuites: String = RatVerifierDummy.RAT_VERIFIER_DUMMY_ID
+    var expectedRaSuites: String = RaVerifierDummy.RA_VERIFIER_DUMMY_ID
 
     @Synchronized
     fun addConsumer(consumer: Idscp2ServerConsumer) {
@@ -200,9 +200,9 @@ class Idscp2ServerEndpoint(uri: String?, private val remaining: String, componen
 
         // create attestation config
         val localAttestationConfig = AttestationConfig.Builder()
-            .setSupportedRatSuite(supportedRatSuites.split('|').toTypedArray())
-            .setExpectedRatSuite(expectedRatSuites.split('|').toTypedArray())
-            .setRatTimeoutDelay(dapsRatTimeoutDelay)
+            .setSupportedRaSuite(supportedRaSuites.split('|').toTypedArray())
+            .setExpectedRaSuite(expectedRaSuites.split('|').toTypedArray())
+            .setRaTimeoutDelay(dapsRaTimeoutDelay)
             .build()
 
         // create daps config

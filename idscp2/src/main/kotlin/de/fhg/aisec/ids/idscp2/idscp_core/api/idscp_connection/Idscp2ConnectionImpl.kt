@@ -144,18 +144,18 @@ class Idscp2ConnectionImpl(
         }
     }
 
-    override fun repeatRat() {
+    override fun repeatRa() {
         if (LOG.isInfoEnabled) {
-            LOG.info("Repeat Rat for connection {}...", id)
+            LOG.info("Repeat RA for connection {}...", id)
         }
 
         // match result
-        when (val res = fsm.repeatRat()) {
+        when (val res = fsm.repeatRa()) {
             FSM.FsmResultCode.OK -> return
             FSM.FsmResultCode.FSM_LOCKED, FSM.FsmResultCode.IO_ERROR ->
                 throw Idscp2Exception("Connection aborted: " + res.value)
-            FSM.FsmResultCode.RAT_ERROR ->
-                throw Idscp2Exception("RAT action failed: " + res.value)
+            FSM.FsmResultCode.RA_ERROR ->
+                throw Idscp2Exception("RA action failed: " + res.value)
             else -> throw Idscp2Exception("Error occurred: " + res.value)
         }
     }

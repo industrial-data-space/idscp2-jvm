@@ -62,7 +62,7 @@ interface Idscp2Connection {
      * Repeat remote attestation verification of remote peer
      */
     @Throws(Idscp2Exception::class)
-    fun repeatRat()
+    fun repeatRa()
 
     fun onMessage(msg: ByteArray)
 

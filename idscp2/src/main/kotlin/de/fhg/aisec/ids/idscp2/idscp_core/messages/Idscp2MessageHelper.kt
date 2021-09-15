@@ -29,9 +29,9 @@ import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpDatExpired
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpData
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpHello
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpMessage
-import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpRatProver
-import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpRatVerifier
-import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpReRat
+import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpRaProver
+import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpRaVerifier
+import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpReRa
 
 /**
  * A factory for creating IDSCP2 messages
@@ -41,8 +41,8 @@ import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpReRat
 object Idscp2MessageHelper {
     fun createIdscpHelloMessage(
         dat: ByteArray,
-        supportedRatSuite: Array<String>,
-        expectedRatSuite: Array<String>
+        supportedRaSuite: Array<String>,
+        expectedRaSuite: Array<String>
     ): IdscpMessage {
         val idscpDat = IdscpDat.newBuilder()
             .setToken(ByteString.copyFrom(dat))
@@ -50,8 +50,8 @@ object Idscp2MessageHelper {
         val idscpHello = IdscpHello.newBuilder()
             .setVersion(2)
             .setDynamicAttributeToken(idscpDat)
-            .addAllExpectedRatSuite(listOf(*expectedRatSuite))
-            .addAllSupportedRatSuite(listOf(*supportedRatSuite))
+            .addAllExpectedRaSuite(listOf(*expectedRaSuite))
+            .addAllSupportedRaSuite(listOf(*supportedRaSuite))
             .build()
         return IdscpMessage.newBuilder()
             .setIdscpHello(idscpHello)
@@ -83,12 +83,12 @@ object Idscp2MessageHelper {
             .build()
     }
 
-    fun createIdscpReRatMessage(cause: String?): IdscpMessage {
-        val idscpReRat = IdscpReRat.newBuilder()
+    fun createIdscpReRaMessage(cause: String?): IdscpMessage {
+        val idscpReRa = IdscpReRa.newBuilder()
             .setCause(cause)
             .build()
         return IdscpMessage.newBuilder()
-            .setIdscpReRat(idscpReRat)
+            .setIdscpReRa(idscpReRa)
             .build()
     }
 
@@ -111,21 +111,21 @@ object Idscp2MessageHelper {
             .build()
     }
 
-    fun createIdscpRatProverMessage(body: ByteArray?): IdscpMessage {
-        val idscpRatProver = IdscpRatProver.newBuilder()
+    fun createIdscpRaProverMessage(body: ByteArray?): IdscpMessage {
+        val idscpRaProver = IdscpRaProver.newBuilder()
             .setData(ByteString.copyFrom(body))
             .build()
         return IdscpMessage.newBuilder()
-            .setIdscpRatProver(idscpRatProver)
+            .setIdscpRaProver(idscpRaProver)
             .build()
     }
 
-    fun createIdscpRatVerifierMessage(body: ByteArray?): IdscpMessage {
-        val idscpRatVerifier = IdscpRatVerifier.newBuilder()
+    fun createIdscpRaVerifierMessage(body: ByteArray?): IdscpMessage {
+        val idscpRaVerifier = IdscpRaVerifier.newBuilder()
             .setData(ByteString.copyFrom(body))
             .build()
         return IdscpMessage.newBuilder()
-            .setIdscpRatVerifier(idscpRatVerifier)
+            .setIdscpRaVerifier(idscpRaVerifier)
             .build()
     }
 

@@ -17,45 +17,46 @@
  * limitations under the License.
  * =========================LICENSE_END==================================
  */
-package de.fhg.aisec.ids.idscp2.default_drivers.rat.`null`
+package de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.`null`
 
-import de.fhg.aisec.ids.idscp2.idscp_core.drivers.RatVerifierDriver
+import de.fhg.aisec.ids.idscp2.idscp_core.drivers.RaProverDriver
 import de.fhg.aisec.ids.idscp2.idscp_core.fsm.InternalControlMessage
-import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RatVerifierFsmListener
+import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RaProverFsmListener
 import org.slf4j.LoggerFactory
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 
 /**
- * A RatVerifier that exchanges messages with a remote RatProver dummy
+ * A RaProver that exchanges RA messages with a remote RaVerifier
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
-class NullRatVerifier(fsmListener: RatVerifierFsmListener) : RatVerifierDriver<Unit>(fsmListener) {
+class NullRaProver(fsmListener: RaProverFsmListener) : RaProverDriver<Unit>(fsmListener) {
     private val queue: BlockingQueue<ByteArray> = LinkedBlockingQueue()
+
     override fun delegate(message: ByteArray) {
         queue.add(message)
         if (LOG.isDebugEnabled) {
-            LOG.debug("Delegated to verifier")
+            LOG.debug("Delegated to prover")
         }
     }
 
     override fun run() {
+        fsmListener.onRaProverMessage(InternalControlMessage.RA_PROVER_MSG, "".toByteArray())
         try {
             queue.take()
         } catch (e: InterruptedException) {
             if (running) {
-                LOG.warn("NullRatVerifier failed")
-                fsmListener.onRatVerifierMessage(InternalControlMessage.RAT_VERIFIER_FAILED)
+                LOG.warn("NullRaProver failed")
+                fsmListener.onRaProverMessage(InternalControlMessage.RA_PROVER_FAILED)
             }
             return
         }
-        fsmListener.onRatVerifierMessage(InternalControlMessage.RAT_VERIFIER_MSG, "".toByteArray())
-        fsmListener.onRatVerifierMessage(InternalControlMessage.RAT_VERIFIER_OK)
+        fsmListener.onRaProverMessage(InternalControlMessage.RA_PROVER_OK)
     }
 
     companion object {
-        const val NULL_RAT_VERIFIER_ID = "NullRat"
-        private val LOG = LoggerFactory.getLogger(NullRatVerifier::class.java)
+        const val NULL_RA_PROVER_ID = "NullRa"
+        private val LOG = LoggerFactory.getLogger(NullRaProver::class.java)
     }
 }

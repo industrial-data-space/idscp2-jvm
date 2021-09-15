@@ -17,34 +17,34 @@
  * limitations under the License.
  * =========================LICENSE_END==================================
  */
-package de.fhg.aisec.ids.idscp2.idscp_core.rat_registry
+package de.fhg.aisec.ids.idscp2.idscp_core.ra_registry
 
-import de.fhg.aisec.ids.idscp2.idscp_core.drivers.RatVerifierDriver
-import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RatVerifierFsmListener
+import de.fhg.aisec.ids.idscp2.idscp_core.drivers.RaProverDriver
+import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RaProverFsmListener
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * A Rat Verifier Driver Registry
+ * A RA Prover Driver Registry
  * The User can register Driver implementation instances and its configurations to the registry
  *
  *
- * The Idscpv2 protocol will select during the idscp handshake a Rat Verifier mechanism and will
- * check for this RatVerifier in this registry
+ * The Idscp2 protocol will select during the idscp handshake a RA Prover mechanism and will
+ * check for this RaProver in this registry
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
-object RatVerifierDriverRegistry {
-    private val LOG by lazy { LoggerFactory.getLogger(RatVerifierDriverRegistry::class.java) }
+object RaProverDriverRegistry {
+    private val LOG by lazy { LoggerFactory.getLogger(RaProverDriverRegistry::class.java) }
 
     /**
      * An inner static wrapper class, that wraps driver config and driver class
      */
-    private class DriverWrapper<VC>(
-        val driverFactory: (RatVerifierFsmListener) -> RatVerifierDriver<VC>,
-        val driverConfig: VC?
+    private class DriverWrapper<PC>(
+        val driverFactory: (RaProverFsmListener) -> RaProverDriver<PC>,
+        val driverConfig: PC?
     ) {
-        fun getInstance(listener: RatVerifierFsmListener) = driverFactory.invoke(listener).also { d ->
+        fun getInstance(listener: RaProverFsmListener) = driverFactory.invoke(listener).also { d ->
             driverConfig?.let { d.setConfig(it) }
         }
     }
@@ -52,15 +52,15 @@ object RatVerifierDriverRegistry {
     private val drivers = ConcurrentHashMap<String, DriverWrapper<*>>()
 
     /**
-     * Register Rat Verifier driver and an optional configuration in the registry
+     * Register RA Prover driver and an optional configuration in the registry
      */
-    fun <VC> registerDriver(
+    fun <PC> registerDriver(
         instance: String,
-        driverFactory: (RatVerifierFsmListener) -> RatVerifierDriver<VC>,
-        driverConfig: VC?
+        driverFactory: (RaProverFsmListener) -> RaProverDriver<PC>,
+        driverConfig: PC?
     ) {
         if (LOG.isDebugEnabled) {
-            LOG.debug("Register '{}' driver to RAT verifier registry", instance)
+            LOG.debug("Register '{}' driver to RA prover registry", instance)
         }
         drivers[instance] = DriverWrapper(driverFactory, driverConfig)
     }
@@ -70,27 +70,26 @@ object RatVerifierDriverRegistry {
      */
     fun unregisterDriver(instance: String) {
         if (LOG.isDebugEnabled) {
-            LOG.debug("Register '{}' driver from RAT verifier registry", instance)
+            LOG.debug("Unregister '{}' driver from RA prover registry", instance)
         }
         drivers.remove(instance)
     }
 
     /**
-     * To start a Rat Verifier from the finite state machine
+     * To start a RA Prover from the finite state machine
      *
-     * First we check if the registry contains the RatVerifier instance, then we create a new
-     * RatVerifierDriver from the driver wrapper that holds the corresponding
-     * RatVerifierDriver class.
+     * First we check if the registry contains the RaProver instance, then we create a new
+     * RaProverDriver from the driver wrapper that holds the corresponding RaProverDriver class.
      *
-     * The finite state machine is registered as the communication partner for the RatVerifier.
-     * The RatVerifier will be initialized with a configuration, if present. Then it is started.
+     * The finite state machine is registered as the communication partner for the RaProver.
+     * The RaProver will be initialized with a configuration, if present. Then it is started.
      */
-    fun startRatVerifierDriver(mechanism: String?, listener: RatVerifierFsmListener): RatVerifierDriver<*>? {
-        return drivers[mechanism]?.let { driverWrapper ->
+    fun startRaProverDriver(instance: String, listener: RaProverFsmListener): RaProverDriver<*>? {
+        return drivers[instance]?.let { driverWrapper ->
             return try {
                 driverWrapper.getInstance(listener).also { it.start() }
             } catch (e: Exception) {
-                LOG.error("Error during RAT verifier start", e)
+                LOG.error("Error during RA prover start", e)
                 null
             }
         }

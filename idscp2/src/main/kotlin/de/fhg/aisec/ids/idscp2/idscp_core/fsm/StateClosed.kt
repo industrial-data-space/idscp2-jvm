@@ -35,7 +35,7 @@ import java.util.stream.Collectors
  *
  *
  * When the FSM go from any State into the Closed State again, the FSM is locked forever and all
- * involved actors like RatDrivers and Timers will be terminated
+ * involved actors like RaDrivers and Timers will be terminated
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
@@ -106,10 +106,10 @@ internal class StateClosed(
         )
 
         addTransition(
-            InternalControlMessage.REPEAT_RAT.value,
+            InternalControlMessage.REPEAT_RA.value,
             Transition {
                 if (LOG.isTraceEnabled) {
-                    LOG.trace("Received RepeatRat in STATE_CLOSED, ignored.")
+                    LOG.trace("Received RepeatRa in STATE_CLOSED, ignored.")
                 }
 
                 // return either FSM_LOCKED or FSM_NOT_STARTED
