@@ -110,59 +110,61 @@ subprojects {
     apply(plugin = "maven-publish")
     apply(plugin = "signing")
 
-    publishing {
-        publications {
-            register("idscp2Library", MavenPublication::class) {
-                from(components["java"])
-                pom {
-                    name.set(project.name)
-                    description.set(descriptions[project.name])
-                    url.set("https://github.com/industrial-data-space/idscp2-java")
-                    licenses {
-                        license {
-                            name.set("The Apache License, Version 2.0")
-                            url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
-                        }
-                    }
-                    developers {
-                        developer {
-                            name.set("Michael Lux")
-                            email.set("michael.lux@aisec.fraunhofer.de")
-                            organization.set("Fraunhofer AISEC")
-                            organizationUrl.set("aisec.fraunhofer.de")
-                        }
-                    }
-                    scm {
-                        connection.set("scm:git:git://github.com:industrial-data-space/idscp2-java.git")
-                        developerConnection.set("scm:git:ssh://github.com:industrial-data-space/idscp2-java.git")
+    if (project.name in descriptions.keys) {
+        publishing {
+            publications {
+                register("idscp2Library", MavenPublication::class) {
+                    from(components["java"])
+                    pom {
+                        name.set(project.name)
+                        description.set(descriptions[project.name])
                         url.set("https://github.com/industrial-data-space/idscp2-java")
+                        licenses {
+                            license {
+                                name.set("The Apache License, Version 2.0")
+                                url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                            }
+                        }
+                        developers {
+                            developer {
+                                name.set("Michael Lux")
+                                email.set("michael.lux@aisec.fraunhofer.de")
+                                organization.set("Fraunhofer AISEC")
+                                organizationUrl.set("aisec.fraunhofer.de")
+                            }
+                        }
+                        scm {
+                            connection.set("scm:git:git://github.com:industrial-data-space/idscp2-java.git")
+                            developerConnection.set("scm:git:ssh://github.com:industrial-data-space/idscp2-java.git")
+                            url.set("https://github.com/industrial-data-space/idscp2-java")
+                        }
+                    }
+                }
+            }
+
+            repositories {
+                // mavenLocal()
+                maven {
+                    url = uri(
+                        if (version.toString().endsWith("SNAPSHOT")) {
+                            "https://oss.sonatype.org/content/repositories/snapshots"
+                        } else {
+                            "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+                        }
+                    )
+
+                    credentials {
+                        username = project.findProperty("deployUsername") as? String
+                        password = project.findProperty("deployPassword") as? String
                     }
                 }
             }
         }
 
-        repositories {
-            // mavenLocal()
-            maven {
-                url = uri(
-                    if (version.toString().endsWith("SNAPSHOT")) {
-                        "https://oss.sonatype.org/content/repositories/snapshots"
-                    } else {
-                        "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-                    }
-                )
-
-                credentials {
-                    username = project.findProperty("deployUsername") as? String
-                    password = project.findProperty("deployPassword") as? String
-                }
-            }
+        signing {
+            useGpgCmd()
+            sign(publishing.publications.getByName("idscp2Library"))
         }
-    }
-
-    signing {
-        useGpgCmd()
-        sign(publishing.publications.getByName("idscp2Library"))
     }
 
     apply(plugin = "com.github.jk1.dependency-license-report")
