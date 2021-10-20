@@ -1,5 +1,5 @@
 # Versions for modules that will be released as libraries
-idscp2: "0.5.2"
+idscp2: "0.6.0"
 ktlint: "0.41.0"
 
 # Kotlin library/compiler version

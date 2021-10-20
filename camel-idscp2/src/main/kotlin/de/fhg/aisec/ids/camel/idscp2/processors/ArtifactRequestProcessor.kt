@@ -56,7 +56,7 @@ class ArtifactRequestProcessor : Processor {
         // if artifact is available/authorised create response else create rejection message
         if (!ProviderDB.availableArtifactURIs.containsKey(requestedArtifact)) {
             createRejectionMessage(exchange, artifactRequestMessage, RejectionReason.NOT_FOUND)
-        } else if (!ProviderDB.contractAgreements.containsKey(usedContract)) {
+        } else if (usedContract == null || !ProviderDB.contractAgreements.containsKey(usedContract)) {
             createRejectionMessage(exchange, artifactRequestMessage, RejectionReason.NOT_AUTHORIZED)
         } else {
             // Proceed normally and send ArtifactResponseMessage

@@ -23,6 +23,7 @@ import de.fhg.aisec.ids.camel.idscp2.Constants.CONTAINER_URI_PROPERTY
 import de.fhg.aisec.ids.camel.idscp2.Constants.IDSCP2_HEADER
 import de.fhg.aisec.ids.camel.idscp2.Utils
 import de.fhg.aisec.ids.camel.idscp2.Utils.SERIALIZER
+import de.fraunhofer.iais.eis.Action
 import de.fraunhofer.iais.eis.BinaryOperator
 import de.fraunhofer.iais.eis.ConstraintBuilder
 import de.fraunhofer.iais.eis.ContractOfferBuilder
@@ -66,35 +67,33 @@ class ContractRequestProcessor : Processor {
             }
 
         // create ContractOffer, allowing use of received data in the given container only
-        val containerUri = exchange.getProperty(CONTAINER_URI_PROPERTY).let {
-            if (it is URI) {
-                it
-            } else {
-                URI.create(it.toString())
-            }
-        }
+        val containerUris = exchange.getProperty(CONTAINER_URI_PROPERTY).toString()
+            .split("\\s+")
+            .map { URI.create(it.trim()) }
+            .toList()
         val contractDate = Utils.createGregorianCalendarTimestamp(System.currentTimeMillis())
         val contractOffer = ContractOfferBuilder()
             ._contractDate_(contractDate)
             ._contractStart_(contractDate)
             // Contract end one year in the future
             ._contractEnd_(contractDate.apply { year += 1 })
-            // Permission for data processing inside a specific system (docker container)
+            // Permissions for data processing inside specific "systems" (docker containers)
             ._permission_(
-                listOf(
+                containerUris.map {
                     PermissionBuilder()
                         ._target_(requestedArtifact)
+                        ._action_(listOf(Action.USE))
                         ._constraint_(
                             listOf(
                                 ConstraintBuilder()
                                     ._leftOperand_(LeftOperand.SYSTEM)
                                     ._operator_(BinaryOperator.SAME_AS)
-                                    ._rightOperandReference_(containerUri)
+                                    ._rightOperandReference_(it)
                                     .build()
                             )
                         )
                         .build()
-                )
+                }
             )
             .build()
 
