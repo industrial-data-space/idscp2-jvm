@@ -20,7 +20,7 @@
 package de.fhg.aisec.ids.camel.idscp2.client
 
 import de.fhg.aisec.ids.camel.idscp2.Constants.IDSCP2_HEADER
-import de.fhg.aisec.ids.camel.idscp2.UsageControlMaps
+import de.fhg.aisec.ids.camel.idscp2.ListenerManager
 import de.fhg.aisec.ids.camel.idscp2.Utils
 import de.fhg.aisec.ids.idscp2.app_layer.AppLayerConnection
 import de.fhg.aisec.ids.idscp2.app_layer.listeners.GenericMessageListener
@@ -86,8 +86,10 @@ class Idscp2ClientConsumer(private val endpoint: Idscp2ClientEndpoint, processor
 
     private fun onMessage(connection: AppLayerConnection, header: Any?, payload: ByteArray?) {
         val exchange = endpoint.createExchange()
+        // Ensures that Exchange has an ID
+        exchange.exchangeId
         if (endpoint.useIdsMessages) {
-            UsageControlMaps.setExchangeConnection(exchange, connection)
+            ListenerManager.publishExchangeEvent(connection, exchange)
         }
         try {
             createUoW(exchange)

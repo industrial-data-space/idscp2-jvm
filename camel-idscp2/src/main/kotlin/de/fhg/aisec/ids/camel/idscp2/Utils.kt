@@ -24,7 +24,6 @@ import de.fraunhofer.iais.eis.DynamicAttributeToken
 import de.fraunhofer.iais.eis.DynamicAttributeTokenBuilder
 import de.fraunhofer.iais.eis.Message
 import de.fraunhofer.iais.eis.TokenFormat
-import de.fraunhofer.iais.eis.ids.jsonld.Serializer
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.net.URI
@@ -34,14 +33,14 @@ import javax.xml.datatype.DatatypeFactory
 import javax.xml.datatype.XMLGregorianCalendar
 
 object Utils {
-    val SERIALIZER: Serializer by lazy { Serializer() }
-    val LOG: Logger = LoggerFactory.getLogger(Utils::class.java)
+    private val LOG: Logger = LoggerFactory.getLogger(Utils::class.java)
 
     lateinit var maintainerUrlProducer: () -> URI
     lateinit var connectorUrlProducer: () -> URI
     lateinit var infomodelVersion: String
     var dapsUrlProducer: () -> String = { Constants.DEFAULT_DAPS_URL }
 
+    @Suppress("MemberVisibilityCanBePrivate")
     fun createGregorianCalendarTimestamp(timeInput: Long): XMLGregorianCalendar {
         return DatatypeFactory.newInstance().newXMLGregorianCalendar(
             GregorianCalendar().apply { timeInMillis = timeInput }

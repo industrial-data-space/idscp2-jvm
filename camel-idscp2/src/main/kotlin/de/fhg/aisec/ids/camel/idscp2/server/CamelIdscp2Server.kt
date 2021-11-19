@@ -19,7 +19,7 @@
  */
 package de.fhg.aisec.ids.camel.idscp2.server
 
-import de.fhg.aisec.ids.camel.idscp2.UsageControlMaps
+import de.fhg.aisec.ids.camel.idscp2.ListenerManager
 import de.fhg.aisec.ids.idscp2.app_layer.AppLayerConnection
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTLSDriver
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
@@ -53,7 +53,7 @@ class CamelIdscp2Server(
         if (useIdsMessages) {
             connection.addIdsMessageListener { c, header, _ ->
                 header?.let {
-                    UsageControlMaps.setConnectionContract(c, it.transferContract)
+                    ListenerManager.publishTransferContractEvent(c, it.transferContract)
                 }
             }
         }

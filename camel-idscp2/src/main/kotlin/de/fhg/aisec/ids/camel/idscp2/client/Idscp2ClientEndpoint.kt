@@ -19,8 +19,8 @@
  */
 package de.fhg.aisec.ids.camel.idscp2.client
 
+import de.fhg.aisec.ids.camel.idscp2.ListenerManager
 import de.fhg.aisec.ids.camel.idscp2.RefCountingHashMap
-import de.fhg.aisec.ids.camel.idscp2.UsageControlMaps
 import de.fhg.aisec.ids.camel.idscp2.Utils
 import de.fhg.aisec.ids.idscp2.app_layer.AppLayerConnection
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.AisecDapsDriver
@@ -148,7 +148,7 @@ class Idscp2ClientEndpoint(uri: String?, private val remaining: String, componen
             .thenApply { c ->
                 if (useIdsMessages) {
                     c.addIdsMessageListener { connection, header, _ ->
-                        header?.let { UsageControlMaps.setConnectionContract(connection, it.transferContract) }
+                        header?.let { ListenerManager.publishTransferContractEvent(connection, it.transferContract) }
                     }
                 }
                 c
