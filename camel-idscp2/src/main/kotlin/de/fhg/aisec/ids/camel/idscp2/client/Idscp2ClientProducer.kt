@@ -44,6 +44,12 @@ class Idscp2ClientProducer(private val endpoint: Idscp2ClientEndpoint) : Default
         exchange.message.let { message ->
             val header = message.getHeader(IDSCP2_HEADER)
             val body = message.getBody(ByteArray::class.java)
+            val extraHeaders = endpoint.copyHeadersRegexObject?.let { regex ->
+                message.headers
+                    .filter { regex.matches(it.key) }
+                    .map { it.key to it.value.toString() }
+                    .toMap()
+            }
             if (header != null || body != null) {
                 for (t in 1L..endpoint.maxRetries) {
                     try {
@@ -56,29 +62,38 @@ class Idscp2ClientProducer(private val endpoint: Idscp2ClientEndpoint) : Default
                         val connection = connectionFuture.get()
                         if (endpoint.awaitResponse) {
                             val condition = reentrantLock.newCondition()
-                            val responseHandler = { responseHeader: Any?, responsePayload: ByteArray? ->
-                                message.setHeader(IDSCP2_HEADER, responseHeader)
-                                message.body = responsePayload
-                                reentrantLock.withLock {
-                                    condition.signal()
+                            val responseHandler =
+                                { responseHeader: Any?, responsePayload: ByteArray?, responseExtraHeaders: Map<String, String>? ->
+                                    message.setHeader(IDSCP2_HEADER, responseHeader)
+                                    message.body = responsePayload
+                                    endpoint.copyHeadersRegexObject?.let { regex ->
+                                        responseExtraHeaders?.forEach {
+                                            if (regex.matches(it.key)) {
+                                                message.setHeader(it.key, it.value)
+                                            }
+                                        }
+                                    }
+                                    reentrantLock.withLock {
+                                        condition.signal()
+                                    }
                                 }
-                            }
                             reentrantLock.withLock {
                                 if (endpoint.useIdsMessages) {
                                     // Response might require UC protection, so register exchange if not yet registered
                                     ListenerManager.publishExchangeEvent(connection, exchange)
-                                    connection.addIdsMessageListener { _, responseHeader, responsePayload ->
-                                        responseHandler(responseHeader, responsePayload)
+                                    connection.addIdsMessageListener { _, responseHeader, responsePayload, responseExtraHeaders ->
+                                        responseHandler(responseHeader, responsePayload, responseExtraHeaders)
                                     }
                                     connection.sendIdsMessage(
                                         header?.let { Utils.finalizeMessage(it, connection) },
-                                        body
+                                        body,
+                                        extraHeaders
                                     )
                                 } else {
-                                    connection.addGenericMessageListener { _, responseHeader, responsePayload ->
-                                        responseHandler(responseHeader, responsePayload)
+                                    connection.addGenericMessageListener { _, responseHeader, responsePayload, responseExtraHeaders ->
+                                        responseHandler(responseHeader, responsePayload, responseExtraHeaders)
                                     }
-                                    connection.sendGenericMessage(header?.toString(), body)
+                                    connection.sendGenericMessage(header?.toString(), body, extraHeaders)
                                 }
                                 if (!condition.await(endpoint.responseTimeout, TimeUnit.MILLISECONDS)) {
                                     throw TimeoutException(
@@ -90,10 +105,11 @@ class Idscp2ClientProducer(private val endpoint: Idscp2ClientEndpoint) : Default
                             if (endpoint.useIdsMessages) {
                                 connection.sendIdsMessage(
                                     header?.let { Utils.finalizeMessage(it, connection) },
-                                    body
+                                    body,
+                                    extraHeaders
                                 )
                             } else {
-                                connection.sendGenericMessage(header?.toString(), body)
+                                connection.sendGenericMessage(header?.toString(), body, extraHeaders)
                             }
                         }
                         return

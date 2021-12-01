@@ -30,11 +30,20 @@ import org.apache.camel.support.DefaultProducer
 class Idscp2ServerProducer(private val endpoint: Idscp2ServerEndpoint) : DefaultProducer(endpoint) {
 
     override fun process(exchange: Exchange) {
-        exchange.message.let {
-            val type = it.getHeader(IDSCP2_HEADER)
-            val body = it.getBody(ByteArray::class.java)
+        exchange.message.let { message ->
+            val type = message.getHeader(IDSCP2_HEADER)
+            val body = message.getBody(ByteArray::class.java)
             if (type != null || body != null) {
-                endpoint.sendMessage(type, body)
+                endpoint.sendMessage(
+                    type,
+                    body,
+                    endpoint.copyHeadersRegexObject?.let { regex ->
+                        message.headers
+                            .filter { regex.matches(it.key) }
+                            .map { it.key to it.value.toString() }
+                            .toMap()
+                    }
+                )
             }
         }
     }

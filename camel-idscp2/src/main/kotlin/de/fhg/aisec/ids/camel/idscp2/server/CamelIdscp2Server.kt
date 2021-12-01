@@ -51,7 +51,7 @@ class CamelIdscp2Server(
 
     override fun onConnection(connection: AppLayerConnection) {
         if (useIdsMessages) {
-            connection.addIdsMessageListener { c, header, _ ->
+            connection.addIdsMessageListener { c, header, _, _ ->
                 header?.let {
                     ListenerManager.publishTransferContractEvent(c, it.transferContract)
                 }

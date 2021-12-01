@@ -47,7 +47,8 @@ class AppLayerConnection private constructor(private val idscp2Connection: Idscp
                         listener.onMessage(
                             this,
                             genericMessage.header,
-                            genericMessage.payload?.toByteArray()
+                            genericMessage.payload?.toByteArray(),
+                            genericMessage.extraHeadersList.associate { it.name to it.value }
                         )
                     }
                 }
@@ -59,7 +60,8 @@ class AppLayerConnection private constructor(private val idscp2Connection: Idscp
                             idsMessage.header?.let {
                                 Utils.SERIALIZER.deserialize(it, Message::class.java)
                             },
-                            idsMessage.payload?.toByteArray()
+                            idsMessage.payload?.toByteArray(),
+                            idsMessage.extraHeadersList.associate { it.name to it.value }
                         )
                     }
                 }
@@ -79,16 +81,22 @@ class AppLayerConnection private constructor(private val idscp2Connection: Idscp
             idscp2Connection.addMessageListener(idscp2MessageListener)
         }
 
-    fun sendGenericMessage(header: String?, payload: ByteArray?) {
+    fun sendGenericMessage(header: String?, payload: ByteArray?, headers: Map<String, String>?) {
         val message = AppLayer.AppLayerMessage.newBuilder()
             .setGenericMessage(
                 AppLayer.GenericMessage.newBuilder()
-                    .also {
+                    .also { messageBuilder ->
                         if (header != null) {
-                            it.header = header
+                            messageBuilder.header = header
                         }
                         if (payload != null) {
-                            it.payload = ByteString.copyFrom(payload)
+                            messageBuilder.payload = ByteString.copyFrom(payload)
+                        }
+                        headers?.forEach {
+                            messageBuilder.addExtraHeadersBuilder().run {
+                                name = it.key
+                                value = it.value
+                            }
                         }
                     }
                     .build()
@@ -106,16 +114,22 @@ class AppLayerConnection private constructor(private val idscp2Connection: Idscp
 
     fun removeGenericMessageListener(listener: GenericMessageListener) = genericMessageListeners.remove(listener)
 
-    fun sendIdsMessage(header: Message?, payload: ByteArray?, sendTimeout: Long = DEFAULT_TIMEOUT) {
+    fun sendIdsMessage(header: Message?, payload: ByteArray?, headers: Map<String, String>?, sendTimeout: Long = DEFAULT_TIMEOUT) {
         val message = AppLayer.AppLayerMessage.newBuilder()
             .setIdsMessage(
                 AppLayer.IdsMessage.newBuilder()
-                    .also {
+                    .also { messageBuilder ->
                         if (header != null) {
-                            it.header = Utils.SERIALIZER.serialize(header)
+                            messageBuilder.header = Utils.SERIALIZER.serialize(header)
                         }
                         if (payload != null) {
-                            it.payload = ByteString.copyFrom(payload)
+                            messageBuilder.payload = ByteString.copyFrom(payload)
+                        }
+                        headers?.forEach {
+                            messageBuilder.addExtraHeadersBuilder().run {
+                                name = it.key
+                                value = it.value
+                            }
                         }
                     }
                     .build()

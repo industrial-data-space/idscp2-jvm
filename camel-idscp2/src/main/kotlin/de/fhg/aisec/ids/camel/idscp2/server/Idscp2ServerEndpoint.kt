@@ -115,6 +115,17 @@ class Idscp2ServerEndpoint(uri: String?, private val remaining: String, componen
     )
     var expectedRaSuites: String = RaVerifierDummy.RA_VERIFIER_DUMMY_ID
 
+    @UriParam(
+        label = "common",
+        description = "Regex for Camel Headers to transfer/copy to/from IDSCP2 via \"extraHeaders\"",
+        defaultValue = ""
+    )
+    var copyHeadersRegex: String? = null
+
+    val copyHeadersRegexObject: Regex? by lazy {
+        copyHeadersRegex?.let { Regex(it) }
+    }
+
     @Synchronized
     fun addConsumer(consumer: Idscp2ServerConsumer) {
         consumers.add(consumer)
@@ -136,16 +147,17 @@ class Idscp2ServerEndpoint(uri: String?, private val remaining: String, componen
     }
 
     @Synchronized
-    fun sendMessage(header: Any?, body: ByteArray?) {
+    fun sendMessage(header: Any?, body: ByteArray?, extraHeaders: Map<String, String>?) {
         server?.let { server ->
             server.allConnections.forEach { connection ->
                 if (useIdsMessages) {
                     connection.sendIdsMessage(
                         header?.let { Utils.finalizeMessage(it, connection) },
-                        body
+                        body,
+                        extraHeaders
                     )
                 } else {
-                    connection.sendGenericMessage(header?.toString(), body)
+                    connection.sendGenericMessage(header?.toString(), body, extraHeaders)
                 }
             }
         }

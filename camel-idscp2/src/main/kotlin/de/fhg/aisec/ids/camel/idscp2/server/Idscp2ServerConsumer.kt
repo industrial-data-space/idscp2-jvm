@@ -45,21 +45,21 @@ class Idscp2ServerConsumer(private val endpoint: Idscp2ServerEndpoint, processor
         super.doStop()
     }
 
-    override fun onMessage(connection: AppLayerConnection, header: Message?, payload: ByteArray?) {
+    override fun onMessage(connection: AppLayerConnection, header: Message?, payload: ByteArray?, extraHeaders: Map<String, String>?) {
         if (LOG.isTraceEnabled) {
             LOG.trace("Idscp2ServerConsumer received IdsMessage with header:\n{}", header)
         }
-        onMessage(connection, header as Any, payload)
+        onMessage(connection, header as Any?, payload, extraHeaders)
     }
 
-    override fun onMessage(connection: AppLayerConnection, header: String?, payload: ByteArray?) {
+    override fun onMessage(connection: AppLayerConnection, header: String?, payload: ByteArray?, extraHeaders: Map<String, String>?) {
         if (LOG.isTraceEnabled) {
             LOG.trace("Idscp2ServerConsumer received GenericMessage with header:\n{}", header)
         }
-        onMessage(connection, header as Any, payload)
+        onMessage(connection, header as Any?, payload, extraHeaders)
     }
 
-    private fun onMessage(connection: AppLayerConnection, header: Any?, payload: ByteArray?) {
+    private fun onMessage(connection: AppLayerConnection, header: Any?, payload: ByteArray?, extraHeaders: Map<String, String>?) {
         val exchange = endpoint.createExchange()
         // Ensures that Exchange has an ID
         exchange.exchangeId
@@ -67,24 +67,38 @@ class Idscp2ServerConsumer(private val endpoint: Idscp2ServerEndpoint, processor
         try {
             createUoW(exchange)
             // Set relevant information
-            exchange.message.let {
-                it.setHeader(IDSCP2_HEADER, header)
-                it.setBody(payload, ByteArray::class.java)
+            exchange.message.let { message ->
+                message.setHeader(IDSCP2_HEADER, header)
+                message.setBody(payload, ByteArray::class.java)
+                endpoint.copyHeadersRegexObject?.let { regex ->
+                    extraHeaders?.forEach {
+                        if (regex.matches(it.key)) {
+                            message.setHeader(it.key, it.value)
+                        }
+                    }
+                }
             }
             // Do processing
             processor.process(exchange)
             // Handle response
-            exchange.message.let {
-                val responseHeader = it.getHeader(IDSCP2_HEADER)
-                val responseBody = it.getBody(ByteArray::class.java)
+            exchange.message.let { message ->
+                val responseHeader = message.getHeader(IDSCP2_HEADER)
+                val responseBody = message.getBody(ByteArray::class.java)
+                val responseExtraHeaders = endpoint.copyHeadersRegexObject?.let { regex ->
+                    message.headers
+                        .filter { regex.matches(it.key) }
+                        .map { it.key to it.value.toString() }
+                        .toMap()
+                }
                 if (responseBody != null || responseHeader != null) {
                     if (endpoint.useIdsMessages) {
                         connection.sendIdsMessage(
                             responseHeader?.let { Utils.finalizeMessage(responseHeader, connection) },
-                            responseBody
+                            responseBody,
+                            responseExtraHeaders
                         )
                     } else {
-                        connection.sendGenericMessage(responseHeader?.toString(), responseBody)
+                        connection.sendGenericMessage(responseHeader?.toString(), responseBody, responseExtraHeaders)
                     }
                 }
             }

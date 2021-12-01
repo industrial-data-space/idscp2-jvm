@@ -123,6 +123,13 @@ class Idscp2ClientEndpoint(uri: String?, private val remaining: String, componen
     var expectedRaSuites: String = RaVerifierDummy.RA_VERIFIER_DUMMY_ID
 
     @UriParam(
+        label = "common",
+        description = "Regex for Camel Headers to transfer/copy to/from IDSCP2 via \"extraHeaders\"",
+        defaultValue = ""
+    )
+    var copyHeadersRegex: String? = null
+
+    @UriParam(
         label = "client",
         description = "Max attempts to connect to the IDSCP2 server",
         defaultValue = "3"
@@ -143,11 +150,15 @@ class Idscp2ClientEndpoint(uri: String?, private val remaining: String, componen
     )
     var responseTimeout: Long = 5000
 
+    val copyHeadersRegexObject: Regex? by lazy {
+        copyHeadersRegex?.let { Regex(it) }
+    }
+
     private fun makeConnectionInternal(): CompletableFuture<AppLayerConnection> {
         return secureChannelDriver.connect(::AppLayerConnection, clientConfiguration, secureChannelConfig)
             .thenApply { c ->
                 if (useIdsMessages) {
-                    c.addIdsMessageListener { connection, header, _ ->
+                    c.addIdsMessageListener { connection, header, _, _ ->
                         header?.let { ListenerManager.publishTransferContractEvent(connection, it.transferContract) }
                     }
                 }

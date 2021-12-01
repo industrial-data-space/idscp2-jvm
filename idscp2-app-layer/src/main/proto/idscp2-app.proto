@@ -9,11 +9,18 @@ message AppLayerMessage {
   }
 }
 
+message HeaderEntry {
+  string name = 1;
+  string value = 2;
+}
+
 message GenericMessage {
   // Arbitrary header string
   string header = 1;
   // The actual, generic message payload
   bytes payload = 2;
+  // Additional headers
+  repeated HeaderEntry extraHeaders = 3;
 }
 
 message IdsMessage {
@@ -21,4 +28,6 @@ message IdsMessage {
   string header = 1;
   // The actual, generic message payload
   bytes payload = 2;
+  // Additional headers
+  repeated HeaderEntry extraHeaders = 3;
 }
