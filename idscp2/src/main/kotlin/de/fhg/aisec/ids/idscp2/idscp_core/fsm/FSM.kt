@@ -561,7 +561,7 @@ class FSM(
             )
         }
 
-        val match = matchRaMechanisms(remoteExpectedVerifier, localSupportedProver)
+        val match = matchRaMechanisms(remoteExpectedVerifier, localSupportedProver.toHashSet())
         if (LOG.isDebugEnabled) {
             LOG.debug("RA prover mechanism: '{}'", match)
         }
@@ -595,19 +595,17 @@ class FSM(
             )
         }
 
-        val match = matchRaMechanisms(localExpectedVerifier, remoteSupportedProver)
+        val match = matchRaMechanisms(localExpectedVerifier, remoteSupportedProver.toHashSet())
         if (LOG.isDebugEnabled) {
-            LOG.debug("RA verifier mechanism: '{}'", match)
+            LOG.debug("Selected RA verifier mechanism: '{}'", match)
         }
         return match
     }
 
-    private fun matchRaMechanisms(primary: Array<String>, secondary: Array<String>): String? {
+    private fun matchRaMechanisms(primary: Array<String>, secondary: Set<String>): String? {
         for (p in primary) {
-            for (s in secondary) {
-                if (p == s) {
-                    return p
-                }
+            if (p in secondary) {
+                return p
             }
         }
         // no match
