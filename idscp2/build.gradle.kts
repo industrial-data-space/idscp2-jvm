@@ -40,6 +40,8 @@ dependencies {
     api("com.google.protobuf", "protobuf-java", libraryVersions["protobuf"])
 
     api("io.jsonwebtoken", "jjwt-impl", libraryVersions["jsonwebtoken"])
+    // Important, since io.jsonwebtoken:jjwt-jackson references an outdated version with critical CVEs
+    api("com.fasterxml.jackson.core", "jackson-databind", libraryVersions["jackson"])
     api("io.jsonwebtoken", "jjwt-jackson", libraryVersions["jsonwebtoken"])
     api("io.jsonwebtoken", "jjwt-api", libraryVersions["jsonwebtoken"])
     api("org.json", "json", libraryVersions["orgJson"])
