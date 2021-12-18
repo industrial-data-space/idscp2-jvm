@@ -3,8 +3,8 @@ idscp2: "0.8.1"
 ktlint: "0.41.0"
 
 # Kotlin library/compiler version
-kotlin: "1.5.20"
-kotlinxCoroutines: "1.5.0"
+kotlin: "1.6.10"
+kotlinxCoroutines: "1.5.2"
 
 # The used version of the infomodel from IESE
 infomodel: "4.1.0"
