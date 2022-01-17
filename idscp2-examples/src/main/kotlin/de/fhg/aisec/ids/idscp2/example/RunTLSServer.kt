@@ -58,7 +58,7 @@ object RunTLSServer {
 
         // create daps config
         val securityRequirements = SecurityRequirements.Builder()
-            .setRequiredSecurityLevel(SecurityProfile.TRUSTED)
+            .setRequiredSecurityLevel(SecurityProfile.INVALID)
             .build()
 
         val dapsDriver: DapsDriver = AisecDapsDriver(
