@@ -28,7 +28,7 @@ import java.nio.file.Paths
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
 class AisecDapsDriverConfig {
-    var dapsUrl = "https://daps.aisec.fraunhofer.de"
+    var dapsUrl = "https://daps.aisec.fraunhofer.de/v2"
         private set
     var keyStorePath: Path = Paths.get("DUMMY-FILENAME.p12")
         private set
@@ -48,6 +48,7 @@ class AisecDapsDriverConfig {
 
     class Builder {
         private val config = AisecDapsDriverConfig()
+
         fun setDapsUrl(dapsUrl: String): Builder {
             config.dapsUrl = dapsUrl
             return this

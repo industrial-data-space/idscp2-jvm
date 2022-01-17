@@ -41,6 +41,7 @@ import org.jose4j.jwt.consumer.JwtConsumerBuilder
 import org.jose4j.keys.resolvers.HttpsJwksVerificationKeyResolver
 import org.json.JSONObject
 import org.slf4j.LoggerFactory
+import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.security.Key
 import java.security.KeyManagementException
@@ -137,7 +138,7 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
         val authorityKeyIdentifier = aki.keyIdentifier
         val akiResult = encodeHexString(authorityKeyIdentifier, true).uppercase()
 
-        // GET 2.5.29.14	SubjectKeyIdentifier
+        // GET 2.5.29.14 SubjectKeyIdentifier
         val skiOid = Extension.subjectKeyIdentifier.id
         val rawSubjectKeyIdentifier = certificate.getExtensionValue(skiOid)
         val ski0c = ASN1OctetString.getInstance(rawSubjectKeyIdentifier)
@@ -151,6 +152,40 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
         }
 
         return skiResult + "keyid:" + akiResult.substring(0, akiResult.length - 1)
+    }
+
+    private fun getOkHttpClient() = OkHttpClient.Builder()
+        .sslSocketFactory(sslSocketFactory, trustManager)
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .writeTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(15, TimeUnit.SECONDS)
+        .build()
+
+    private fun getDapsMeta(client: OkHttpClient): DapsMeta {
+        try {
+            val dapsUri = URI.create(dapsUrl)
+
+            val metaRequest = Request.Builder()
+                .url("${dapsUri.scheme}://${dapsUri.host}/.well-known/oauth-authorization-server${dapsUri.path}")
+                .get()
+                .build()
+
+            // get http response from DAPS
+            val response = client.newCall(metaRequest).execute()
+
+            if (!response.isSuccessful) {
+                throw DatException("Request was not successful, HTTP code ${response.code}")
+            }
+            return DapsMeta.fromJson(response.body?.string()
+                ?: throw DatException("Response body is null"))
+        } catch (x: Throwable) {
+            LOG.warn("DAPS /.well-known/oauth-authorization-server not available, using fallback URLs")
+            if (LOG.isDebugEnabled) {
+                LOG.debug("DAPS /.well-known/oauth-authorization-server error:", x)
+            }
+            // Fallback, if request was not successful
+            return DapsMeta.fromDapsUrl(dapsUrl)
+        }
     }
 
     private fun syncGetToken(): ByteArray {
@@ -199,15 +234,13 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
                 .add("scope", "idsc:IDS_CONNECTOR_ATTRIBUTES_ALL")
                 .build()
 
-            val client = OkHttpClient.Builder()
-                .sslSocketFactory(sslSocketFactory, trustManager)
-                .connectTimeout(15, TimeUnit.SECONDS)
-                .writeTimeout(15, TimeUnit.SECONDS)
-                .readTimeout(15, TimeUnit.SECONDS)
-                .build()
+            val client = getOkHttpClient()
+
+            // Get OAuth server meta information (Issuer, URLs)
+            val dapsMeta = getDapsMeta(client)
 
             val request = Request.Builder()
-                .url("$dapsUrl/v2/token")
+                .url(dapsMeta.tokenEndpoint)
                 .post(formBody)
                 .build()
 
@@ -229,13 +262,13 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
                 throw DatException("Received non-200 http response: " + response.code)
             }
 
-            if (LOG.isDebugEnabled) {
-                LOG.debug("Acquired DAT from {}/v2/token", dapsUrl)
-            }
             val json = JSONObject(
                 response.body?.string()
                     ?: throw DatException("Received empty DAPS response")
             )
+            if (LOG.isDebugEnabled) {
+                LOG.debug("Acquired DAT from {}", dapsMeta.tokenEndpoint)
+            }
 
             val token: String
             if (json.has("access_token")) {
@@ -249,7 +282,8 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
                 throw DatException("DAPS response does not contain \"access_token\" or \"error\" field.")
             }
 
-            innerVerifyToken(token.toByteArray(StandardCharsets.UTF_8), null, localPeerCertificate, true)
+            innerVerifyToken(token.toByteArray(StandardCharsets.UTF_8), null, localPeerCertificate,
+                true, dapsMeta)
             return token.toByteArray(StandardCharsets.UTF_8)
         } catch (e: Throwable) {
             throw if (e is DatException) {
@@ -309,14 +343,15 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
         dat: ByteArray,
         securityRequirements: SecurityRequirements?,
         certificate: X509Certificate,
-        setCurrentToken: Boolean
+        setCurrentToken: Boolean,
+        dapsMeta: DapsMeta = getDapsMeta(getOkHttpClient())
     ): Long {
         if (LOG.isDebugEnabled) {
             LOG.debug("Verifying dynamic attribute token...")
         }
 
         // Get JsonWebKey JWK from JsonWebKeyStore JWKS using DAPS JWKS endpoint
-        val httpsJwks = HttpsJwks("$dapsUrl/.well-known/jwks.json")
+        val httpsJwks = HttpsJwks(dapsMeta.jwksUri)
         val getInstance = Get()
         getInstance.setSslSocketFactory(sslSocketFactory)
         httpsJwks.setSimpleHttpGet(getInstance)
@@ -330,7 +365,7 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
             .setAllowedClockSkewInSeconds(30) // leeway in validation time
             .setRequireSubject() // has subject
             .setExpectedAudience(true, "IDS_Connector", TARGET_AUDIENCE)
-            .setExpectedIssuer(dapsUrl) // e.g. https://daps.aisec.fraunhofer.de
+            .setExpectedIssuer(dapsMeta.issuer) // e.g. https://daps.aisec.fraunhofer.de
             .setVerificationKeyResolver(jwksKeyResolver) // get decryption key from jwks
             .setJweAlgorithmConstraints(
                 AlgorithmConstraints(
