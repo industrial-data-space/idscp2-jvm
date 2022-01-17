@@ -176,8 +176,10 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
             if (!response.isSuccessful) {
                 throw DatException("Request was not successful, HTTP code ${response.code}")
             }
-            return DapsMeta.fromJson(response.body?.string()
-                ?: throw DatException("Response body is null"))
+            return DapsMeta.fromJson(
+                response.body?.string()
+                    ?: throw DatException("Response body is null")
+            )
         } catch (x: Throwable) {
             LOG.warn("DAPS /.well-known/oauth-authorization-server not available, using fallback URLs")
             if (LOG.isDebugEnabled) {
@@ -282,8 +284,10 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
                 throw DatException("DAPS response does not contain \"access_token\" or \"error\" field.")
             }
 
-            innerVerifyToken(token.toByteArray(StandardCharsets.UTF_8), null, localPeerCertificate,
-                true, dapsMeta)
+            innerVerifyToken(
+                token.toByteArray(StandardCharsets.UTF_8), null, localPeerCertificate,
+                true, dapsMeta
+            )
             return token.toByteArray(StandardCharsets.UTF_8)
         } catch (e: Throwable) {
             throw if (e is DatException) {
