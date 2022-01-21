@@ -1,4 +1,4 @@
-rootProject.name = "idscp2-java"
+rootProject.name = "idscp2-jvm"
 
 include("idscp2")
 include("idscp2-examples")

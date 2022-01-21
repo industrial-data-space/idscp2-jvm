@@ -118,7 +118,7 @@ subprojects {
                     pom {
                         name.set(project.name)
                         description.set(descriptions[project.name])
-                        url.set("https://github.com/industrial-data-space/idscp2-java")
+                        url.set("https://github.com/industrial-data-space/idscp2-jvm")
                         licenses {
                             license {
                                 name.set("The Apache License, Version 2.0")
@@ -134,36 +134,41 @@ subprojects {
                             }
                         }
                         scm {
-                            connection.set("scm:git:git://github.com:industrial-data-space/idscp2-java.git")
-                            developerConnection.set("scm:git:ssh://github.com:industrial-data-space/idscp2-java.git")
-                            url.set("https://github.com/industrial-data-space/idscp2-java")
+                            connection.set("scm:git:git://github.com:industrial-data-space/idscp2-jvm.git")
+                            developerConnection.set("scm:git:ssh://github.com:industrial-data-space/idscp2-jvm.git")
+                            url.set("https://github.com/industrial-data-space/idscp2-jvm")
                         }
                     }
                 }
             }
 
             repositories {
-                // mavenLocal()
-                maven {
-                    url = uri(
-                        if (version.toString().endsWith("SNAPSHOT")) {
-                            "https://oss.sonatype.org/content/repositories/snapshots"
-                        } else {
-                            "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-                        }
-                    )
+                if (project.hasProperty("publishLocal")) {
+                    mavenLocal()
+                } else {
+                    maven {
+                        url = uri(
+                            if (version.toString().endsWith("SNAPSHOT")) {
+                                "https://oss.sonatype.org/content/repositories/snapshots"
+                            } else {
+                                "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+                            }
+                        )
 
-                    credentials {
-                        username = project.findProperty("deployUsername") as? String
-                        password = project.findProperty("deployPassword") as? String
+                        credentials {
+                            username = project.findProperty("deployUsername") as? String
+                            password = project.findProperty("deployPassword") as? String
+                        }
                     }
                 }
             }
         }
 
-        signing {
-            useGpgCmd()
-            sign(publishing.publications.getByName("idscp2Library"))
+        if (!project.hasProperty("publishLocal")) {
+            signing {
+                useGpgCmd()
+                sign(publishing.publications.getByName("idscp2Library"))
+            }
         }
     }
 
@@ -185,9 +190,9 @@ subprojects {
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
