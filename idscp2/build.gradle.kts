@@ -47,6 +47,7 @@ dependencies {
     api("org.json", "json", libraryVersions["orgJson"])
     api("org.bitbucket.b_c", "jose4j", libraryVersions["jose4j"])
     api("com.squareup.okhttp3", "okhttp", libraryVersions["okhttp"])
+    api("com.squareup.okio", "okio-fakefilesystem", libraryVersions["okioFakeFs"])
 
     testImplementation("org.awaitility", "awaitility-kotlin", libraryVersions["awaitility"])
     testImplementation("junit", "junit", libraryVersions["junit4"])

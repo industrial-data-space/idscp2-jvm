@@ -27,6 +27,7 @@ jackson: "2.13.0"
 
 # Needed for token manager to assemble JWTs
 jsonwebtoken: "0.11.2"
-okhttp: "4.9.1"
+okhttp: "5.0.0-alpha.3"
+okioFakeFs: "3.0.0"
 orgJson: "20210307"
 jose4j: "0.7.8"

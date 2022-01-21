@@ -24,14 +24,16 @@ import de.fhg.aisec.ids.idscp2.idscp_core.drivers.DapsDriver
 import de.fhg.aisec.ids.idscp2.idscp_core.error.DatException
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
+import okhttp3.Cache
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okio.fakefilesystem.FakeFileSystem
 import org.bouncycastle.asn1.ASN1OctetString
 import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.SubjectKeyIdentifier
-import org.jose4j.http.Get
+import org.jose4j.http.SimpleResponse
 import org.jose4j.jwa.AlgorithmConstraints
 import org.jose4j.jwk.HttpsJwks
 import org.jose4j.jws.AlgorithmIdentifiers
@@ -55,6 +57,7 @@ import java.util.concurrent.locks.ReentrantLock
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocketFactory
 import javax.net.ssl.X509ExtendedTrustManager
+import kotlin.io.path.absolutePathString
 
 /**
  * Default DAPS Driver Implementation for requesting valid dynamicAttributeToken and verifying DAT
@@ -63,8 +66,9 @@ import javax.net.ssl.X509ExtendedTrustManager
  * @author Gerd Brost (gerd.brost@aisec.fraunhofer.de)
  */
 class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
-    private var sslSocketFactory: SSLSocketFactory
-    private var securityRequirements: SecurityRequirements? = config.securityRequirements
+    private val sslSocketFactory: SSLSocketFactory
+    // Security requirements can be modified at runtime
+    var securityRequirements: SecurityRequirements? = config.securityRequirements
     private val trustManager: X509ExtendedTrustManager
     private val privateKey: Key = PreConfiguration.getKey(
         config.keyStorePath,
@@ -73,7 +77,6 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
         config.keyPassword
     )
     private val dapsUrl: String = config.dapsUrl
-
     private val localPeerCertificate: X509Certificate =
         PreConfiguration.getCertificate(
             config.keyStorePath,
@@ -117,13 +120,40 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
             sslContext.init(null, trustManagers, null)
             sslContext.socketFactory
         } catch (e: NoSuchAlgorithmException) {
-            LOG.error("Cannot init DefaultDapsDriver: {}", e.toString())
+            LOG.error("Cannot init AisecDapsDriver", e)
             throw RuntimeException(e)
         } catch (e: KeyManagementException) {
-            LOG.error("Cannot init DefaultDapsDriver: {}", e.toString())
+            LOG.error("Cannot init AisecDapsDriver", e)
             throw RuntimeException(e)
         }
     }
+
+    // OkHttpClient with in-memory cache. Will be reused for equal TrustStores.
+    private val okHttpClient = OK_HTTP_CLIENTS.getOrPut(config.trustStorePath.absolutePathString()) {
+        try {
+            val fakeFs = FakeFileSystem().apply { createDirectory(workingDirectory) }
+            OkHttpClient.Builder()
+                .sslSocketFactory(sslSocketFactory, trustManager)
+                .cache(
+                    // Use small, 1 MiB in-memory cache to store DAPS meta, JWKS etc.
+                    Cache(
+                        fakeFs.workingDirectory,
+                        1024L * 1024L,
+                        fakeFs
+                    )
+                )
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .writeTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(15, TimeUnit.SECONDS)
+                .build()
+        } catch (t: Throwable) {
+            LOG.error("Error creating OkHttpClient", t)
+            throw t
+        }
+    }
+    // DAPS meta caching
+    private var dapsMeta: DapsMeta? = null
+    private var dapsMetaExpire = 0L
 
     /**
      * Create connector UUID: SKI:keyid:AKI from X509 Certificate
@@ -154,39 +184,53 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
         return skiResult + "keyid:" + akiResult.substring(0, akiResult.length - 1)
     }
 
-    private fun getOkHttpClient() = OkHttpClient.Builder()
-        .sslSocketFactory(sslSocketFactory, trustManager)
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .writeTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
-        .build()
-
-    private fun getDapsMeta(client: OkHttpClient): DapsMeta {
-        try {
-            val dapsUri = URI.create(dapsUrl)
-
-            val metaRequest = Request.Builder()
-                .url("${dapsUri.scheme}://${dapsUri.host}/.well-known/oauth-authorization-server${dapsUri.path}")
-                .get()
-                .build()
-
-            // get http response from DAPS
-            val response = client.newCall(metaRequest).execute()
-
-            if (!response.isSuccessful) {
-                throw DatException("Request was not successful, HTTP code ${response.code}")
+    private fun getDapsMeta(): DapsMeta {
+        if (dapsMetaExpire > System.currentTimeMillis()) {
+            dapsMeta?.let {
+                if (LOG.isDebugEnabled) {
+                    LOG.debug(
+                        "Reusing DAPS meta, remaining validity: {} seconds",
+                        (dapsMetaExpire - System.currentTimeMillis()) / 1000
+                    )
+                }
+                return it
             }
-            return DapsMeta.fromJson(
-                response.body?.string()
-                    ?: throw DatException("Response body is null")
-            )
-        } catch (x: Throwable) {
-            LOG.warn("DAPS /.well-known/oauth-authorization-server not available, using fallback URLs")
-            if (LOG.isDebugEnabled) {
-                LOG.debug("DAPS /.well-known/oauth-authorization-server error:", x)
+        }
+
+        val dapsUri = URI.create(dapsUrl)
+
+        val metaRequest = Request.Builder()
+            .url("${dapsUri.scheme}://${dapsUri.host}/.well-known/oauth-authorization-server${dapsUri.path}")
+            .build()
+
+        // get http response from DAPS
+        val response = okHttpClient.newCall(metaRequest).execute()
+
+        if (!response.isSuccessful) {
+            if (response.code == 404) {
+                LOG.warn(
+                    "DAPS /.well-known/oauth-authorization-server not available, using fallback URLs." +
+                        " Next retry to fetch DAPS meta in ${META_FALLBACK_LIFETIME_MS / 1000} seconds"
+                )
+            } else {
+                LOG.error("Request was not successful, unexpected HTTP code ${response.code}")
             }
             // Fallback, if request was not successful
-            return DapsMeta.fromDapsUrl(dapsUrl)
+            return DapsMeta.fromDapsUrl(dapsUrl).also {
+                // Cache metadata only for acceptable 404 (not found) error
+                if (response.code == 404) {
+                    dapsMetaExpire = System.currentTimeMillis() + META_FALLBACK_LIFETIME_MS
+                    dapsMeta = it
+                }
+            }
+        }
+
+        return DapsMeta.fromJson(
+            response.body?.string()
+                ?: throw DatException("Response body is null")
+        ).also {
+            dapsMetaExpire = response.receivedResponseAtMillis + (response.cacheControl.maxAgeSeconds * 1000L)
+            dapsMeta = it
         }
     }
 
@@ -236,10 +280,8 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
                 .add("scope", "idsc:IDS_CONNECTOR_ATTRIBUTES_ALL")
                 .build()
 
-            val client = getOkHttpClient()
-
             // Get OAuth server meta information (Issuer, URLs)
-            val dapsMeta = getDapsMeta(client)
+            val dapsMeta = getDapsMeta()
 
             val request = Request.Builder()
                 .url(dapsMeta.tokenEndpoint)
@@ -247,7 +289,7 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
                 .build()
 
             // get http response from DAPS
-            val response = client.newCall(request).execute()
+            val response = okHttpClient.newCall(request).execute()
 
             // check for valid response
             if (!response.isSuccessful) {
@@ -309,13 +351,6 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
         get() = syncGetToken()
 
     /**
-     * Update the security requirements of the DAPS (This might be caused by changes in the connector configuration)
-     */
-    fun updateSecurityRequirements(securityRequirements: SecurityRequirements?) {
-        this.securityRequirements = securityRequirements
-    }
-
-    /**
      * Public verifyToken API, used from the IDSCP2 protocol. Security requirements are used from the DAPS config
      * Peer certificate is used for verifying DAT subject
      *
@@ -348,19 +383,34 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
         securityRequirements: SecurityRequirements?,
         certificate: X509Certificate,
         setCurrentToken: Boolean,
-        dapsMeta: DapsMeta = getDapsMeta(getOkHttpClient())
+        dapsMeta: DapsMeta = getDapsMeta()
     ): Long {
         if (LOG.isDebugEnabled) {
             LOG.debug("Verifying dynamic attribute token...")
         }
 
-        // Get JsonWebKey JWK from JsonWebKeyStore JWKS using DAPS JWKS endpoint
-        val httpsJwks = HttpsJwks(dapsMeta.jwksUri)
-        val getInstance = Get()
-        getInstance.setSslSocketFactory(sslSocketFactory)
-        httpsJwks.setSimpleHttpGet(getInstance)
+        // JWKS using DAPS JWKS endpoint
+        val httpsJwks = HttpsJwks(dapsMeta.jwksUri).apply {
+            // Use SimpleGet-Adapter using the common, cached OkHttpClient
+            setSimpleHttpGet { url ->
+                object : SimpleResponse {
+                    val response = okHttpClient.newCall(
+                        Request.Builder().url(url).build()
+                    ).execute()
 
-        // create new jwks key resolver, selects jwk based on key ID in jwt header
+                    override fun getStatusCode() = response.code
+
+                    override fun getStatusMessage() = response.message
+
+                    override fun getHeaderNames() = response.headers.names().toMutableSet()
+
+                    override fun getHeaderValues(name: String) = response.headers.values(name).toMutableList()
+
+                    override fun getBody() = response.body?.string()
+                }
+            }
+        }
+        // Create JWKS key resolver that selects JWK based on key ID in jwt header
         val jwksKeyResolver = HttpsJwksVerificationKeyResolver(httpsJwks)
 
         // create validation requirements
@@ -433,7 +483,7 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
         }
 
         // check security requirements
-        if (securityRequirements != null) {
+        securityRequirements?.let {
             if (LOG.isDebugEnabled) {
                 LOG.debug("Validate security attributes")
             }
@@ -441,10 +491,10 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
             val securityProfile = claims.getStringClaimValue("securityProfile")
                 ?: throw DatException("DAT does not contain securityProfile")
             val securityProfilePeer = SecurityProfile.fromString(securityProfile)
-            if (securityProfilePeer < securityRequirements.requiredSecurityLevel) {
+            if (securityProfilePeer < it.requiredSecurityLevel) {
                 throw DatException(
                     "Peer does not support any valid trust profile: Required: " +
-                        securityRequirements.requiredSecurityLevel +
+                        it.requiredSecurityLevel +
                         " given: " +
                         securityProfilePeer
                 )
@@ -476,7 +526,7 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
      * @param byteArray Byte array to get hexadecimal representation for
      * @return Hexadecimal representation of the given bytes
      */
-    private fun encodeHexString(byteArray: ByteArray, beautify: Boolean): String {
+    private fun encodeHexString(byteArray: ByteArray, beautify: Boolean = false): String {
         val sb = StringBuilder()
         for (b in byteArray) {
             sb.append(hexLookup.computeIfAbsent(b) { num: Byte -> byteToHex(num.toInt()) })
@@ -490,5 +540,9 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
     companion object {
         private val LOG = LoggerFactory.getLogger(AisecDapsDriver::class.java)
         private const val TARGET_AUDIENCE = "idsc:IDS_CONNECTORS_ALL"
+        // If DAPS doesn't provide metadata, retry after this timespan has elapsed
+        private const val META_FALLBACK_LIFETIME_MS = 86_400_000L
+        // OkHttpClient pool
+        private val OK_HTTP_CLIENTS = mutableMapOf<String, OkHttpClient>()
     }
 }
