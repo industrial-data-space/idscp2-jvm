@@ -28,6 +28,7 @@ import okhttp3.Cache
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
 import okio.fakefilesystem.FakeFileSystem
 import org.bouncycastle.asn1.ASN1OctetString
 import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier
@@ -43,6 +44,7 @@ import org.jose4j.jwt.consumer.JwtConsumerBuilder
 import org.jose4j.keys.resolvers.HttpsJwksVerificationKeyResolver
 import org.json.JSONObject
 import org.slf4j.LoggerFactory
+import java.io.IOException
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.security.Key
@@ -51,12 +53,16 @@ import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import java.security.cert.X509Certificate
 import java.time.Instant
+import java.util.Collections.synchronizedMap
 import java.util.Date
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.ReadWriteLock
 import java.util.concurrent.locks.ReentrantLock
+import java.util.concurrent.locks.ReentrantReadWriteLock
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocketFactory
 import javax.net.ssl.X509ExtendedTrustManager
+import kotlin.concurrent.withLock
 import kotlin.io.path.absolutePathString
 
 /**
@@ -90,7 +96,7 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
     private val hexLookup = HashMap<Byte, CharArray>()
 
     // requires hexLookup to be existent
-    private val connectorUUID: String = createConnectorUUID(localPeerCertificate)
+    private val connectorUUID: String = extractConnectorUUID(localPeerCertificate)
 
     /**
      * The token, that will be issued until the renewalTime is over. This mechanism reduces the number
@@ -128,11 +134,15 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
         }
     }
 
-    // OkHttpClient with in-memory cache. Will be reused for equal TrustStores.
-    private val okHttpClient = OK_HTTP_CLIENTS.getOrPut(config.trustStorePath.absolutePathString()) {
+    /**
+     * Pair of OkHttpClient with in-memory cache and a ReadWriteLock.
+     * Will be reused for equal TrustStores.
+     * The ReadWriteLock is used to handle rare IOExceptions caused by race conditions of FakeFileSystem.
+     */
+    private val okHttpClient = OK_HTTP_CLIENTS.computeIfAbsent(config.trustStorePath.absolutePathString()) {
         try {
             val fakeFs = FakeFileSystem().apply { createDirectory(workingDirectory) }
-            OkHttpClient.Builder()
+            val client = OkHttpClient.Builder()
                 .sslSocketFactory(sslSocketFactory, trustManager)
                 .cache(
                     // Use small, 1 MiB in-memory cache to store DAPS meta, JWKS etc.
@@ -146,20 +156,38 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
                 .writeTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(15, TimeUnit.SECONDS)
                 .build()
+            Pair(client, ReentrantReadWriteLock())
         } catch (t: Throwable) {
-            LOG.error("Error creating OkHttpClient", t)
-            throw t
+            throw DatException("Error creating OkHttpClient", t)
         }
     }
-    // DAPS meta caching
-    private var dapsMeta: DapsMeta? = null
-    private var dapsMetaExpire = 0L
 
     /**
-     * Create connector UUID: SKI:keyid:AKI from X509 Certificate
+     * Executes an OkHttp Request on a shared client, using a ReadWriteLock to
+     * handle rare IOExceptions caused by race conditions of FakeFileSystem.
+     * @param request The request to be executed
      */
-    private fun createConnectorUUID(certificate: X509Certificate): String {
+    private fun execOkHttpCall(request: Request): Response {
+        return try {
+            // First use a read (i.e. shared) lock to perform the request
+            okHttpClient.second.readLock().withLock {
+                okHttpClient.first.newCall(request).execute()
+            }
+        } catch (iox: IOException) {
+            // If the request fails, obtain an exclusive lock
+            // for the OkHttpClient to prevent repeated conflicts
+            LOG.warn("HTTP(S) request failed, retry request with exclusive lock...")
+            okHttpClient.second.writeLock().withLock {
+                okHttpClient.first.newCall(request).execute()
+            }
+        }
+    }
 
+    /**
+     * Extract connector UUID: SKI:keyid:AKI from X509 Certificate
+     * @param certificate The certificate to extract the UUID from
+     */
+    private fun extractConnectorUUID(certificate: X509Certificate): String {
         // GET 2.5.29.35 AuthorityKeyIdentifier
         val akiOid = Extension.authorityKeyIdentifier.id
         val rawAuthorityKeyIdentifier = certificate.getExtensionValue(akiOid)
@@ -184,6 +212,16 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
         return skiResult + "keyid:" + akiResult.substring(0, akiResult.length - 1)
     }
 
+    /**
+     * Cached DAPS metadata, also for instances not featuring /.well-known/oauth-authorization-server,
+     * see below.
+     */
+    private var dapsMeta: DapsMeta? = null
+    /**
+     * Expiration timestamp for cached DAPS metadata, in ms
+     */
+    private var dapsMetaExpire = 0L
+
     private fun getDapsMeta(): DapsMeta {
         if (dapsMetaExpire > System.currentTimeMillis()) {
             dapsMeta?.let {
@@ -199,12 +237,12 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
 
         val dapsUri = URI.create(dapsUrl)
 
-        val metaRequest = Request.Builder()
-            .url("${dapsUri.scheme}://${dapsUri.host}/.well-known/oauth-authorization-server${dapsUri.path}")
-            .build()
-
         // get http response from DAPS
-        val response = okHttpClient.newCall(metaRequest).execute()
+        val response = execOkHttpCall(
+            Request.Builder()
+                .url("${dapsUri.scheme}://${dapsUri.host}/.well-known/oauth-authorization-server${dapsUri.path}")
+                .build()
+        )
 
         if (!response.isSuccessful) {
             if (response.code == 404) {
@@ -283,13 +321,13 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
             // Get OAuth server meta information (Issuer, URLs)
             val dapsMeta = getDapsMeta()
 
-            val request = Request.Builder()
-                .url(dapsMeta.tokenEndpoint)
-                .post(formBody)
-                .build()
-
-            // get http response from DAPS
-            val response = okHttpClient.newCall(request).execute()
+            // Get http response from DAPS
+            val response = execOkHttpCall(
+                Request.Builder()
+                    .url(dapsMeta.tokenEndpoint)
+                    .post(formBody)
+                    .build()
+            )
 
             // check for valid response
             if (!response.isSuccessful) {
@@ -394,9 +432,7 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
             // Use SimpleGet-Adapter using the common, cached OkHttpClient
             setSimpleHttpGet { url ->
                 object : SimpleResponse {
-                    val response = okHttpClient.newCall(
-                        Request.Builder().url(url).build()
-                    ).execute()
+                    val response = execOkHttpCall(Request.Builder().url(url).build())
 
                     override fun getStatusCode() = response.code
 
@@ -543,6 +579,6 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
         // If DAPS doesn't provide metadata, retry after this timespan has elapsed
         private const val META_FALLBACK_LIFETIME_MS = 86_400_000L
         // OkHttpClient pool
-        private val OK_HTTP_CLIENTS = mutableMapOf<String, OkHttpClient>()
+        private val OK_HTTP_CLIENTS = synchronizedMap(mutableMapOf<String, Pair<OkHttpClient, ReadWriteLock>>())
     }
 }
