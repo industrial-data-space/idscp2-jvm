@@ -45,21 +45,21 @@ class Idscp2ServerConsumer(private val endpoint: Idscp2ServerEndpoint, processor
         super.doStop()
     }
 
-    override fun onMessage(connection: AppLayerConnection, header: Message?, payload: ByteArray?, extraHeaders: Map<String, String>?) {
+    override fun onMessage(connection: AppLayerConnection, header: Message?, payload: ByteArray?, extraHeaders: Map<String, String>) {
         if (LOG.isTraceEnabled) {
             LOG.trace("Idscp2ServerConsumer received IdsMessage with header:\n{}", header)
         }
         onMessage(connection, header as Any?, payload, extraHeaders)
     }
 
-    override fun onMessage(connection: AppLayerConnection, header: String?, payload: ByteArray?, extraHeaders: Map<String, String>?) {
+    override fun onMessage(connection: AppLayerConnection, header: String?, payload: ByteArray?, extraHeaders: Map<String, String>) {
         if (LOG.isTraceEnabled) {
             LOG.trace("Idscp2ServerConsumer received GenericMessage with header:\n{}", header)
         }
         onMessage(connection, header as Any?, payload, extraHeaders)
     }
 
-    private fun onMessage(connection: AppLayerConnection, header: Any?, payload: ByteArray?, extraHeaders: Map<String, String>?) {
+    private fun onMessage(connection: AppLayerConnection, header: Any?, payload: ByteArray?, extraHeaders: Map<String, String>) {
         val exchange = endpoint.createExchange()
         // Ensures that Exchange has an ID
         exchange.exchangeId
@@ -71,7 +71,7 @@ class Idscp2ServerConsumer(private val endpoint: Idscp2ServerEndpoint, processor
                 message.setHeader(IDSCP2_HEADER, header)
                 message.setBody(payload, ByteArray::class.java)
                 endpoint.copyHeadersRegexObject?.let { regex ->
-                    extraHeaders?.forEach {
+                    extraHeaders.forEach {
                         if (regex.matches(it.key)) {
                             message.setHeader(it.key, it.value)
                         }

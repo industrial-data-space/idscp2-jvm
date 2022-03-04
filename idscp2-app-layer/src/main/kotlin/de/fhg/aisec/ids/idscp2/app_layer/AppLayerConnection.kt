@@ -76,10 +76,9 @@ class AppLayerConnection private constructor(private val idscp2Connection: Idscp
     private val idsMessageListeners: MutableSet<IdsMessageListener> =
         Collections.synchronizedSet(LinkedHashSet())
 
-    constructor(fsm: FSM, id: String) :
-        this(Idscp2ConnectionImpl(fsm, id)) {
-            idscp2Connection.addMessageListener(idscp2MessageListener)
-        }
+    constructor(fsm: FSM, id: String) : this(Idscp2ConnectionImpl(fsm, id)) {
+        idscp2Connection.addMessageListener(idscp2MessageListener)
+    }
 
     fun sendGenericMessage(header: String?, payload: ByteArray?, headers: Map<String, String>?) {
         val message = AppLayer.AppLayerMessage.newBuilder()

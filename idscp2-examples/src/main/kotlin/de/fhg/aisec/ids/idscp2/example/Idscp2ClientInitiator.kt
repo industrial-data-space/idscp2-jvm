@@ -31,10 +31,8 @@ import de.fhg.aisec.ids.idscp2.idscp_core.ra_registry.RaProverDriverRegistry
 import de.fhg.aisec.ids.idscp2.idscp_core.ra_registry.RaVerifierDriverRegistry
 import org.slf4j.LoggerFactory
 import java.nio.charset.StandardCharsets
-import java.util.concurrent.CompletableFuture
 
 class Idscp2ClientInitiator {
-    private lateinit var connectionFuture: CompletableFuture<Idscp2Connection>
 
     fun init(configuration: Idscp2Configuration, nativeTlsConfiguration: NativeTlsConfiguration) {
 
@@ -51,7 +49,7 @@ class Idscp2ClientInitiator {
         )
 
         // connect to idscp2 server
-        connectionFuture = secureChannelDriver.connect(::Idscp2ConnectionImpl, configuration, nativeTlsConfiguration)
+        val connectionFuture = secureChannelDriver.connect(::Idscp2ConnectionImpl, configuration, nativeTlsConfiguration)
         connectionFuture.thenAccept { connection: Idscp2Connection ->
             LOG.info("Client: New connection with id " + connection.id)
             connection.addConnectionListener(object : Idscp2ConnectionAdapter() {

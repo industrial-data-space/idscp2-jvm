@@ -70,14 +70,14 @@ class Idscp2ClientConsumer(private val endpoint: Idscp2ClientEndpoint, processor
         endpoint.releaseConnection(connectionFuture)
     }
 
-    override fun onMessage(connection: AppLayerConnection, header: Message?, payload: ByteArray?, extraHeaders: Map<String, String>?) {
+    override fun onMessage(connection: AppLayerConnection, header: Message?, payload: ByteArray?, extraHeaders: Map<String, String>) {
         if (LOG.isTraceEnabled) {
             LOG.trace("Idscp2ClientConsumer received IdsMessage with header:\n{}", header)
         }
         onMessage(connection, header as Any?, payload, extraHeaders)
     }
 
-    override fun onMessage(connection: AppLayerConnection, header: String?, payload: ByteArray?, extraHeaders: Map<String, String>?) {
+    override fun onMessage(connection: AppLayerConnection, header: String?, payload: ByteArray?, extraHeaders: Map<String, String>) {
         if (LOG.isTraceEnabled) {
             LOG.trace("Idscp2ClientConsumer received GenericMessage with header:\n{}", header)
         }

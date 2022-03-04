@@ -47,35 +47,35 @@ object Utils {
         )
     }
 
-    fun finalizeMessage(messageOrBuilder: Any, connection: Idscp2Connection): Message {
-        if (messageOrBuilder is Message) {
+    fun finalizeMessage(messageBuilder: Any, connection: Idscp2Connection): Message {
+        if (messageBuilder is Message) {
             if (LOG.isDebugEnabled) {
                 LOG.debug(
-                    "Object passed to finalizeMessage is already a Message, " +
-                        "no methods will be called."
+                    "Object passed to finalizeMessage is already a Message, MessageBuilder is required. " +
+                        "No methods will be called."
                 )
             }
-            return messageOrBuilder
+            return messageBuilder
         }
         try {
             if (LOG.isDebugEnabled) {
                 LOG.debug("Finalizing IDS MessageBuilder object...")
             }
-            messageOrBuilder::class.java.apply {
+            messageBuilder::class.java.apply {
                 getMethod("_securityToken_", DynamicAttributeToken::class.java)
                     .invoke(
-                        messageOrBuilder,
+                        messageBuilder,
                         DynamicAttributeTokenBuilder()
                             ._tokenFormat_(TokenFormat.JWT)
                             ._tokenValue_(String(connection.localDynamicAttributeToken, StandardCharsets.UTF_8))
                             .build()
                     )
-                getMethod("_senderAgent_", URI::class.java).invoke(messageOrBuilder, maintainerUrlProducer())
-                getMethod("_issuerConnector_", URI::class.java).invoke(messageOrBuilder, connectorUrlProducer())
+                getMethod("_senderAgent_", URI::class.java).invoke(messageBuilder, maintainerUrlProducer())
+                getMethod("_issuerConnector_", URI::class.java).invoke(messageBuilder, connectorUrlProducer())
                 getMethod("_issued_", XMLGregorianCalendar::class.java)
-                    .invoke(messageOrBuilder, createGregorianCalendarTimestamp(System.currentTimeMillis()))
-                getMethod("_modelVersion_", String::class.java).invoke(messageOrBuilder, infomodelVersion)
-                val message = getMethod("build").invoke(messageOrBuilder)
+                    .invoke(messageBuilder, createGregorianCalendarTimestamp(System.currentTimeMillis()))
+                getMethod("_modelVersion_", String::class.java).invoke(messageBuilder, infomodelVersion)
+                val message = getMethod("build").invoke(messageBuilder)
                 if (message !is Message) {
                     throw CamelIdscp2Exception(
                         "InfoModel message build failed! build() did not return a Message object!"
@@ -93,7 +93,7 @@ object Utils {
         } catch (t: Throwable) {
             throw CamelIdscp2Exception(
                 "Failed to finalize IDS MessageBuilder, " +
-                    "the object passed as IDSCP2 header must be an IDS Message or an IDS MessageBuilder.",
+                    "the object passed as IDSCP2 header must be an IDS MessageBuilder.",
                 t
             )
         }
