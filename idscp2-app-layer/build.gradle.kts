@@ -35,11 +35,10 @@ val testImplementation by configurations
 dependencies {
     api(project(":idscp2"))
 
-    api("com.google.protobuf", "protobuf-java", libraryVersions["protobuf"])
-
-    // Supplied by ids-infomodel-manager
     api("de.fraunhofer.iais.eis.ids.infomodel", "java", libraryVersions["infomodel"])
-    api("de.fraunhofer.iais.eis.ids", "infomodel-serializer", libraryVersions["infomodel"])
+    implementation("de.fraunhofer.iais.eis.ids", "infomodel-serializer", libraryVersions["infomodel"])
+
+    implementation("com.google.protobuf", "protobuf-java", libraryVersions["protobuf"])
 }
 
 tasks.named("spotlessKotlin") {

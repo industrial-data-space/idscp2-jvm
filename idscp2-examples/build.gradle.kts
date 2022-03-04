@@ -13,9 +13,8 @@ val api by configurations
 
 dependencies {
     api(project(":idscp2"))
-    api(project(":idscp2-app-layer"))
 
-    api("org.slf4j", "slf4j-simple", libraryVersions["slf4j"])
+    implementation("org.slf4j", "slf4j-simple", libraryVersions["slf4j"])
 }
 
 application {

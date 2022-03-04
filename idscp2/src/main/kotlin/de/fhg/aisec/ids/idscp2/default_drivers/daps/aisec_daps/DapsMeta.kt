@@ -20,7 +20,6 @@
 package de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps
 
 import de.fhg.aisec.ids.idscp2.idscp_core.error.DatException
-import org.json.JSONObject
 import java.net.URI
 
 data class DapsMeta(val issuer: String, val jwksUri: String, val tokenEndpoint: String) {
@@ -33,14 +32,13 @@ data class DapsMeta(val issuer: String, val jwksUri: String, val tokenEndpoint: 
                 "$url/token"
             )
         }
-        fun fromJson(jsonString: String): DapsMeta {
-            val json = JSONObject(jsonString)
+        fun fromJson(json: Map<String, Any>): DapsMeta {
             return DapsMeta(
-                json.getString("issuer")
+                json["issuer"] as String?
                     ?: throw DatException("\"issuer\" not found in DAPS meta JSON"),
-                json.getString("jwks_uri")
+                json["jwks_uri"] as String?
                     ?: throw DatException("\"jwks_uri\" not found in DAPS meta JSON"),
-                json.getString("token_endpoint")
+                json["token_endpoint"] as String?
                     ?: throw DatException("\"token_endpoint\" not found in DAPS meta JSON")
             )
         }

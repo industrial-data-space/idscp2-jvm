@@ -24,12 +24,19 @@ import de.fhg.aisec.ids.idscp2.idscp_core.drivers.DapsDriver
 import de.fhg.aisec.ids.idscp2.idscp_core.error.DatException
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
-import okhttp3.Cache
-import okhttp3.FormBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Response
-import okio.fakefilesystem.FakeFileSystem
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.engine.java.Java
+import io.ktor.client.plugins.ContentNegotiation
+import io.ktor.client.plugins.cache.HttpCache
+import io.ktor.client.request.forms.submitForm
+import io.ktor.client.request.request
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.Parameters
+import io.ktor.http.cacheControl
+import io.ktor.serialization.jackson.jackson
+import kotlinx.coroutines.runBlocking
 import org.bouncycastle.asn1.ASN1OctetString
 import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier
 import org.bouncycastle.asn1.x509.Extension
@@ -42,9 +49,7 @@ import org.jose4j.jwt.JwtClaims
 import org.jose4j.jwt.NumericDate
 import org.jose4j.jwt.consumer.JwtConsumerBuilder
 import org.jose4j.keys.resolvers.HttpsJwksVerificationKeyResolver
-import org.json.JSONObject
 import org.slf4j.LoggerFactory
-import java.io.IOException
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.security.Key
@@ -52,17 +57,12 @@ import java.security.KeyManagementException
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import java.security.cert.X509Certificate
+import java.time.Duration
 import java.time.Instant
 import java.util.Collections.synchronizedMap
 import java.util.Date
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.locks.ReadWriteLock
 import java.util.concurrent.locks.ReentrantLock
-import java.util.concurrent.locks.ReentrantReadWriteLock
 import javax.net.ssl.SSLContext
-import javax.net.ssl.SSLSocketFactory
-import javax.net.ssl.X509ExtendedTrustManager
-import kotlin.concurrent.withLock
 import kotlin.io.path.absolutePathString
 
 /**
@@ -72,10 +72,9 @@ import kotlin.io.path.absolutePathString
  * @author Gerd Brost (gerd.brost@aisec.fraunhofer.de)
  */
 class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
-    private val sslSocketFactory: SSLSocketFactory
+    private val sslContext: SSLContext
     // Security requirements can be modified at runtime
-    var securityRequirements: SecurityRequirements? = config.securityRequirements
-    private val trustManager: X509ExtendedTrustManager
+    private var securityRequirements: SecurityRequirements? = config.securityRequirements
     private val privateKey: Key = PreConfiguration.getKey(
         config.keyStorePath,
         config.keyStorePassword,
@@ -120,11 +119,10 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
             config.trustStorePath,
             config.trustStorePassword
         )
-        trustManager = trustManagers[0] as X509ExtendedTrustManager
-        sslSocketFactory = try {
-            val sslContext = SSLContext.getInstance("TLS")
-            sslContext.init(null, trustManagers, null)
-            sslContext.socketFactory
+        sslContext = try {
+            SSLContext.getInstance("TLS").apply {
+                init(null, trustManagers, null)
+            }
         } catch (e: NoSuchAlgorithmException) {
             LOG.error("Cannot init AisecDapsDriver", e)
             throw RuntimeException(e)
@@ -139,46 +137,17 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
      * Will be reused for equal TrustStores.
      * The ReadWriteLock is used to handle rare IOExceptions caused by race conditions of FakeFileSystem.
      */
-    private val okHttpClient = OK_HTTP_CLIENTS.computeIfAbsent(config.trustStorePath.absolutePathString()) {
-        try {
-            val fakeFs = FakeFileSystem().apply { createDirectory(workingDirectory) }
-            val client = OkHttpClient.Builder()
-                .sslSocketFactory(sslSocketFactory, trustManager)
-                .cache(
-                    // Use small, 1 MiB in-memory cache to store DAPS meta, JWKS etc.
-                    Cache(
-                        fakeFs.workingDirectory,
-                        1024L * 1024L,
-                        fakeFs
-                    )
-                )
-                .connectTimeout(15, TimeUnit.SECONDS)
-                .writeTimeout(15, TimeUnit.SECONDS)
-                .readTimeout(15, TimeUnit.SECONDS)
-                .build()
-            Pair(client, ReentrantReadWriteLock())
-        } catch (t: Throwable) {
-            throw DatException("Error creating OkHttpClient", t)
-        }
-    }
-
-    /**
-     * Executes an OkHttp Request on a shared client, using a ReadWriteLock to
-     * handle rare IOExceptions caused by race conditions of FakeFileSystem.
-     * @param request The request to be executed
-     */
-    private fun execOkHttpCall(request: Request): Response {
-        return try {
-            // First use a read (i.e. shared) lock to perform the request
-            okHttpClient.second.readLock().withLock {
-                okHttpClient.first.newCall(request).execute()
+    private val httpClient = OK_HTTP_CLIENTS.computeIfAbsent(config.trustStorePath.absolutePathString()) {
+        HttpClient(Java) {
+            engine {
+                config {
+                    sslContext(sslContext)
+                    connectTimeout(Duration.ofSeconds(15))
+                }
             }
-        } catch (iox: IOException) {
-            // If the request fails, obtain an exclusive lock
-            // for the OkHttpClient to prevent repeated conflicts
-            LOG.warn("HTTP(S) request failed, retry request with exclusive lock...")
-            okHttpClient.second.writeLock().withLock {
-                okHttpClient.first.newCall(request).execute()
+            install(HttpCache)
+            install(ContentNegotiation) {
+                jackson()
             }
         }
     }
@@ -237,146 +206,39 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
 
         val dapsUri = URI.create(dapsUrl)
 
-        // get http response from DAPS
-        val response = execOkHttpCall(
-            Request.Builder()
-                .url("${dapsUri.scheme}://${dapsUri.host}/.well-known/oauth-authorization-server${dapsUri.path}")
-                .build()
-        )
-
-        if (!response.isSuccessful) {
-            if (response.code == 404) {
-                LOG.warn(
-                    "DAPS /.well-known/oauth-authorization-server not available, using fallback URLs." +
-                        " Next retry to fetch DAPS meta in ${META_FALLBACK_LIFETIME_MS / 1000} seconds"
-                )
+        return runBlocking {
+            val response = httpClient.request(
+                "${dapsUri.scheme}://${dapsUri.host}/.well-known/oauth-authorization-server${dapsUri.path}"
+            )
+            if (response.status.value in 200..299) {
+                DapsMeta.fromJson(response.body()).also { dm ->
+                    val maxAge = response.cacheControl()
+                        .first { it.value.startsWith("max-age=") }
+                        .value.split("=").getOrNull(1)?.toInt()
+                    if (LOG.isDebugEnabled) {
+                        LOG.debug("Cache-Control max-age: $maxAge")
+                    }
+                    dapsMetaExpire = response.responseTime.timestamp + ((maxAge ?: 0) * 1000L)
+                    dapsMeta = dm
+                }
             } else {
-                LOG.error("Request was not successful, unexpected HTTP code ${response.code}")
-            }
-            // Fallback, if request was not successful
-            return DapsMeta.fromDapsUrl(dapsUrl).also {
-                // Cache metadata only for acceptable 404 (not found) error
-                if (response.code == 404) {
-                    dapsMetaExpire = System.currentTimeMillis() + META_FALLBACK_LIFETIME_MS
-                    dapsMeta = it
+                if (response.status == HttpStatusCode.NotFound) {
+                    LOG.warn(
+                        "DAPS /.well-known/oauth-authorization-server not available, using fallback URLs." +
+                            " Next retry to fetch DAPS meta in ${META_FALLBACK_LIFETIME_MS / 1000} seconds"
+                    )
+                } else {
+                    LOG.error("Request was not successful, unexpected HTTP status ${response.status}")
+                }
+                // Fallback, if request was not successful
+                DapsMeta.fromDapsUrl(dapsUrl).also {
+                    // Cache metadata only for acceptable 404 (not found) error
+                    if (response.status == HttpStatusCode.NotFound) {
+                        dapsMetaExpire = System.currentTimeMillis() + META_FALLBACK_LIFETIME_MS
+                        dapsMeta = it
+                    }
                 }
             }
-        }
-
-        return DapsMeta.fromJson(
-            response.body?.string()
-                ?: throw DatException("Response body is null")
-        ).also {
-            dapsMetaExpire = response.receivedResponseAtMillis + (response.cacheControl.maxAgeSeconds * 1000L)
-            dapsMeta = it
-        }
-    }
-
-    private fun syncGetToken(): ByteArray {
-        renewalLock.lock()
-        try {
-            if (NumericDate.now().isBefore(renewalTime)) {
-                // the current token is still valid
-                if (LOG.isDebugEnabled) {
-                    LOG.debug("Issue cached DAT: {}", currentToken.toString(StandardCharsets.UTF_8))
-                }
-                return currentToken
-            }
-
-            // request a new token from the DAPS
-            if (LOG.isInfoEnabled) {
-                LOG.info("Retrieving Dynamic Attribute Token from DAPS ...")
-            }
-            if (LOG.isDebugEnabled) {
-                LOG.debug("ConnectorUUID: $connectorUUID")
-            }
-
-            // create signed JWT
-            val expiration = Date.from(Instant.now().plusSeconds(86400))
-            val issuedAt = Date.from(Instant.now())
-            val notBefore = Date.from(Instant.now())
-
-            val jwt = Jwts.builder()
-                .setIssuer(connectorUUID)
-                .setSubject(connectorUUID)
-                .claim("@context", "https://w3id.org/idsa/contexts/context.jsonld")
-                .claim("@type", "ids:DatRequestToken")
-                .setExpiration(expiration)
-                .setIssuedAt(issuedAt)
-                .setNotBefore(notBefore)
-                .setAudience(TARGET_AUDIENCE)
-                .signWith(privateKey, SignatureAlgorithm.RS256)
-                .compact()
-
-            // build http client and request for DAPS
-            val formBody = FormBody.Builder()
-                .add("grant_type", "client_credentials")
-                .add(
-                    "client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
-                )
-                .add("client_assertion", jwt)
-                .add("scope", "idsc:IDS_CONNECTOR_ATTRIBUTES_ALL")
-                .build()
-
-            // Get OAuth server meta information (Issuer, URLs)
-            val dapsMeta = getDapsMeta()
-
-            // Get http response from DAPS
-            val response = execOkHttpCall(
-                Request.Builder()
-                    .url(dapsMeta.tokenEndpoint)
-                    .post(formBody)
-                    .build()
-            )
-
-            // check for valid response
-            if (!response.isSuccessful) {
-                LOG.error(
-                    "Failed to request token issued with parameters: Issuer: {}, Subject: {}, " +
-                        "Expiration: {}, IssuedAt: {}, NotBefore: {}, Audience: {}",
-                    connectorUUID,
-                    connectorUUID,
-                    expiration,
-                    issuedAt,
-                    notBefore,
-                    TARGET_AUDIENCE
-                )
-                throw DatException("Received non-200 http response: " + response.code)
-            }
-
-            val json = JSONObject(
-                response.body?.string()
-                    ?: throw DatException("Received empty DAPS response")
-            )
-            if (LOG.isDebugEnabled) {
-                LOG.debug("Acquired DAT from {}", dapsMeta.tokenEndpoint)
-            }
-
-            val token: String
-            if (json.has("access_token")) {
-                token = json.getString("access_token")
-                if (LOG.isDebugEnabled) {
-                    LOG.debug("Received DAT from DAPS: {}", token)
-                }
-            } else if (json.has("error")) {
-                throw DatException("DAPS reported error: " + json.getString("error"))
-            } else {
-                throw DatException("DAPS response does not contain \"access_token\" or \"error\" field.")
-            }
-
-            innerVerifyToken(
-                token.toByteArray(StandardCharsets.UTF_8), null, localPeerCertificate,
-                true, dapsMeta
-            )
-            return token.toByteArray(StandardCharsets.UTF_8)
-        } catch (e: Throwable) {
-            throw if (e is DatException) {
-                e
-            } else {
-                DatException("Error whilst retrieving DAT", e)
-            }
-        } finally {
-            renewalLock.unlock()
         }
     }
 
@@ -386,7 +248,104 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
      * @throws DatException
      */
     override val token: ByteArray
-        get() = syncGetToken()
+        get() {
+            renewalLock.lock()
+            try {
+                if (NumericDate.now().isBefore(renewalTime)) {
+                    // the current token is still valid
+                    if (LOG.isDebugEnabled) {
+                        LOG.debug("Issue cached DAT: {}", currentToken.toString(StandardCharsets.UTF_8))
+                    }
+                    return currentToken
+                }
+
+                // request a new token from the DAPS
+                if (LOG.isInfoEnabled) {
+                    LOG.info("Retrieving Dynamic Attribute Token from DAPS ...")
+                }
+                if (LOG.isDebugEnabled) {
+                    LOG.debug("ConnectorUUID: $connectorUUID")
+                }
+
+                // create signed JWT
+                val expiration = Date.from(Instant.now().plusSeconds(86400))
+                val issuedAt = Date.from(Instant.now())
+                val notBefore = Date.from(Instant.now())
+
+                val jwt = Jwts.builder()
+                    .setIssuer(connectorUUID)
+                    .setSubject(connectorUUID)
+                    .claim("@context", "https://w3id.org/idsa/contexts/context.jsonld")
+                    .claim("@type", "ids:DatRequestToken")
+                    .setExpiration(expiration)
+                    .setIssuedAt(issuedAt)
+                    .setNotBefore(notBefore)
+                    .setAudience(TARGET_AUDIENCE)
+                    .signWith(privateKey, SignatureAlgorithm.RS256)
+                    .compact()
+
+                // Get OAuth server meta information (Issuer, URLs)
+                val dapsMeta = getDapsMeta()
+
+                return runBlocking {
+                    val response = httpClient.submitForm(
+                        dapsMeta.tokenEndpoint,
+                        formParameters = Parameters.build {
+                            append("grant_type", "client_credentials")
+                            append("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
+                            append("client_assertion", jwt)
+                            append("scope", "idsc:IDS_CONNECTOR_ATTRIBUTES_ALL")
+                        }
+                    )
+
+                    // check for valid response
+                    if (response.status != HttpStatusCode.OK) {
+                        LOG.error(
+                            "Failed to request token issued with parameters: Issuer: {}, Subject: {}, " +
+                                "Expiration: {}, IssuedAt: {}, NotBefore: {}, Audience: {}",
+                            connectorUUID,
+                            connectorUUID,
+                            expiration,
+                            issuedAt,
+                            notBefore,
+                            TARGET_AUDIENCE
+                        )
+                        throw DatException("Received non-200 status: ${response.status}")
+                    }
+
+                    val json: Map<String, Any> = response.body()
+                    if (LOG.isDebugEnabled) {
+                        LOG.debug("Acquired DAT from {}", dapsMeta.tokenEndpoint)
+                    }
+
+                    val token = if (json.containsKey("access_token")) {
+                        json["access_token"].toString().also {
+                            if (LOG.isDebugEnabled) {
+                                LOG.debug("Received DAT from DAPS: {}", it)
+                            }
+                        }
+                    } else if (json.containsKey("error")) {
+                        throw DatException("DAPS reported error: ${json["error"]}")
+                    } else {
+                        throw DatException("DAPS response does not contain \"access_token\" or \"error\" field.")
+                    }
+
+                    innerVerifyToken(
+                        token.toByteArray(StandardCharsets.UTF_8), null, localPeerCertificate,
+                        true, dapsMeta
+                    )
+                    token.toByteArray(StandardCharsets.UTF_8)
+                }
+            } catch (e: Throwable) {
+                throw if (e is DatException) {
+                    e
+                } else {
+                    DatException("Error whilst retrieving DAT", e)
+                }
+            } finally {
+                renewalLock.unlock()
+            }
+        }
 
     /**
      * Public verifyToken API, used from the IDSCP2 protocol. Security requirements are used from the DAPS config
@@ -432,17 +391,20 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
             // Use SimpleGet-Adapter using the common, cached OkHttpClient
             setSimpleHttpGet { url ->
                 object : SimpleResponse {
-                    val response = execOkHttpCall(Request.Builder().url(url).build())
+                    val response = runBlocking {
+                        val request = httpClient.request(url)
+                        Triple(request.status, request.headers, request.bodyAsText())
+                    }
 
-                    override fun getStatusCode() = response.code
+                    override fun getStatusCode() = response.first.value
 
-                    override fun getStatusMessage() = response.message
+                    override fun getStatusMessage() = response.first.description
 
-                    override fun getHeaderNames() = response.headers.names().toMutableSet()
+                    override fun getHeaderNames() = response.second.names()
 
-                    override fun getHeaderValues(name: String) = response.headers.values(name).toMutableList()
+                    override fun getHeaderValues(name: String) = response.second.getAll(name)
 
-                    override fun getBody() = response.body?.string()
+                    override fun getBody() = response.third
                 }
             }
         }
@@ -579,6 +541,6 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
         // If DAPS doesn't provide metadata, retry after this timespan has elapsed
         private const val META_FALLBACK_LIFETIME_MS = 86_400_000L
         // OkHttpClient pool
-        private val OK_HTTP_CLIENTS = synchronizedMap(mutableMapOf<String, Pair<OkHttpClient, ReadWriteLock>>())
+        private val OK_HTTP_CLIENTS = synchronizedMap(mutableMapOf<String, HttpClient>())
     }
 }

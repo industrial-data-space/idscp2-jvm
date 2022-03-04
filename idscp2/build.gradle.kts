@@ -33,21 +33,22 @@ val api by configurations
 val testImplementation by configurations
 
 dependencies {
-    api("org.jetbrains.kotlinx", "kotlinx-coroutines-core-jvm", libraryVersions["kotlinxCoroutines"])
+    implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-core-jvm", libraryVersions["kotlinxCoroutines"])
 
-    api("org.bouncycastle", "bcprov-jdk15on", libraryVersions["bouncycastle"])
+    implementation("org.bouncycastle", "bcprov-jdk15on", libraryVersions["bouncycastle"])
 
-    api("com.google.protobuf", "protobuf-java", libraryVersions["protobuf"])
+    implementation("com.google.protobuf", "protobuf-java", libraryVersions["protobuf"])
 
-    api("io.jsonwebtoken", "jjwt-impl", libraryVersions["jsonwebtoken"])
+    implementation("io.jsonwebtoken", "jjwt-impl", libraryVersions["jsonwebtoken"])
     // Important, since io.jsonwebtoken:jjwt-jackson references an outdated version with critical CVEs
-    api("com.fasterxml.jackson.core", "jackson-databind", libraryVersions["jackson"])
-    api("io.jsonwebtoken", "jjwt-jackson", libraryVersions["jsonwebtoken"])
-    api("io.jsonwebtoken", "jjwt-api", libraryVersions["jsonwebtoken"])
-    api("org.json", "json", libraryVersions["orgJson"])
-    api("org.bitbucket.b_c", "jose4j", libraryVersions["jose4j"])
-    api("com.squareup.okhttp3", "okhttp", libraryVersions["okhttp"])
-    api("com.squareup.okio", "okio-fakefilesystem", libraryVersions["okioFakeFs"])
+    implementation("com.fasterxml.jackson.core", "jackson-databind", libraryVersions["jackson"])
+    implementation("io.jsonwebtoken", "jjwt-jackson", libraryVersions["jsonwebtoken"])
+    implementation("io.jsonwebtoken", "jjwt-api", libraryVersions["jsonwebtoken"])
+    implementation("org.bitbucket.b_c", "jose4j", libraryVersions["jose4j"])
+    implementation("io.ktor", "ktor-client-core", libraryVersions["ktor"])
+    implementation("io.ktor", "ktor-client-java", libraryVersions["ktor"])
+    implementation("io.ktor", "ktor-client-content-negotiation", libraryVersions["ktor"])
+    implementation("io.ktor", "ktor-serialization-jackson", libraryVersions["ktor"])
 
     testImplementation("org.awaitility", "awaitility-kotlin", libraryVersions["awaitility"])
     testImplementation("junit", "junit", libraryVersions["junit4"])
