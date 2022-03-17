@@ -20,8 +20,8 @@
 package de.fhg.aisec.ids.idscp2.example
 
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.null_daps.NullDaps
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaProverDummy
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaVerifierDummy
+import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.DemoRaProver
+import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.DemoRaVerifier
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.AttestationConfig
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
@@ -33,8 +33,8 @@ object RunTunnelClient {
     fun main(args: Array<String>) {
 
         val localAttestationConfig = AttestationConfig.Builder()
-            .setSupportedRaSuite(arrayOf(RaProverDummy.RA_PROVER_DUMMY_ID))
-            .setExpectedRaSuite(arrayOf(RaVerifierDummy.RA_VERIFIER_DUMMY_ID))
+            .setSupportedRaSuite(arrayOf(DemoRaProver.DEMO_RA_PROVER_ID))
+            .setExpectedRaSuite(arrayOf(DemoRaVerifier.DEMO_RA_VERIFIER_ID))
             .setRaTimeoutDelay(70 * 1000L) // 70 seconds
             .build()
 

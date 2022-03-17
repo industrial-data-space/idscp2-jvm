@@ -17,7 +17,7 @@
  * limitations under the License.
  * =========================LICENSE_END==================================
  */
-package de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.`null`
+package de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy
 
 import de.fhg.aisec.ids.idscp2.idscp_core.drivers.RaVerifierDriver
 import de.fhg.aisec.ids.idscp2.idscp_core.fsm.InternalControlMessage
@@ -27,35 +27,51 @@ import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 
 /**
- * A RaVerifier that exchanges messages with a remote RaProver dummy
+ * A RaVerifier dummy that exchanges messages with a remote RaProver dummy
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
-class NullRaVerifier(fsmListener: RaVerifierFsmListener) : RaVerifierDriver<Unit>(fsmListener) {
+class DemoRaVerifier(fsmListener: RaVerifierFsmListener) : RaVerifierDriver<Unit>(fsmListener) {
     private val queue: BlockingQueue<ByteArray> = LinkedBlockingQueue()
     override fun delegate(message: ByteArray) {
         queue.add(message)
         if (LOG.isDebugEnabled) {
-            LOG.debug("Delegated to verifier")
+            LOG.debug("Delegated to Verifier")
         }
     }
 
     override fun run() {
-        try {
-            queue.take()
-        } catch (e: InterruptedException) {
-            if (running) {
-                LOG.warn("NullRaVerifier failed")
-                fsmListener.onRaVerifierMessage(InternalControlMessage.RA_VERIFIER_FAILED)
+        var countDown = 2
+        while (running) {
+            try {
+                if (LOG.isDebugEnabled) {
+                    LOG.debug("Verifier sends \"verifier message\"...")
+                }
+                fsmListener.onRaVerifierMessage(
+                    InternalControlMessage.RA_VERIFIER_MSG,
+                    "verifier message".toByteArray()
+                )
+                if (LOG.isDebugEnabled) {
+                    LOG.debug("Verifier waits....")
+                }
+                val msg = queue.take()
+                if (LOG.isDebugEnabled) {
+                    LOG.debug("Verifier received \"${msg.decodeToString()}\", sleep 1 second...")
+                }
+                sleep(1000)
+                if (--countDown == 0) break
+            } catch (e: InterruptedException) {
+                if (running) {
+                    fsmListener.onRaVerifierMessage(InternalControlMessage.RA_VERIFIER_FAILED)
+                }
+                return
             }
-            return
         }
-        fsmListener.onRaVerifierMessage(InternalControlMessage.RA_VERIFIER_MSG, "".toByteArray())
         fsmListener.onRaVerifierMessage(InternalControlMessage.RA_VERIFIER_OK)
     }
 
     companion object {
-        const val NULL_RA_VERIFIER_ID = "NullRa"
-        private val LOG = LoggerFactory.getLogger(NullRaVerifier::class.java)
+        const val DEMO_RA_VERIFIER_ID = "DemoRA"
+        private val LOG = LoggerFactory.getLogger(DemoRaVerifier::class.java)
     }
 }

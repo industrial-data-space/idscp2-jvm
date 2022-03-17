@@ -19,8 +19,8 @@
  */
 package de.fhg.aisec.ids.idscp2.example
 
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaProverDummy
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaVerifierDummy
+import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.DemoRaProver
+import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.DemoRaVerifier
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTLSDriver
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
@@ -45,11 +45,11 @@ class CommandlineTunnelClient {
 
         // register ra drivers
         RaProverDriverRegistry.registerDriver(
-            RaProverDummy.RA_PROVER_DUMMY_ID, ::RaProverDummy, null
+            DemoRaProver.DEMO_RA_PROVER_ID, ::DemoRaProver, null
         )
 
         RaVerifierDriverRegistry.registerDriver(
-            RaVerifierDummy.RA_VERIFIER_DUMMY_ID, ::RaVerifierDummy, null
+            DemoRaVerifier.DEMO_RA_VERIFIER_ID, ::DemoRaVerifier, null
         )
 
         // connect to idscp2 server

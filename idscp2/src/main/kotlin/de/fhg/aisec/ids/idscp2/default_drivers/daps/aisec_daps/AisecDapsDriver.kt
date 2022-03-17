@@ -215,8 +215,8 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
                     val maxAge = response.cacheControl()
                         .first { it.value.startsWith("max-age=") }
                         .value.split("=").getOrNull(1)?.toInt()
-                    if (LOG.isDebugEnabled) {
-                        LOG.debug("Cache-Control max-age: $maxAge")
+                    if (LOG.isTraceEnabled) {
+                        LOG.trace("DAPS meta: Cache-Control max-age: $maxAge")
                     }
                     dapsMetaExpire = response.responseTime.timestamp + ((maxAge ?: 0) * 1000L)
                     dapsMeta = dm

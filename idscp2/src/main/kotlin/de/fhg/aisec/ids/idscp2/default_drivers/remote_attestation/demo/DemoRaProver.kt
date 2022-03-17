@@ -17,7 +17,7 @@
  * limitations under the License.
  * =========================LICENSE_END==================================
  */
-package de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.`null`
+package de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy
 
 import de.fhg.aisec.ids.idscp2.idscp_core.drivers.RaProverDriver
 import de.fhg.aisec.ids.idscp2.idscp_core.fsm.InternalControlMessage
@@ -27,11 +27,11 @@ import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 
 /**
- * A RaProver that exchanges RA messages with a remote RaVerifier
+ * A RaProver dummy that exchanges ra messages with a remote RaVerifier
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
-class NullRaProver(fsmListener: RaProverFsmListener) : RaProverDriver<Unit>(fsmListener) {
+class DemoRaProver(fsmListener: RaProverFsmListener) : RaProverDriver<Unit>(fsmListener) {
     private val queue: BlockingQueue<ByteArray> = LinkedBlockingQueue()
 
     override fun delegate(message: ByteArray) {
@@ -42,21 +42,34 @@ class NullRaProver(fsmListener: RaProverFsmListener) : RaProverDriver<Unit>(fsmL
     }
 
     override fun run() {
-        fsmListener.onRaProverMessage(InternalControlMessage.RA_PROVER_MSG, "".toByteArray())
-        try {
-            queue.take()
-        } catch (e: InterruptedException) {
-            if (running) {
-                LOG.warn("NullRaProver failed")
-                fsmListener.onRaProverMessage(InternalControlMessage.RA_PROVER_FAILED)
+        var countDown = 2
+        while (running) {
+            try {
+                val msg = queue.take()
+                if (LOG.isDebugEnabled) {
+                    LOG.debug("Prover received \"${msg.decodeToString()}\", sleep 1 second...")
+                }
+                sleep(1000)
+                if (LOG.isDebugEnabled) {
+                    LOG.debug("Prover sends \"prover message\"...")
+                }
+                fsmListener.onRaProverMessage(
+                    InternalControlMessage.RA_PROVER_MSG,
+                    "prover message".toByteArray()
+                )
+                if (--countDown == 0) break
+            } catch (e: InterruptedException) {
+                if (running) {
+                    fsmListener.onRaProverMessage(InternalControlMessage.RA_PROVER_FAILED)
+                }
+                return
             }
-            return
         }
         fsmListener.onRaProverMessage(InternalControlMessage.RA_PROVER_OK)
     }
 
     companion object {
-        const val NULL_RA_PROVER_ID = "NullRa"
-        private val LOG = LoggerFactory.getLogger(NullRaProver::class.java)
+        const val DEMO_RA_PROVER_ID = "DemoRA"
+        private val LOG = LoggerFactory.getLogger(DemoRaProver::class.java)
     }
 }
