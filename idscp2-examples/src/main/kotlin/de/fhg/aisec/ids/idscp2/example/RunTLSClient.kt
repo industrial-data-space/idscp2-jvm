@@ -23,8 +23,8 @@ import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.AisecDapsDriver
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.AisecDapsDriverConfig
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.SecurityProfile
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.SecurityRequirements
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.DemoRaProver
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.DemoRaVerifier
+import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.demo.DemoRaProver
+import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.demo.DemoRaVerifier
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.AttestationConfig
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
