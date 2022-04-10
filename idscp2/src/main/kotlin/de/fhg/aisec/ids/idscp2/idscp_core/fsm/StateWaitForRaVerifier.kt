@@ -23,9 +23,8 @@ import de.fhg.aisec.ids.idscp2.idscp_core.fsm.FSM.FsmState
 import de.fhg.aisec.ids.idscp2.idscp_core.messages.Idscp2MessageHelper
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpClose.CloseCause
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpMessage
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
+import java.util.concurrent.CompletableFuture
 
 /**
  * The Wait_For_Ra_Verifier State of the FSM of the IDSCP2 protocol.
@@ -227,7 +226,7 @@ class StateWaitForRaVerifier(
 
                 fsm.raVerifierDriver?.let {
                     // Run in async fire-and-forget coroutine to avoid cycles caused by protocol misuse
-                    GlobalScope.launch {
+                    CompletableFuture.runAsync {
                         it.delegate(event.idscpMessage.idscpRaProver.data.toByteArray())
                     }
                 } ?: run {

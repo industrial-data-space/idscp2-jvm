@@ -36,8 +36,6 @@ import de.fhg.aisec.ids.idscp2.idscp_core.secure_channel.SecureChannel
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpAck
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpData
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpMessage
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import java.nio.charset.StandardCharsets
 import java.security.cert.X509Certificate
@@ -647,7 +645,7 @@ class FSM(
                 it.interrupt()
 
                 // run in async fire-and-forget coroutine to avoid cycles caused by protocol misuse
-                GlobalScope.launch {
+                CompletableFuture.runAsync {
                     it.terminate()
                 }
             }
@@ -689,7 +687,7 @@ class FSM(
                 it.interrupt()
 
                 // Run in async fire-and-forget coroutine to avoid cycles caused by protocol misuse
-                GlobalScope.launch {
+                CompletableFuture.runAsync {
                     it.terminate()
                 }
             }
@@ -713,7 +711,7 @@ class FSM(
         isLocked = true
 
         // run in async fire-and-forget coroutine to avoid cycles caused by protocol misuse
-        GlobalScope.launch {
+        CompletableFuture.runAsync {
             if (LOG.isTraceEnabled) {
                 LOG.trace("Closing secure channel of connection {}...", connectionId)
             }
