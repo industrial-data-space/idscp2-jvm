@@ -17,6 +17,8 @@
  * limitations under the License.
  * =========================LICENSE_END==================================
  */
+@file:Suppress("DEPRECATION")
+
 package de.fhg.aisec.ids.camel.idscp2.client
 
 import de.fhg.aisec.ids.camel.idscp2.ListenerManager
@@ -26,7 +28,9 @@ import de.fhg.aisec.ids.idscp2.app_layer.AppLayerConnection
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.AisecDapsDriver
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.AisecDapsDriverConfig
 import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaProverDummy
+import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaProverDummy2
 import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaVerifierDummy
+import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaVerifierDummy2
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTLSDriver
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.AttestationConfig
@@ -110,17 +114,17 @@ class Idscp2ClientEndpoint(uri: String?, private val remaining: String, componen
     @UriParam(
         label = "common",
         description = "Locally supported Remote Attestation Suite IDs, separated by \"|\"",
-        defaultValue = RaProverDummy.RA_PROVER_DUMMY_ID
+        defaultValue = "${RaProverDummy2.RA_PROVER_DUMMY2_ID}|${RaProverDummy.RA_PROVER_DUMMY_ID}"
     )
-    var supportedRaSuites: String = RaProverDummy.RA_PROVER_DUMMY_ID
+    var supportedRaSuites: String = "${RaProverDummy2.RA_PROVER_DUMMY2_ID}|${RaProverDummy.RA_PROVER_DUMMY_ID}"
 
     @UriParam(
         label = "common",
         description = "Expected Remote Attestation Suite IDs, separated by \"|\", " +
             "each communication peer must support at least one",
-        defaultValue = RaVerifierDummy.RA_VERIFIER_DUMMY_ID
+        defaultValue = "${RaVerifierDummy2.RA_VERIFIER_DUMMY2_ID}|${RaVerifierDummy.RA_VERIFIER_DUMMY_ID}"
     )
-    var expectedRaSuites: String = RaVerifierDummy.RA_VERIFIER_DUMMY_ID
+    var expectedRaSuites: String = "${RaVerifierDummy2.RA_VERIFIER_DUMMY2_ID}|${RaVerifierDummy.RA_VERIFIER_DUMMY_ID}"
 
     @UriParam(
         label = "common",

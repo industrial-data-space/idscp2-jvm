@@ -68,6 +68,7 @@ import kotlin.io.path.absolutePathString
 /**
  * Default DAPS Driver Implementation for requesting valid dynamicAttributeToken and verifying DAT
  *
+ * @author Michael Lux (michael.lux@aisec.fraunhofer.de)
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  * @author Gerd Brost (gerd.brost@aisec.fraunhofer.de)
  */
@@ -133,11 +134,9 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
     }
 
     /**
-     * Pair of OkHttpClient with in-memory cache and a ReadWriteLock.
-     * Will be reused for equal TrustStores.
-     * The ReadWriteLock is used to handle rare IOExceptions caused by race conditions of FakeFileSystem.
+     * Ktor HTTP client for DAPS communication
      */
-    private val httpClient = OK_HTTP_CLIENTS.computeIfAbsent(config.trustStorePath.absolutePathString()) {
+    private val httpClient = HTTP_CLIENTS.computeIfAbsent(config.trustStorePath.absolutePathString()) {
         HttpClient(Java) {
             engine {
                 config {
@@ -541,6 +540,6 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
         // If DAPS doesn't provide metadata, retry after this timespan has elapsed
         private const val META_FALLBACK_LIFETIME_MS = 86_400_000L
         // OkHttpClient pool
-        private val OK_HTTP_CLIENTS = synchronizedMap(mutableMapOf<String, HttpClient>())
+        private val HTTP_CLIENTS = synchronizedMap(mutableMapOf<String, HttpClient>())
     }
 }

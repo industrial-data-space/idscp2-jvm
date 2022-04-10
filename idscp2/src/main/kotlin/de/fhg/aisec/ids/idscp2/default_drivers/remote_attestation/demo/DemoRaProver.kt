@@ -69,7 +69,7 @@ class DemoRaProver(fsmListener: RaProverFsmListener) : RaProverDriver<Unit>(fsmL
     }
 
     companion object {
-        const val DEMO_RA_PROVER_ID = "DemoRA"
+        const val DEMO_RA_PROVER_ID = "Demo"
         private val LOG = LoggerFactory.getLogger(DemoRaProver::class.java)
     }
 }

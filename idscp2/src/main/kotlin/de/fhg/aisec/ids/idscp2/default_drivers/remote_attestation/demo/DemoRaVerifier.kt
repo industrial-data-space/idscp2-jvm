@@ -71,7 +71,7 @@ class DemoRaVerifier(fsmListener: RaVerifierFsmListener) : RaVerifierDriver<Unit
     }
 
     companion object {
-        const val DEMO_RA_VERIFIER_ID = "DemoRA"
+        const val DEMO_RA_VERIFIER_ID = "Demo"
         private val LOG = LoggerFactory.getLogger(DemoRaVerifier::class.java)
     }
 }

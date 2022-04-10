@@ -22,44 +22,22 @@ package de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy
 import de.fhg.aisec.ids.idscp2.idscp_core.drivers.RaProverDriver
 import de.fhg.aisec.ids.idscp2.idscp_core.fsm.InternalControlMessage
 import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RaProverFsmListener
-import java.util.concurrent.BlockingQueue
-import java.util.concurrent.LinkedBlockingQueue
 
 /**
- * A RaProver dummy that exchanges ra messages with a remote RaVerifier
+ * A RaProver dummy just confirms successful remote attestation.
  *
- * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  * @author Michael Lux (michael.lux@aisec.fraunhofer.de)
  */
-@Deprecated("""This legacy remote attestation ("Dummy") sends useless messages. Use "Dummy2" instead.""")
-class RaProverDummy(fsmListener: RaProverFsmListener) : RaProverDriver<Unit>(fsmListener) {
-    private val queue: BlockingQueue<ByteArray> = LinkedBlockingQueue()
+class RaProverDummy2(fsmListener: RaProverFsmListener) : RaProverDriver<Unit>(fsmListener) {
 
     override fun delegate(message: ByteArray) {
-        queue.add(message)
     }
 
     override fun run() {
-        var countDown = 2
-        while (running) {
-            try {
-                fsmListener.onRaProverMessage(
-                    InternalControlMessage.RA_PROVER_MSG,
-                    "test".toByteArray()
-                )
-                queue.take()
-                if (--countDown == 0) break
-            } catch (e: InterruptedException) {
-                if (running) {
-                    fsmListener.onRaProverMessage(InternalControlMessage.RA_PROVER_FAILED)
-                }
-                return
-            }
-        }
         fsmListener.onRaProverMessage(InternalControlMessage.RA_PROVER_OK)
     }
 
     companion object {
-        const val RA_PROVER_DUMMY_ID = "Dummy"
+        const val RA_PROVER_DUMMY2_ID = "Dummy2"
     }
 }

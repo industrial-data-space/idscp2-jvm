@@ -17,10 +17,14 @@
  * limitations under the License.
  * =========================LICENSE_END==================================
  */
+@file:Suppress("DEPRECATION")
+
 package de.fhg.aisec.ids.camel.idscp2.client
 
 import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaProverDummy
+import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaProverDummy2
 import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaVerifierDummy
+import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaVerifierDummy2
 import de.fhg.aisec.ids.idscp2.idscp_core.ra_registry.RaProverDriverRegistry
 import de.fhg.aisec.ids.idscp2.idscp_core.ra_registry.RaVerifierDriverRegistry
 import org.apache.camel.Endpoint
@@ -34,8 +38,14 @@ class Idscp2ClientComponent : DefaultComponent() {
         RaProverDriverRegistry.registerDriver(
             RaProverDummy.RA_PROVER_DUMMY_ID, ::RaProverDummy, null
         )
+        RaProverDriverRegistry.registerDriver(
+            RaProverDummy2.RA_PROVER_DUMMY2_ID, ::RaProverDummy2, null
+        )
         RaVerifierDriverRegistry.registerDriver(
             RaVerifierDummy.RA_VERIFIER_DUMMY_ID, ::RaVerifierDummy, null
+        )
+        RaVerifierDriverRegistry.registerDriver(
+            RaVerifierDummy2.RA_VERIFIER_DUMMY2_ID, ::RaVerifierDummy2, null
         )
     }
 
