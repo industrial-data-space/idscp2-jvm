@@ -156,7 +156,7 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
         get() = sslSocket.isConnected
 
     override fun remotePeer(): String {
-        TODO("Not yet implemented")
+        return remotePeer
     }
 
     override fun handshakeCompleted(handshakeCompletedEvent: HandshakeCompletedEvent) {
