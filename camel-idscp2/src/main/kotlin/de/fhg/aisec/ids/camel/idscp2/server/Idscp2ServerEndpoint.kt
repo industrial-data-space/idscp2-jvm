@@ -21,6 +21,7 @@
 
 package de.fhg.aisec.ids.camel.idscp2.server
 
+import de.fhg.aisec.ids.camel.idscp2.ListenerManager
 import de.fhg.aisec.ids.camel.idscp2.Utils
 import de.fhg.aisec.ids.idscp2.app_layer.AppLayerConnection
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.AisecDapsDriver
@@ -187,6 +188,8 @@ class Idscp2ServerEndpoint(uri: String?, private val remaining: String, componen
         } else {
             consumers.forEach { connection.addGenericMessageListener(it) }
         }
+        // notify connection listeners
+        ListenerManager.publishConnectionEvent(connection, this)
         // Handle connection errors and closing
         connection.addConnectionListener(object : Idscp2ConnectionListener {
             override fun onError(t: Throwable) {

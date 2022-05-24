@@ -166,6 +166,9 @@ class Idscp2ClientEndpoint(uri: String?, private val remaining: String, componen
                         header?.let { ListenerManager.publishTransferContractEvent(connection, it.transferContract) }
                     }
                 }
+                // notify connection listeners
+
+                ListenerManager.publishConnectionEvent(c, this)
                 c
             }
     }
