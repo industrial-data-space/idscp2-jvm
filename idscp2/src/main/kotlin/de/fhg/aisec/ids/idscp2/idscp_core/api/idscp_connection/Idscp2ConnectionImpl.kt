@@ -193,6 +193,10 @@ class Idscp2ConnectionImpl(
         connectionListeners.forEach { l: Idscp2ConnectionListener -> l.onClose() }
     }
 
+    override fun remotePeer(): String {
+        return fsm.remotePeer()
+    }
+
     /**
      * Check if the idscp connection is currently established
      *

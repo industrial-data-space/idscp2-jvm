@@ -19,15 +19,20 @@
  */
 package de.fhg.aisec.ids.camel.idscp2
 
+import de.fhg.aisec.ids.camel.idscp2.client.Idscp2ClientEndpoint
+import de.fhg.aisec.ids.camel.idscp2.listeners.ConnectionListener
 import de.fhg.aisec.ids.camel.idscp2.listeners.ExchangeListener
 import de.fhg.aisec.ids.camel.idscp2.listeners.TransferContractListener
+import de.fhg.aisec.ids.camel.idscp2.server.Idscp2ServerEndpoint
 import de.fhg.aisec.ids.idscp2.app_layer.AppLayerConnection
 import org.apache.camel.Exchange
+import org.apache.camel.support.DefaultEndpoint
 import java.net.URI
 
 object ListenerManager {
     private val exchangeListeners = HashSet<ExchangeListener>()
     private val transferContractListeners = HashSet<TransferContractListener>()
+    private val connectionListeners = HashSet<ConnectionListener>()
 
     fun addExchangeListener(listener: ExchangeListener) {
         exchangeListeners += listener
@@ -35,6 +40,10 @@ object ListenerManager {
 
     fun addTransferContractListener(listener: TransferContractListener) {
         transferContractListeners += listener
+    }
+
+    fun addConnectionListener(listener: ConnectionListener) {
+        connectionListeners += listener
     }
 
     fun removeExchangeListener(listener: ExchangeListener) {
@@ -45,11 +54,29 @@ object ListenerManager {
         transferContractListeners -= listener
     }
 
+    fun removeConnectionListener(listener: ConnectionListener) {
+        connectionListeners -= listener
+    }
+
     fun publishExchangeEvent(connection: AppLayerConnection, exchange: Exchange) {
         exchangeListeners.forEach { it.onExchange(connection, exchange) }
     }
 
     fun publishTransferContractEvent(connection: AppLayerConnection, contract: URI?) {
         transferContractListeners.forEach { it.onTransferContractChange(connection, contract) }
+    }
+
+    fun publishConnectionEvent(connection: AppLayerConnection, endpoint: DefaultEndpoint) {
+        when (endpoint) {
+            is Idscp2ClientEndpoint -> {
+                connectionListeners.forEach { it.onClientConnection(connection, endpoint) }
+            }
+            is Idscp2ServerEndpoint -> {
+                connectionListeners.forEach { it.onServerConnection(connection, endpoint) }
+            }
+            else -> {
+                // nothing to do
+            }
+        }
     }
 }

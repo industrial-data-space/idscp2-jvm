@@ -70,6 +70,8 @@ interface Idscp2Connection {
 
     fun onClose()
 
+    fun remotePeer(): String
+
     /**
      * Check if the idscp connection is currently established
      *

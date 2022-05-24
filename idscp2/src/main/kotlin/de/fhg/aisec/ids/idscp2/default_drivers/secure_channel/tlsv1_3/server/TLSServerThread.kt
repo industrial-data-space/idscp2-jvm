@@ -66,6 +66,7 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
     private val out: DataOutputStream
     private val listenerPromise = CompletableFuture<SecureChannelListener>()
     private val tlsVerificationLatch = FastLatch()
+    private var remotePeer = "NotConnected"
 
     override fun run() {
         // first run the tls handshake to enforce catching every error occurred during the handshake
@@ -154,6 +155,10 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
     override val isConnected: Boolean
         get() = sslSocket.isConnected
 
+    override fun remotePeer(): String {
+        return remotePeer
+    }
+
     override fun handshakeCompleted(handshakeCompletedEvent: HandshakeCompletedEvent) {
         if (LOG.isTraceEnabled) {
             LOG.trace("TLS Handshake was successful")
@@ -178,6 +183,7 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
             if (LOG.isTraceEnabled) {
                 LOG.trace("TLS session is valid")
             }
+            remotePeer = "${sslSession.peerHost}:${sslSession.peerPort}"
 
             // provide secure channel to IDSCP2 Config and register secure channel as listener
             val secureChannel = SecureChannel(this, peerCert)
