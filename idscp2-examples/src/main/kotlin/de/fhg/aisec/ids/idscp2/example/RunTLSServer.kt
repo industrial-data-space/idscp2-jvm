@@ -23,13 +23,13 @@ import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.AisecDapsDriver
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.AisecDapsDriverConfig
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.SecurityProfile
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.SecurityRequirements
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.demo.DemoRaProver
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.demo.DemoRaVerifier
+import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaProverDummy2
+import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaVerifierDummy2
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.AttestationConfig
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
 import java.nio.file.Paths
-import java.util.Objects
+import java.util.*
 
 object RunTLSServer {
     @JvmStatic
@@ -38,7 +38,7 @@ object RunTLSServer {
         val keyStorePath = Paths.get(
             Objects.requireNonNull(
                 RunTLSServer::class.java.classLoader
-                    .getResource("ssl/provider-keystore.p12")
+                    .getResource("ssl/localhost.p12")
             ).path
         )
 
@@ -50,8 +50,8 @@ object RunTLSServer {
         )
 
         val localAttestationConfig = AttestationConfig.Builder()
-            .setSupportedRaSuite(arrayOf(DemoRaProver.DEMO_RA_PROVER_ID))
-            .setExpectedRaSuite(arrayOf(DemoRaVerifier.DEMO_RA_VERIFIER_ID))
+            .setSupportedRaSuite(arrayOf(RaProverDummy2.RA_PROVER_DUMMY2_ID))
+            .setExpectedRaSuite(arrayOf(RaVerifierDummy2.RA_VERIFIER_DUMMY2_ID))
             .setRaTimeoutDelay(300 * 1000L) // 300 seconds
             .build()
 
@@ -64,7 +64,7 @@ object RunTLSServer {
             AisecDapsDriverConfig.Builder()
                 .setKeyStorePath(keyStorePath)
                 .setTrustStorePath(trustStorePath)
-                .setDapsUrl("https://daps-dev.aisec.fraunhofer.de")
+                .setDapsUrl("https://daps.aisec.fraunhofer.de")
                 .setSecurityRequirements(securityRequirements)
                 .build()
         )
@@ -78,7 +78,6 @@ object RunTLSServer {
             .setKeyStorePath(keyStorePath)
             .setTrustStorePath(trustStorePath)
             .setCertificateAlias("1.0.1")
-            .setHost("consumer-core")
             .build()
 
         val initiator = Idscp2ServerInitiator()

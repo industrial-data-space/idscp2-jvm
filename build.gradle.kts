@@ -84,6 +84,35 @@ subprojects {
 
         // Needed for kotlin modules, provided at runtime via kotlin-osgi-bundle in karaf-features-ids
         api("org.jetbrains.kotlin", "kotlin-stdlib-jdk8", libraryVersions["kotlin"])
+
+        // Some versions are downgraded for unknown reasons, fix this here
+        val groupPins = mapOf(
+            "org.jetbrains.kotlin" to mapOf(
+                "*" to "kotlin"
+            )
+        )
+        // We need to explicitly specify the kotlin version for all kotlin dependencies,
+        // because otherwise something (maybe a plugin) downgrades the kotlin version,
+        // which produces errors in the kotlin compiler. This is really nasty.
+        configurations.all {
+            resolutionStrategy.eachDependency {
+                groupPins[requested.group]?.let { pins ->
+                    pins["*"]?.let {
+                        // Pin all names when asterisk is set
+                        useVersion(
+                            libraryVersions[it]
+                                ?: throw RuntimeException("Key \"$it\" not set in libraryVersions.yaml")
+                        )
+                    } ?: pins[requested.name]?.let { pin ->
+                        // Pin only for specific names given in map
+                        useVersion(
+                            libraryVersions[pin]
+                                ?: throw RuntimeException("Key \"$pin\" not set in libraryVersions.yaml")
+                        )
+                    }
+                }
+            }
+        }
     }
 
     tasks.withType<KotlinCompile> {
