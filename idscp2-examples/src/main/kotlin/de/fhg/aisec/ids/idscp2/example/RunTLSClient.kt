@@ -34,7 +34,6 @@ import java.util.Objects
 object RunTLSClient {
     @JvmStatic
     fun main(args: Array<String>) {
-
         val keyStorePath = Paths.get(
             Objects.requireNonNull(
                 RunTLSClient::class.java.classLoader

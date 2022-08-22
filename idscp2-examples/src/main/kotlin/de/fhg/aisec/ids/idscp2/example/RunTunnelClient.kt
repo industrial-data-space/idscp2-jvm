@@ -31,7 +31,6 @@ import java.util.Objects
 object RunTunnelClient {
     @JvmStatic
     fun main(args: Array<String>) {
-
         val localAttestationConfig = AttestationConfig.Builder()
             .setSupportedRaSuite(arrayOf(DemoRaProver.DEMO_RA_PROVER_ID))
             .setExpectedRaSuite(arrayOf(DemoRaVerifier.DEMO_RA_VERIFIER_ID))

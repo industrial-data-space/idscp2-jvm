@@ -1,10 +1,7 @@
 import com.google.protobuf.gradle.protobuf
 import org.gradle.plugins.ide.idea.model.IdeaModel
 
-@Suppress("UNCHECKED_CAST")
-val libraryVersions = rootProject.extra.get("libraryVersions") as Map<String, String>
-
-version = libraryVersions["idscp2"] ?: error("IDSCP2 version not specified")
+version = libs.versions.idscp2.get()
 
 apply(plugin = "java")
 apply(plugin = "com.google.protobuf")
@@ -35,10 +32,10 @@ val testImplementation by configurations
 dependencies {
     api(project(":idscp2"))
 
-    api("de.fraunhofer.iais.eis.ids.infomodel", "java", libraryVersions["infomodel"])
-    implementation("de.fraunhofer.iais.eis.ids", "infomodel-serializer", libraryVersions["infomodel"])
+    api(libs.infomodel.model)
+    implementation(libs.infomodel.serializer)
 
-    implementation("com.google.protobuf", "protobuf-java", libraryVersions["protobuf"])
+    implementation(libs.protobuf)
 }
 
 tasks.named("spotlessKotlin") {

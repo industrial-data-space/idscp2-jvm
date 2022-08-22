@@ -230,7 +230,6 @@ class FSM(
      * driver implementations
      */
     override fun onMessage(data: ByteArray) {
-
         // check for incorrect usage
         checkForFsmCycles()
 
@@ -703,7 +702,6 @@ class FSM(
      * and notify handshake lock if necessary
      */
     fun shutdownFsm() {
-
         if (LOG.isTraceEnabled) {
             LOG.trace("Shutting down FSM of connection {}...", connectionId)
             LOG.trace("Running close handlers of connection {}...", connectionId)
@@ -889,31 +887,63 @@ class FSM(
 
         /* ------------- FSM STATE Initialization -------------*/
         states[FsmState.STATE_CLOSED] = StateClosed(
-            this, onMessageBlock, attestationConfig
+            this,
+            onMessageBlock,
+            attestationConfig
         )
         states[FsmState.STATE_WAIT_FOR_HELLO] = StateWaitForHello(
-            this, handshakeTimer, datTimer, dapsDriver, attestationConfig
+            this,
+            handshakeTimer,
+            datTimer,
+            dapsDriver,
+            attestationConfig
         )
         states[FsmState.STATE_WAIT_FOR_RA] = StateWaitForRa(
-            this, handshakeTimer, verifierHandshakeTimer, proverHandshakeTimer, raTimer
+            this,
+            handshakeTimer,
+            verifierHandshakeTimer,
+            proverHandshakeTimer,
+            raTimer
         )
         states[FsmState.STATE_WAIT_FOR_RA_PROVER] = StateWaitForRaProver(
-            this, raTimer, handshakeTimer, proverHandshakeTimer, ackTimer
+            this,
+            raTimer,
+            handshakeTimer,
+            proverHandshakeTimer,
+            ackTimer
         )
         states[FsmState.STATE_WAIT_FOR_RA_VERIFIER] = StateWaitForRaVerifier(
-            this, raTimer, handshakeTimer, verifierHandshakeTimer, ackTimer
+            this,
+            raTimer,
+            handshakeTimer,
+            verifierHandshakeTimer,
+            ackTimer
         )
         states[FsmState.STATE_WAIT_FOR_DAT_AND_RA] = StateWaitForDatAndRa(
-            this, handshakeTimer, proverHandshakeTimer, datTimer, dapsDriver
+            this,
+            handshakeTimer,
+            proverHandshakeTimer,
+            datTimer,
+            dapsDriver
         )
         states[FsmState.STATE_WAIT_FOR_DAT_AND_RA_VERIFIER] = StateWaitForDatAndRaVerifier(
-            this, handshakeTimer, datTimer, dapsDriver
+            this,
+            handshakeTimer,
+            datTimer,
+            dapsDriver
         )
         states[FsmState.STATE_ESTABLISHED] = StateEstablished(
-            this, raTimer, handshakeTimer, ackTimer, nextSendAlternatingBit
+            this,
+            raTimer,
+            handshakeTimer,
+            ackTimer,
+            nextSendAlternatingBit
         )
         states[FsmState.STATE_WAIT_FOR_ACK] = StateWaitForAck(
-            this, raTimer, handshakeTimer, ackTimer
+            this,
+            raTimer,
+            handshakeTimer,
+            ackTimer
         )
 
         // Set initial state

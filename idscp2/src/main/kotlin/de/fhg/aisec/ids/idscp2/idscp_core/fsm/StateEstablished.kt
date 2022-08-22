@@ -95,7 +95,8 @@ class StateEstablished(
             Transition {
                 // repack data, include alternating bit
                 val idscpMessage = Idscp2MessageHelper.createIdscpDataMessageWithAltBit(
-                    it.idscpMessage.idscpData.data.toByteArray(), alternatingBit
+                    it.idscpMessage.idscpData.data.toByteArray(),
+                    alternatingBit
                 )
 
                 // send repacked data

@@ -176,7 +176,9 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
 
             // verify tls session on application layer: hostname verification, certificate validity
             TLSSessionVerificationHelper.verifyTlsSession(
-                sslSession.peerHost, sslSession.peerPort, peerCert,
+                sslSession.peerHost,
+                sslSession.peerPort,
+                peerCert,
                 nativeTlsConfiguration.hostnameVerificationEnabled,
                 false
             )
@@ -191,7 +193,9 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
 
             // initiate idscp2 connection
             AsyncIdscp2Factory.initiateIdscp2Connection(
-                secureChannel, serverConfiguration, connectionFactory,
+                secureChannel,
+                serverConfiguration,
+                connectionFactory,
                 connectionFuture
             )
         } catch (e: Exception) {

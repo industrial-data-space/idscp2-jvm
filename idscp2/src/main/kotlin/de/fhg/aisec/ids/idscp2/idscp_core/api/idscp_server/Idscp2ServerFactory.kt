@@ -52,8 +52,10 @@ class Idscp2ServerFactory<CC : Idscp2Connection, SecureChannelConfiguration>(
         // create a connection listener promise for the Idscp2Server which is responsible for new connections
         val connectionListenerPromise = CompletableFuture<ServerConnectionListener<CC>>()
         val secureServer = secureChannelDriver.listen(
-            connectionListenerPromise, secureChannelConfig,
-            serverConfiguration, connectionFactory
+            connectionListenerPromise,
+            secureChannelConfig,
+            serverConfiguration,
+            connectionFactory
         )
         val server = Idscp2Server(secureServer, endpointListener)
         connectionListenerPromise.complete(server)

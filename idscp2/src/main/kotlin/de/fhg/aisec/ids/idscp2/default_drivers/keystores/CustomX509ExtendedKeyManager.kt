@@ -75,7 +75,8 @@ class CustomX509ExtendedKeyManager internal constructor(
             if (LOG.isTraceEnabled) {
                 LOG.trace(
                     "Different keyType '{}' in chooseClientAlias() in CustomX509ExtendedKeyManager, expected '{}'",
-                    keyType, this.keyType
+                    keyType,
+                    this.keyType
                 )
             }
         }
@@ -113,7 +114,8 @@ class CustomX509ExtendedKeyManager internal constructor(
             if (LOG.isTraceEnabled) {
                 LOG.trace(
                     "Different keyType '{}' in chooseServerAlias() in CustomX509ExtendedKeyManager, expected '{}'",
-                    keyType, this.keyType
+                    keyType,
+                    this.keyType
                 )
             }
         }
@@ -130,7 +132,8 @@ class CustomX509ExtendedKeyManager internal constructor(
             LOG.warn(
                 "Different certAlias '{}' in getCertificateChain() in class X509ExtendedKeyManager, " +
                     "expected: '{}'",
-                certAlias, this.certAlias
+                certAlias,
+                this.certAlias
             )
             null
         }
@@ -144,7 +147,8 @@ class CustomX509ExtendedKeyManager internal constructor(
         } else {
             LOG.warn(
                 "Different certAlias '{}' in getPrivateKey() in class X509ExtendedKeyManager, expected '{}'",
-                certAlias, this.certAlias
+                certAlias,
+                this.certAlias
             )
 
             null

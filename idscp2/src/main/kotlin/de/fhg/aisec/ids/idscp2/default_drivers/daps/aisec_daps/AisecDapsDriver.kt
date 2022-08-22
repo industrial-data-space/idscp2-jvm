@@ -27,8 +27,8 @@ import io.jsonwebtoken.SignatureAlgorithm
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.java.Java
-import io.ktor.client.plugins.ContentNegotiation
 import io.ktor.client.plugins.cache.HttpCache
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.forms.submitForm
 import io.ktor.client.request.request
 import io.ktor.client.statement.bodyAsText
@@ -330,8 +330,11 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
                     }
 
                     innerVerifyToken(
-                        token.toByteArray(StandardCharsets.UTF_8), null, localPeerCertificate,
-                        true, dapsMeta
+                        token.toByteArray(StandardCharsets.UTF_8),
+                        null,
+                        localPeerCertificate,
+                        true,
+                        dapsMeta
                     )
                     token.toByteArray(StandardCharsets.UTF_8)
                 }
@@ -354,10 +357,10 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
      * @throws DatException
      */
     override fun verifyToken(dat: ByteArray, peerCertificate: X509Certificate?): Long {
-
         // We expect the peer certificate to validate its fingerprints with the DAT
-        if (peerCertificate == null)
+        if (peerCertificate == null) {
             throw DatException("Missing peer certificate for fingerprint validation")
+        }
 
         return innerVerifyToken(dat, securityRequirements, peerCertificate, false)
     }

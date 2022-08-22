@@ -25,7 +25,6 @@ import java.security.cert.CertificateExpiredException
 import java.security.cert.CertificateNotYetValidException
 import java.security.cert.CertificateParsingException
 import java.security.cert.X509Certificate
-import java.util.ArrayList
 import java.util.Date
 import java.util.regex.Pattern
 import javax.net.ssl.SSLPeerUnverifiedException
@@ -67,19 +66,17 @@ object TLSSessionVerificationHelper {
             LOG.trace("Connected to {}:{}", host, port)
         }
         try {
-
             /*
              * Hostname verification is always enabled per default but the user can disable it using an as
              * danger marked function of the native tls configuration (e.g. for testing purposes)
              */
             if (hostnameVerificationEnabled) {
-
-            /*
-             * According to RFC6125, hostname verification should be done against the certificate's
-             * subject alternative name's (SANs) DNSName field or the SANs IPAddress. In some legacy
-             * implementations, the check is done against the certificate's commonName, but this is
-             * deprecated for quite a while and is therefore not supported anymore in the IDSCP2 protocol.
-             */
+                /*
+                 * According to RFC6125, hostname verification should be done against the certificate's
+                 * subject alternative name's (SANs) DNSName field or the SANs IPAddress. In some legacy
+                 * implementations, the check is done against the certificate's commonName, but this is
+                 * deprecated for quite a while and is therefore not supported anymore in the IDSCP2 protocol.
+                 */
                 val sans = peerCert.subjectAlternativeNames
                     ?: throw SSLPeerUnverifiedException(
                         "No Subject alternative names for hostname " +
@@ -194,7 +191,6 @@ object TLSSessionVerificationHelper {
      * match dNS Name
      */
     private fun checkHostname(dnsNameLabels: List<String>, hostNameLabels: List<String>): Boolean {
-
         /*
          * support wildcard matching of DNS names as described in RFC6125 Section 6.4.3
          *

@@ -217,7 +217,6 @@ class Idscp2Integration {
         proverSuite: Array<String>,
         verifierSuite: Array<String>
     ): Idscp2Configuration {
-
         val attestationConfig = AttestationConfig.Builder()
             .setRaTimeoutDelay(raDelay)
             .setExpectedRaSuite(verifierSuite)
@@ -233,7 +232,6 @@ class Idscp2Integration {
     }
 
     private fun createTlsConfig(keystore: String): NativeTlsConfiguration {
-
         val keyStorePath = Paths.get(
             Objects.requireNonNull(
                 Idscp2Integration::class.java.classLoader
@@ -278,7 +276,6 @@ class Idscp2Integration {
         clientTlsConfig: NativeTlsConfiguration,
         serverTlsConfig: NativeTlsConfiguration
     ) {
-
         val closeLatch = CountDownLatch(1)
 
         // start server
@@ -291,7 +288,7 @@ class Idscp2Integration {
             },
             serverConfig,
             NativeTLSDriver(),
-            serverTlsConfig,
+            serverTlsConfig
         )
         idscpServer = serverFactory.listen()
         await().until { idscpServer.isRunning }
@@ -321,7 +318,6 @@ class Idscp2Integration {
         serverTlsConfig: NativeTlsConfiguration,
         reRaOrDat: Boolean
     ) {
-
         val connectionLatch = CountDownLatch(2)
         val messageLatchServer = CountDownLatch(3)
         val messageLatchClient = CountDownLatch(2)
@@ -348,7 +344,7 @@ class Idscp2Integration {
             },
             serverConfig,
             NativeTLSDriver(),
-            serverTlsConfig,
+            serverTlsConfig
         )
         idscpServer = serverFactory.listen()
         await().until { idscpServer.isRunning }
@@ -386,14 +382,12 @@ class Idscp2Integration {
         await().until { clientConnection.isConnected && serverConnection.isConnected }
 
         if (reRaOrDat) {
-
             // ensure re-attestation takes place
             await().until { !clientConnection.isConnected && !serverConnection.isConnected }
 
             // wait until re-attestation was successful
             await().until { clientConnection.isConnected && serverConnection.isConnected }
         } else {
-
             // send two message from the client to the server via blocking send
             clientConnection.blockingSend("ONE".toByteArray(StandardCharsets.UTF_8), 2000, 100)
             clientConnection.blockingSend("TWO".toByteArray(StandardCharsets.UTF_8), 2000, 100)
@@ -437,18 +431,25 @@ class Idscp2Integration {
      */
     @Test(timeout = 40000)
     fun testIdscp2Valid() {
-
         // create client config
         val clientIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            100,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            100,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
@@ -466,18 +467,25 @@ class Idscp2Integration {
      */
     @Test(timeout = 20000)
     fun testIdscp2HandshakeTimeoutClient() {
-
         // create client config
         val clientIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 100, 5, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            100,
+            5,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            100,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
@@ -494,18 +502,25 @@ class Idscp2Integration {
      */
     @Test(timeout = 20000)
     fun testIdscp2HandshakeTimeoutServer() {
-
         // create client config
         val clientIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            100,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 100, 5, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            100,
+            5,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
@@ -520,18 +535,25 @@ class Idscp2Integration {
      */
     @Test(timeout = 40000)
     fun testIdscp2AckTimeout() {
-
         // create client config
         val clientIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 1, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            1,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 500, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            500,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
@@ -547,21 +569,28 @@ class Idscp2Integration {
      */
     @Test(timeout = 30000)
     fun testIdscp2RaTimeoutClient() {
-
         val raTimeout: Long = 750
         val raDriverDelay: Long = 500
 
         // create client config
         val clientIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 100, 5000, raTimeout,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            100,
+            5000,
+            raTimeout,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            100,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
@@ -577,21 +606,28 @@ class Idscp2Integration {
      */
     @Test(timeout = 30000)
     fun testIdscp2RaTimeoutServer() {
-
         val raTimeout: Long = 750
         val raDriverDelay: Long = 500
 
         // create client config
         val clientIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            100,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 100, 5000, raTimeout,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            100,
+            5000,
+            raTimeout,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
@@ -607,18 +643,25 @@ class Idscp2Integration {
      */
     @Test(timeout = 20000)
     fun testIdscp2RaMismatch() {
-
         // create client config
         val clientIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NullRa"), arrayOf("NullRa")
+            DapsAcceptor(3600),
+            100,
+            5000,
+            3600000,
+            arrayOf("NullRa"),
+            arrayOf("NullRa")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NoNullRa"), arrayOf("NoNullRa")
+            DapsAcceptor(3600),
+            100,
+            5000,
+            3600000,
+            arrayOf("NoNullRa"),
+            arrayOf("NoNullRa")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
@@ -634,18 +677,25 @@ class Idscp2Integration {
      */
     @Test(timeout = 30000)
     fun testIdscp2EmptyRaRegistry() {
-
         // create client config
         val clientIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            100,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            100,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
@@ -657,18 +707,25 @@ class Idscp2Integration {
      */
     @Test(timeout = 20000)
     fun testIdscp2DapsRejectorClient() {
-
         // create client config
         val clientIdscpConfig = createIdscp2Config(
-            DapsRejector(), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsRejector(),
+            100,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            100,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
@@ -685,15 +742,23 @@ class Idscp2Integration {
     fun testIdscp2DapsRejectorServer() {
         // create client config
         val clientIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            100,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
-            DapsRejector(), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsRejector(),
+            100,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
@@ -708,18 +773,25 @@ class Idscp2Integration {
      */
     @Test(timeout = 20000)
     fun testIdscp2DapsInvalidTokenClient() {
-
         // create client config
         val clientIdscpConfig = createIdscp2Config(
-            InvalidDaps(), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            InvalidDaps(),
+            100,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            100,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
@@ -734,18 +806,25 @@ class Idscp2Integration {
      */
     @Test(timeout = 20000)
     fun testIdscp2DapsInvalidTokenServer() {
-
         // create client config
         val clientIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            100,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
-            InvalidDaps(), 100, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            InvalidDaps(),
+            100,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
@@ -760,18 +839,25 @@ class Idscp2Integration {
      */
     @Test(timeout = 40000)
     fun testIdscp2DapsShortLifetimeClient() {
-
         // create client config
         val clientIdscpConfig = createIdscp2Config(
-            DapsAcceptor(2), 500, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(2),
+            500,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 500, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            500,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
@@ -787,18 +873,25 @@ class Idscp2Integration {
      */
     @Test(timeout = 40000)
     fun testIdscp2DapsShortLifetimeServer() {
-
         // create client config
         val clientIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 500, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            500,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
-            DapsAcceptor(2), 500, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(2),
+            500,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
@@ -816,15 +909,23 @@ class Idscp2Integration {
     fun testIdscp2RaVerifierRejector() {
         // create client config
         val clientIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 500, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            500,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 500, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            500,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
@@ -841,15 +942,23 @@ class Idscp2Integration {
     fun testIdscp2RaProverRejector() {
         // create client config
         val clientIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 500, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            500,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 500, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            500,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 
@@ -866,15 +975,23 @@ class Idscp2Integration {
     fun testIdscp2RaRejectors() {
         // create client config
         val clientIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 500, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            500,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
-            DapsAcceptor(3600), 500, 5000, 3600000,
-            arrayOf("NotUsed", "NullRa"), arrayOf("NullRa", "NotUsed")
+            DapsAcceptor(3600),
+            500,
+            5000,
+            3600000,
+            arrayOf("NotUsed", "NullRa"),
+            arrayOf("NullRa", "NotUsed")
         )
         val serverTlsConfig = createTlsConfig("provider-keystore.p12")
 

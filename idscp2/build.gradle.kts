@@ -1,10 +1,7 @@
 import com.google.protobuf.gradle.protobuf
 import org.gradle.plugins.ide.idea.model.IdeaModel
 
-@Suppress("UNCHECKED_CAST")
-val libraryVersions = rootProject.extra.get("libraryVersions") as Map<String, String>
-
-version = libraryVersions["idscp2"] ?: error("IDSCP2 version not specified")
+version = libs.versions.idscp2.get()
 
 apply(plugin = "java")
 apply(plugin = "com.google.protobuf")
@@ -33,26 +30,19 @@ val api by configurations
 val testImplementation by configurations
 
 dependencies {
-    implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-core-jvm", libraryVersions["kotlinxCoroutines"])
+    implementation(libs.kotlinx.coroutines)
 
-    implementation("org.bouncycastle", "bcprov-jdk15on", libraryVersions["bouncycastle"])
+    implementation(libs.bouncycastle)
 
-    implementation("com.google.protobuf", "protobuf-java", libraryVersions["protobuf"])
+    implementation(libs.protobuf)
 
-    implementation("io.jsonwebtoken", "jjwt-impl", libraryVersions["jsonwebtoken"])
-    // Important, since io.jsonwebtoken:jjwt-jackson references an outdated version with critical CVEs
-    implementation("com.fasterxml.jackson.core", "jackson-databind", libraryVersions["jackson"])
-    implementation("io.jsonwebtoken", "jjwt-jackson", libraryVersions["jsonwebtoken"])
-    implementation("io.jsonwebtoken", "jjwt-api", libraryVersions["jsonwebtoken"])
-    implementation("org.bitbucket.b_c", "jose4j", libraryVersions["jose4j"])
-    implementation("io.ktor", "ktor-client-core", libraryVersions["ktor"])
-    implementation("io.ktor", "ktor-client-java", libraryVersions["ktor"])
-    implementation("io.ktor", "ktor-client-content-negotiation", libraryVersions["ktor"])
-    implementation("io.ktor", "ktor-serialization-jackson", libraryVersions["ktor"])
+    implementation(libs.bundles.jsonwebtoken)
+    implementation(libs.jose4j)
+    implementation(libs.bundles.ktor.richClient)
 
-    testImplementation("org.awaitility", "awaitility-kotlin", libraryVersions["awaitility"])
-    testImplementation("junit", "junit", libraryVersions["junit4"])
-    testImplementation("org.mockito", "mockito-core", libraryVersions["mockito"])
+    testImplementation(libs.awaitility)
+    testImplementation(libs.junit)
+    testImplementation(libs.mockito)
 }
 
 tasks.named("spotlessKotlin") {

@@ -45,11 +45,15 @@ class CommandlineTunnelClient {
 
         // register ra drivers
         RaProverDriverRegistry.registerDriver(
-            DemoRaProver.DEMO_RA_PROVER_ID, ::DemoRaProver, null
+            DemoRaProver.DEMO_RA_PROVER_ID,
+            ::DemoRaProver,
+            null
         )
 
         RaVerifierDriverRegistry.registerDriver(
-            DemoRaVerifier.DEMO_RA_VERIFIER_ID, ::DemoRaVerifier, null
+            DemoRaVerifier.DEMO_RA_VERIFIER_ID,
+            ::DemoRaVerifier,
+            null
         )
 
         // connect to idscp2 server
@@ -62,7 +66,6 @@ class CommandlineTunnelClient {
 
             connection.addConnectionListener(object : Idscp2ConnectionAdapter() {
                 override fun onError(t: Throwable) {
-
                     LOG.error("Client connection error occurred", t)
                     runningUserJob = false
                 }

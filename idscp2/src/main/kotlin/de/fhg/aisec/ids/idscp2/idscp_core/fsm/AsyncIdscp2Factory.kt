@@ -46,7 +46,6 @@ object AsyncIdscp2Factory {
         connectionFactory: (FSM, String) -> CC,
         connectionFuture: CompletableFuture<CC>
     ): Boolean {
-
         if (connectionFuture.isCancelled) {
             secureChannel.close()
             return false

@@ -1,0 +1,74 @@
+[versions]
+# Versions for modules that will be released as libraries
+idscp2 = "0.11.0"
+ktlint = "0.47.0"
+
+# Kotlin library/compiler version
+kotlin = "1.7.10"
+kotlinxCoroutines = "1.6.4"
+
+# The used version of the infomodel from IESE
+infomodel = "4.1.0"
+
+camel = "3.14.5"
+
+slf4j = "2.0.0"
+
+guava = "31.1-jre"
+junit4 = "4.13.2"
+mockito = "4.7.0"
+awaitility = "4.2.0"
+
+protobuf = "3.21.5"
+
+bouncycastle = "1.70"
+
+# We will pull in a newer version of jackson (required by io.jsonwebtoken) because of security fixes
+jackson = "2.13.3"
+
+# Needed for token manager to assemble JWTs
+jsonwebtoken = "0.11.5"
+orgJson = "20220320"
+jose4j = "0.7.12"
+
+# HTTP client
+ktor = "2.1.0"
+
+[libraries]
+slf4j-api = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }
+slf4j-impl = { group = "org.slf4j", name = "slf4j-simple", version.ref = "slf4j" }
+kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib-jdk8", version.ref = "kotlin" }
+protobuf = { group = "com.google.protobuf", name = "protobuf-java", version.ref = "protobuf" }
+junit = { group = "junit", name = "junit", version.ref = "junit4" }
+mockito = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }
+infomodel-model = { group = "de.fraunhofer.iais.eis.ids.infomodel", name = "java", version.ref = "infomodel" }
+infomodel-serializer = { group = "de.fraunhofer.iais.eis.ids", name = "infomodel-serializer", version.ref = "infomodel" }
+
+kotlinx-coroutines = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core-jvm", version.ref = "kotlinxCoroutines" }
+bouncycastle = { group = "org.bouncycastle", name = "bcprov-jdk15on", version.ref = "bouncycastle" }
+jjwt-impl = { group = "io.jsonwebtoken", name = "jjwt-impl", version.ref = "jsonwebtoken" }
+jjwt-jackson = { group = "io.jsonwebtoken", name = "jjwt-jackson", version.ref = "jsonwebtoken" }
+jjwt-api = { group = "io.jsonwebtoken", name = "jjwt-api", version.ref = "jsonwebtoken" }
+jackson-databind = { group = "com.fasterxml.jackson.core", name = "jackson-databind", version.ref = "jackson" }
+jose4j = { group = "org.bitbucket.b_c", name = "jose4j", version.ref = "jose4j" }
+ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
+ktor-client-java = { group = "io.ktor", name = "ktor-client-java", version.ref = "ktor" }
+ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-serialization-jackson = { group = "io.ktor", name = "ktor-serialization-jackson", version.ref = "ktor" }
+awaitility = { group = "org.awaitility", name = "awaitility-kotlin", version.ref = "awaitility" }
+
+camel-core = { group = "org.apache.camel", name = "camel-core", version.ref = "camel" }
+camel-test = { group = "org.apache.camel", name = "camel-test", version.ref = "camel" }
+guava = { group = "com.google.guava", name = "guava", version.ref = "guava" }
+
+[bundles]
+# Important: Require "jackson-databind" as io.jsonwebtoken:jjwt-jackson references an outdated version with critical CVEs
+jsonwebtoken = ["jjwt-impl", "jjwt-jackson", "jjwt-api", "jackson-databind"]
+ktor-richClient = ["ktor-client-core", "ktor-client-java", "ktor-client-content-negotiation", "ktor-serialization-jackson"]
+
+[plugins]
+protobuf = { id = "com.google.protobuf",  version = "0.8.19" }
+kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+spotless = { id = "com.diffplug.spotless", version = "5.11.0" }
+license-report = { id = "com.github.jk1.dependency-license-report", version = "1.16" }
+versions = { id = "com.github.ben-manes.versions", version = "0.42.0" }

@@ -1,22 +1,19 @@
-@Suppress("UNCHECKED_CAST")
-val libraryVersions = rootProject.extra.get("libraryVersions") as Map<String, String>
-
-version = libraryVersions["idscp2"] ?: error("IDSCP2 version not specified")
+version = libs.versions.idscp2.get()
 
 dependencies {
     api(project(":idscp2-app-layer"))
 
-    api("de.fraunhofer.iais.eis.ids.infomodel", "java", libraryVersions["infomodel"])
+    api(libs.infomodel.model)
 
-    implementation("org.apache.camel", "camel-core", libraryVersions["camel"])
+    implementation(libs.camel.core)
 
-    implementation("com.google.protobuf", "protobuf-java", libraryVersions["protobuf"])
+    implementation(libs.protobuf)
 
-    implementation("com.google.guava", "guava", libraryVersions["guava"]) {
+    implementation(libs.guava) {
         isTransitive = false // Avoid pulling in of checker framework and other annotation stuff
     }
 
-    testImplementation("junit", "junit", libraryVersions["junit4"])
-    testImplementation("org.apache.camel", "camel-test", libraryVersions["camel"])
-    testImplementation("org.mockito", "mockito-core", libraryVersions["mockito"])
+    testImplementation(libs.junit)
+    testImplementation(libs.camel.test)
+    testImplementation(libs.mockito)
 }

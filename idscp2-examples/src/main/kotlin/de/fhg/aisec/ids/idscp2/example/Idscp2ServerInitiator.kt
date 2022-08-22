@@ -36,17 +36,20 @@ import java.nio.charset.StandardCharsets
 
 class Idscp2ServerInitiator : Idscp2EndpointListener<Idscp2Connection> {
     fun init(configuration: Idscp2Configuration, nativeTlsConfiguration: NativeTlsConfiguration) {
-
         // create secure channel driver
         val secureChannelDriver = NativeTLSDriver<Idscp2Connection>()
 
         // register ra drivers
         RaProverDriverRegistry.registerDriver(
-            DemoRaProver.DEMO_RA_PROVER_ID, ::DemoRaProver, null
+            DemoRaProver.DEMO_RA_PROVER_ID,
+            ::DemoRaProver,
+            null
         )
 
         RaVerifierDriverRegistry.registerDriver(
-            DemoRaVerifier.DEMO_RA_VERIFIER_ID, ::DemoRaVerifier, null
+            DemoRaVerifier.DEMO_RA_VERIFIER_ID,
+            ::DemoRaVerifier,
+            null
         )
 
         // create server config
@@ -57,8 +60,10 @@ class Idscp2ServerInitiator : Idscp2EndpointListener<Idscp2Connection> {
             secureChannelDriver,
             nativeTlsConfiguration
         )
+
         // run idscp2 server
-        @Suppress("UNUSED_VARIABLE") val idscp2Server = serverConfig.listen()
+        @Suppress("UNUSED_VARIABLE")
+        val idscp2Server = serverConfig.listen()
     }
 
     override fun onConnection(connection: Idscp2Connection) {

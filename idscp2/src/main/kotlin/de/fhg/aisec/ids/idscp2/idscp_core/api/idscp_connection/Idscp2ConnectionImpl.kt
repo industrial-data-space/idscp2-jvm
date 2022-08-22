@@ -131,8 +131,9 @@ class Idscp2ConnectionImpl(
                 FSM.FsmResultCode.OK -> return
                 FSM.FsmResultCode.WOULD_BLOCK -> {
                     // wait and repeat, fsm currently in wait_for_ack state
-                    if (retryInterval > 0)
+                    if (retryInterval > 0) {
                         Thread.sleep(retryInterval)
+                    }
                     continue
                 }
                 FSM.FsmResultCode.IO_ERROR, FSM.FsmResultCode.FSM_LOCKED ->

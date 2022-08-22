@@ -204,7 +204,9 @@ class TLSClient<CC : Idscp2Connection>(
             val peerCert = certificates[0] as X509Certificate
 
             TLSSessionVerificationHelper.verifyTlsSession(
-                sslSession.peerHost, sslSession.peerPort, peerCert,
+                sslSession.peerHost,
+                sslSession.peerPort,
+                peerCert,
                 nativeTlsConfiguration.hostnameVerificationEnabled
             )
             if (LOG.isTraceEnabled) {
@@ -220,7 +222,9 @@ class TLSClient<CC : Idscp2Connection>(
 
             // initiate idscp2 connection asynchronous.. the connection will be created using the future
             val success = AsyncIdscp2Factory.initiateIdscp2Connection(
-                secureChannel, clientConfiguration, connectionFactory,
+                secureChannel,
+                clientConfiguration,
+                connectionFactory,
                 connectionFuture
             )
 

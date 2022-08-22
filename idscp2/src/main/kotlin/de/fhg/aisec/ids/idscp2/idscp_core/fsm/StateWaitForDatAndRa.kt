@@ -192,7 +192,8 @@ class StateWaitForDatAndRa(
                         }
                         fsm.sendFromFSM(
                             Idscp2MessageHelper.createIdscpCloseMessage(
-                                "No valid DAT", CloseCause.NO_VALID_DAT
+                                "No valid DAT",
+                                CloseCause.NO_VALID_DAT
                             )
                         )
                         return@Transition FSM.FsmResult(
@@ -204,7 +205,8 @@ class StateWaitForDatAndRa(
                     LOG.warn("DapsDriver has thrown Exception while validating remote DAT. Send IDSCP_CLOSE: {}", e)
                     fsm.sendFromFSM(
                         Idscp2MessageHelper.createIdscpCloseMessage(
-                            "No valid DAT", CloseCause.NO_VALID_DAT
+                            "No valid DAT",
+                            CloseCause.NO_VALID_DAT
                         )
                     )
                     return@Transition FSM.FsmResult(FSM.FsmResultCode.INVALID_DAT, fsm.getState(FsmState.STATE_CLOSED))

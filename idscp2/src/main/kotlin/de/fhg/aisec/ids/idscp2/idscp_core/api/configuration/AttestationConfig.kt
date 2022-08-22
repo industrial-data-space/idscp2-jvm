@@ -70,7 +70,8 @@ class AttestationConfig {
     override fun hashCode(): Int {
         return Objects.hash(
             supportedAttestationSuite.contentHashCode(),
-            expectedAttestationSuite.contentHashCode(), raTimeoutDelay
+            expectedAttestationSuite.contentHashCode(),
+            raTimeoutDelay
         )
     }
 

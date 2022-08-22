@@ -35,17 +35,20 @@ import java.nio.charset.StandardCharsets
 class Idscp2ClientInitiator {
 
     fun init(configuration: Idscp2Configuration, nativeTlsConfiguration: NativeTlsConfiguration) {
-
         // create secure channel driver
         val secureChannelDriver = NativeTLSDriver<Idscp2Connection>()
 
         // register ra drivers
         RaProverDriverRegistry.registerDriver(
-            DemoRaProver.DEMO_RA_PROVER_ID, ::DemoRaProver, null
+            DemoRaProver.DEMO_RA_PROVER_ID,
+            ::DemoRaProver,
+            null
         )
 
         RaVerifierDriverRegistry.registerDriver(
-            DemoRaVerifier.DEMO_RA_VERIFIER_ID, ::DemoRaVerifier, null
+            DemoRaVerifier.DEMO_RA_VERIFIER_ID,
+            ::DemoRaVerifier,
+            null
         )
 
         // connect to idscp2 server
