@@ -19,6 +19,7 @@
  */
 package de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3
 
+import org.bouncycastle.asn1.x509.GeneralName
 import org.slf4j.LoggerFactory
 import java.net.InetAddress
 import java.security.cert.CertificateExpiredException
@@ -37,8 +38,15 @@ import javax.net.ssl.SSLPeerUnverifiedException
  */
 object TLSSessionVerificationHelper {
     private val LOG = LoggerFactory.getLogger(TLSSessionVerificationHelper::class.java)
-    private const val ipv4Pattern = "(([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.){3}([01]?\\d\\d?|2[0-4]\\d|25[0-5])"
-    private const val ipv6Pattern = "([0-9a-f]{1,4}:){7}([0-9a-f]){1,4}"
+    private val ipv4Pattern by lazy {
+        Pattern.compile(
+            "(([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.){3}([01]?\\d\\d?|2[0-4]\\d|25[0-5])",
+            Pattern.CASE_INSENSITIVE
+        )
+    }
+    private val ipv6Pattern by lazy {
+        Pattern.compile("(([0-9a-f]{0,4}:){1,7}[0-9a-f]{0,4})", Pattern.CASE_INSENSITIVE)
+    }
 
     /*
      * Checks if the ssl session is valid and the remote host can be trusted
@@ -90,12 +98,12 @@ object TLSSessionVerificationHelper {
                     }
                     val value = subjectAltName[1]
                     when (subjectAltName[0] as Int?) {
-                        2 -> if (value is String) {
+                        GeneralName.dNSName -> if (value is String) {
                             acceptedDnsNames.add(value)
                         } else if (value is ByteArray) {
                             acceptedDnsNames.add(String(value))
                         }
-                        7 -> if (value is String) {
+                        GeneralName.iPAddress -> if (value is String) {
                             acceptedIpAddresses.add(value)
                         } else if (value is ByteArray) {
                             acceptedIpAddresses.add(String(value))
@@ -150,8 +158,8 @@ object TLSSessionVerificationHelper {
             } else {
                 if (peerIsServer) {
                     LOG.warn(
-                        "DANGER: TLS server hostname verification of is disabled. " +
-                            "This is strongly discouraged except for testing purposes!."
+                        "DANGER: TLS server hostname verification is disabled. " +
+                            "This is strongly discouraged except for testing purposes!"
                     )
                 } else {
                     LOG.info(
@@ -162,8 +170,7 @@ object TLSSessionVerificationHelper {
             }
 
             // check certificate validity for now and at least one day
-            val oneDay = Date()
-            oneDay.time = oneDay.time + 86400000
+            val oneDay = Date().apply { this.time += 86_400_000 }
             peerCert.checkValidity()
             peerCert.checkValidity(oneDay)
         } catch (e: CertificateParsingException) {
@@ -179,12 +186,7 @@ object TLSSessionVerificationHelper {
      * check if host is an IP Address
      */
     private fun isIpAddress(host: String): Boolean {
-        val ip4 = Pattern.compile(ipv4Pattern, Pattern.CASE_INSENSITIVE).matcher(host)
-        if (ip4.matches()) {
-            return true
-        }
-        val ip6 = Pattern.compile(ipv6Pattern, Pattern.CASE_INSENSITIVE).matcher(host)
-        return ip6.matches()
+        return ipv4Pattern.matcher(host).matches() || ipv6Pattern.matcher(host).matches()
     }
 
     /*
