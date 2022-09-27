@@ -19,12 +19,12 @@
  */
 package de.fhg.aisec.ids.idscp2.example
 
-import de.fhg.aisec.ids.idscp2.default_drivers.daps.null_daps.NullDaps
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.demo.DemoRaProver
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.demo.DemoRaVerifier
-import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
-import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.AttestationConfig
-import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
+import de.fhg.aisec.ids.idscp2.core.api.configuration.AttestationConfig
+import de.fhg.aisec.ids.idscp2.core.api.configuration.Idscp2Configuration
+import de.fhg.aisec.ids.idscp2.defaultdrivers.daps.nulldaps.NullDaps
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaProver
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaVerifier
+import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
 import java.nio.file.Paths
 import java.util.Objects
 

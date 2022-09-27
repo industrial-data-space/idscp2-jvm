@@ -1,7 +1,7 @@
 [versions]
 # Versions for modules that will be released as libraries
-idscp2 = "0.11.1"
-ktlint = "0.47.0"
+idscp2 = "0.12.0"
+ktlint = "0.47.1"
 
 # Kotlin library/compiler version
 kotlin = "1.7.10"
@@ -69,6 +69,6 @@ ktor-richClient = ["ktor-client-core", "ktor-client-java", "ktor-client-content-
 [plugins]
 protobuf = { id = "com.google.protobuf",  version = "0.8.19" }
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
-spotless = { id = "com.diffplug.spotless", version = "5.11.0" }
+spotless = { id = "com.diffplug.spotless", version = "6.11.0" }
 license-report = { id = "com.github.jk1.dependency-license-report", version = "1.16" }
 versions = { id = "com.github.ben-manes.versions", version = "0.42.0" }

@@ -19,25 +19,25 @@
  */
 package de.fhg.aisec.ids.idscp2.tests
 
-import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTLSDriver
-import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
-import de.fhg.aisec.ids.idscp2.idscp_core.api.Idscp2EndpointListener
-import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.AttestationConfig
-import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
-import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2Connection
-import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2ConnectionAdapter
-import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2ConnectionImpl
-import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server.Idscp2Server
-import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server.Idscp2ServerFactory
-import de.fhg.aisec.ids.idscp2.idscp_core.drivers.DapsDriver
-import de.fhg.aisec.ids.idscp2.idscp_core.drivers.RaProverDriver
-import de.fhg.aisec.ids.idscp2.idscp_core.drivers.RaVerifierDriver
-import de.fhg.aisec.ids.idscp2.idscp_core.error.DatException
-import de.fhg.aisec.ids.idscp2.idscp_core.fsm.InternalControlMessage
-import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RaProverFsmListener
-import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RaVerifierFsmListener
-import de.fhg.aisec.ids.idscp2.idscp_core.ra_registry.RaProverDriverRegistry
-import de.fhg.aisec.ids.idscp2.idscp_core.ra_registry.RaVerifierDriverRegistry
+import de.fhg.aisec.ids.idscp2.core.api.Idscp2EndpointListener
+import de.fhg.aisec.ids.idscp2.core.api.configuration.AttestationConfig
+import de.fhg.aisec.ids.idscp2.core.api.configuration.Idscp2Configuration
+import de.fhg.aisec.ids.idscp2.core.api.connection.Idscp2Connection
+import de.fhg.aisec.ids.idscp2.core.api.connection.Idscp2ConnectionAdapter
+import de.fhg.aisec.ids.idscp2.core.api.connection.Idscp2ConnectionImpl
+import de.fhg.aisec.ids.idscp2.core.api.server.Idscp2Server
+import de.fhg.aisec.ids.idscp2.core.api.server.Idscp2ServerFactory
+import de.fhg.aisec.ids.idscp2.core.drivers.DapsDriver
+import de.fhg.aisec.ids.idscp2.core.drivers.RaProverDriver
+import de.fhg.aisec.ids.idscp2.core.drivers.RaVerifierDriver
+import de.fhg.aisec.ids.idscp2.core.error.DatException
+import de.fhg.aisec.ids.idscp2.core.fsm.InternalControlMessage
+import de.fhg.aisec.ids.idscp2.core.fsm.fsmListeners.RaProverFsmListener
+import de.fhg.aisec.ids.idscp2.core.fsm.fsmListeners.RaVerifierFsmListener
+import de.fhg.aisec.ids.idscp2.core.raregistry.RaProverDriverRegistry
+import de.fhg.aisec.ids.idscp2.core.raregistry.RaVerifierDriverRegistry
+import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTLSDriver
+import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
 import org.awaitility.Awaitility.await
 import org.junit.After
 import org.junit.Assert
@@ -248,8 +248,12 @@ class Idscp2Integration {
         return NativeTlsConfiguration.Builder()
             .setHost("localhost")
             .setServerPort(5678)
+            .setKeyPassword("password".toCharArray())
+            .setCertificateAlias("1.0.1")
             .setKeyStorePath(keyStorePath)
+            .setKeyStorePassword("password".toCharArray())
             .setTrustStorePath(trustStorePath)
+            .setTrustStorePassword("password".toCharArray())
             .setServerSocketTimeout(300)
             .build()
     }
@@ -259,7 +263,9 @@ class Idscp2Integration {
      */
     @After
     fun cleanupTest() {
-        idscpServer.terminate()
+        if (this::idscpServer.isInitialized) {
+            idscpServer.terminate()
+        }
         RaProverDriverRegistry.unregisterDriver("NullRa")
         RaVerifierDriverRegistry.unregisterDriver("NullRa")
     }

@@ -21,7 +21,7 @@ package de.fhg.aisec.ids.camel.idscp2.listeners
 
 import de.fhg.aisec.ids.camel.idscp2.client.Idscp2ClientEndpoint
 import de.fhg.aisec.ids.camel.idscp2.server.Idscp2ServerEndpoint
-import de.fhg.aisec.ids.idscp2.app_layer.AppLayerConnection
+import de.fhg.aisec.ids.idscp2.applayer.AppLayerConnection
 
 interface ConnectionListener {
     fun onClientConnection(connection: AppLayerConnection, endpoint: Idscp2ClientEndpoint)

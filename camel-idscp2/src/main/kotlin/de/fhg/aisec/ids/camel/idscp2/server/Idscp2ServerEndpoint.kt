@@ -23,18 +23,18 @@ package de.fhg.aisec.ids.camel.idscp2.server
 
 import de.fhg.aisec.ids.camel.idscp2.ListenerManager
 import de.fhg.aisec.ids.camel.idscp2.Utils
-import de.fhg.aisec.ids.idscp2.app_layer.AppLayerConnection
-import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.AisecDapsDriver
-import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.AisecDapsDriverConfig
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaProverDummy
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaProverDummy2
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaVerifierDummy
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaVerifierDummy2
-import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
-import de.fhg.aisec.ids.idscp2.idscp_core.api.Idscp2EndpointListener
-import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.AttestationConfig
-import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
-import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2ConnectionListener
+import de.fhg.aisec.ids.idscp2.applayer.AppLayerConnection
+import de.fhg.aisec.ids.idscp2.core.api.Idscp2EndpointListener
+import de.fhg.aisec.ids.idscp2.core.api.configuration.AttestationConfig
+import de.fhg.aisec.ids.idscp2.core.api.configuration.Idscp2Configuration
+import de.fhg.aisec.ids.idscp2.core.api.connection.Idscp2ConnectionListener
+import de.fhg.aisec.ids.idscp2.defaultdrivers.daps.aisecdaps.AisecDapsDriver
+import de.fhg.aisec.ids.idscp2.defaultdrivers.daps.aisecdaps.AisecDapsDriverConfig
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaProverDummy
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaProverDummy2
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaVerifierDummy
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaVerifierDummy2
+import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
 import org.apache.camel.Consumer
 import org.apache.camel.Processor
 import org.apache.camel.Producer
@@ -83,13 +83,6 @@ class Idscp2ServerEndpoint(uri: String?, private val remaining: String, componen
         description = "Whether to verify the hostname of the client."
     )
     var tlsClientHostnameVerification: Boolean = true
-
-    @UriParam(
-        label = "security",
-        description = "The alias of the DAPS key in the keystore provided by sslContextParameters",
-        defaultValue = "1"
-    )
-    var dapsKeyAlias: String = "1"
 
     @UriParam(
         label = "security",
@@ -227,7 +220,6 @@ class Idscp2ServerEndpoint(uri: String?, private val remaining: String, componen
         // create daps config
         val dapsDriverConfigBuilder = AisecDapsDriverConfig.Builder()
             .setDapsUrl(Utils.dapsUrlProducer())
-            .setKeyAlias(dapsKeyAlias)
 
         val secureChannelConfigBuilder = NativeTlsConfiguration.Builder()
             .setHost(host)
@@ -238,42 +230,47 @@ class Idscp2ServerEndpoint(uri: String?, private val remaining: String, componen
 
         @Suppress("DEPRECATION")
         (transportSslContextParameters ?: sslContextParameters)?.let {
-            secureChannelConfigBuilder
-                .setKeyPassword(
+            secureChannelConfigBuilder.apply {
+                setKeyPassword(
                     it.keyManagers?.keyPassword?.toCharArray()
                         ?: "password".toCharArray()
                 )
-                .setKeyStorePath(Paths.get(it.keyManagers?.keyStore?.resource ?: "DUMMY-FILENAME.p12"))
-                .setKeyStoreKeyType(it.keyManagers?.keyStore?.type ?: "RSA")
-                .setKeyStorePassword(
+                it.keyManagers?.keyStore?.resource?.let { setKeyStorePath(Paths.get(it)) }
+                it.keyManagers?.keyStore?.type?.let { setKeyStoreKeyType(it) }
+                setKeyStorePassword(
                     it.keyManagers?.keyStore?.password?.toCharArray()
                         ?: "password".toCharArray()
                 )
-                .setTrustStorePath(Paths.get(it.trustManagers?.keyStore?.resource ?: "DUMMY-FILENAME.p12"))
-                .setTrustStorePassword(
+                it.trustManagers?.trustManager?.let { setTrustManager(it) }
+                it.trustManagers?.keyStore?.resource?.let { setTrustStorePath(Paths.get(it)) }
+                setTrustStorePassword(
                     it.trustManagers?.keyStore?.password?.toCharArray()
                         ?: "password".toCharArray()
                 )
-                .setCertificateAlias(it.certAlias ?: "1.0.1")
+                setCertificateAlias(it.certAlias ?: "1.0.1")
+            }
         }
 
         @Suppress("DEPRECATION")
         (dapsSslContextParameters ?: sslContextParameters)?.let {
-            dapsDriverConfigBuilder
-                .setKeyPassword(
+            dapsDriverConfigBuilder.apply {
+                setKeyPassword(
                     it.keyManagers?.keyPassword?.toCharArray()
                         ?: "password".toCharArray()
                 )
-                .setKeyStorePath(Paths.get(it.keyManagers?.keyStore?.resource ?: "DUMMY-FILENAME.p12"))
-                .setKeyStorePassword(
+                it.keyManagers?.keyStore?.resource?.let { setKeyStorePath(Paths.get(it)) }
+                setKeyStorePassword(
                     it.keyManagers?.keyStore?.password?.toCharArray()
                         ?: "password".toCharArray()
                 )
-                .setTrustStorePath(Paths.get(it.trustManagers?.keyStore?.resource ?: "DUMMY-FILENAME.p12"))
-                .setTrustStorePassword(
+                it.trustManagers?.trustManager?.let { setTrustManager(it) }
+                it.trustManagers?.keyStore?.resource?.let { setTrustStorePath(Paths.get(it)) }
+                setTrustStorePassword(
                     it.trustManagers?.keyStore?.password?.toCharArray()
                         ?: "password".toCharArray()
                 )
+                setKeyAlias(it.certAlias ?: "1")
+            }
         }
 
         // create idscp config

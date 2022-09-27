@@ -21,12 +21,12 @@
 
 package de.fhg.aisec.ids.camel.idscp2.client
 
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaProverDummy
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaProverDummy2
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaVerifierDummy
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaVerifierDummy2
-import de.fhg.aisec.ids.idscp2.idscp_core.ra_registry.RaProverDriverRegistry
-import de.fhg.aisec.ids.idscp2.idscp_core.ra_registry.RaVerifierDriverRegistry
+import de.fhg.aisec.ids.idscp2.core.raregistry.RaProverDriverRegistry
+import de.fhg.aisec.ids.idscp2.core.raregistry.RaVerifierDriverRegistry
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaProverDummy
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaProverDummy2
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaVerifierDummy
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaVerifierDummy2
 import org.apache.camel.Endpoint
 import org.apache.camel.spi.annotations.Component
 import org.apache.camel.support.DefaultComponent

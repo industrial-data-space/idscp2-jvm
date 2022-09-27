@@ -19,7 +19,7 @@
  */
 package de.fhg.aisec.ids.camel.idscp2
 
-import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2Connection
+import de.fhg.aisec.ids.idscp2.core.api.connection.Idscp2Connection
 import de.fraunhofer.iais.eis.DynamicAttributeToken
 import de.fraunhofer.iais.eis.DynamicAttributeTokenBuilder
 import de.fraunhofer.iais.eis.Message

@@ -22,7 +22,7 @@ package de.fhg.aisec.ids.camel.idscp2.client
 import de.fhg.aisec.ids.camel.idscp2.Constants.IDSCP2_HEADER
 import de.fhg.aisec.ids.camel.idscp2.ListenerManager
 import de.fhg.aisec.ids.camel.idscp2.Utils
-import de.fhg.aisec.ids.idscp2.app_layer.AppLayerConnection
+import de.fhg.aisec.ids.idscp2.applayer.AppLayerConnection
 import org.apache.camel.Exchange
 import org.apache.camel.support.DefaultProducer
 import org.slf4j.LoggerFactory

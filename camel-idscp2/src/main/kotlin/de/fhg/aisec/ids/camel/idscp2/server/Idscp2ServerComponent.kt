@@ -22,14 +22,14 @@
 package de.fhg.aisec.ids.camel.idscp2.server
 
 import de.fhg.aisec.ids.camel.idscp2.RefCountingHashMap
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaProverDummy
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaProverDummy2
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaVerifierDummy
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaVerifierDummy2
-import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
-import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
-import de.fhg.aisec.ids.idscp2.idscp_core.ra_registry.RaProverDriverRegistry
-import de.fhg.aisec.ids.idscp2.idscp_core.ra_registry.RaVerifierDriverRegistry
+import de.fhg.aisec.ids.idscp2.core.api.configuration.Idscp2Configuration
+import de.fhg.aisec.ids.idscp2.core.raregistry.RaProverDriverRegistry
+import de.fhg.aisec.ids.idscp2.core.raregistry.RaVerifierDriverRegistry
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaProverDummy
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaProverDummy2
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaVerifierDummy
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaVerifierDummy2
+import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
 import org.apache.camel.Endpoint
 import org.apache.camel.spi.annotations.Component
 import org.apache.camel.support.DefaultComponent

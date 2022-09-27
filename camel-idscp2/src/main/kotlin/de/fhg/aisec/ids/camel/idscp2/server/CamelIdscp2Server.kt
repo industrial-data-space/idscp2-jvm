@@ -20,13 +20,13 @@
 package de.fhg.aisec.ids.camel.idscp2.server
 
 import de.fhg.aisec.ids.camel.idscp2.ListenerManager
-import de.fhg.aisec.ids.idscp2.app_layer.AppLayerConnection
-import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTLSDriver
-import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
-import de.fhg.aisec.ids.idscp2.idscp_core.api.Idscp2EndpointListener
-import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
-import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server.Idscp2Server
-import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server.Idscp2ServerFactory
+import de.fhg.aisec.ids.idscp2.applayer.AppLayerConnection
+import de.fhg.aisec.ids.idscp2.core.api.Idscp2EndpointListener
+import de.fhg.aisec.ids.idscp2.core.api.configuration.Idscp2Configuration
+import de.fhg.aisec.ids.idscp2.core.api.server.Idscp2Server
+import de.fhg.aisec.ids.idscp2.core.api.server.Idscp2ServerFactory
+import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTLSDriver
+import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
 import java.util.Collections
 
 class CamelIdscp2Server(

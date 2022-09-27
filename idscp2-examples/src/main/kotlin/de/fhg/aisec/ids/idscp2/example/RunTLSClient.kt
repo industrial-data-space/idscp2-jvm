@@ -19,15 +19,15 @@
  */
 package de.fhg.aisec.ids.idscp2.example
 
-import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.AisecDapsDriver
-import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.AisecDapsDriverConfig
-import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.SecurityProfile
-import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.SecurityRequirements
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.demo.DemoRaProver
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.demo.DemoRaVerifier
-import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
-import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.AttestationConfig
-import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
+import de.fhg.aisec.ids.idscp2.core.api.configuration.AttestationConfig
+import de.fhg.aisec.ids.idscp2.core.api.configuration.Idscp2Configuration
+import de.fhg.aisec.ids.idscp2.defaultdrivers.daps.aisecdaps.AisecDapsDriver
+import de.fhg.aisec.ids.idscp2.defaultdrivers.daps.aisecdaps.AisecDapsDriverConfig
+import de.fhg.aisec.ids.idscp2.defaultdrivers.daps.aisecdaps.SecurityProfile
+import de.fhg.aisec.ids.idscp2.defaultdrivers.daps.aisecdaps.SecurityRequirements
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaProver
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaVerifier
+import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
 import java.nio.file.Paths
 import java.util.Objects
 
@@ -59,10 +59,16 @@ object RunTLSClient {
             .setRequiredSecurityLevel(SecurityProfile.INVALID)
             .build()
 
+        val password = "password".toCharArray()
+
         val dapsDriver = AisecDapsDriver(
             AisecDapsDriverConfig.Builder()
                 .setKeyStorePath(keyStorePath)
+                .setKeyStorePassword(password)
+                .setKeyPassword(password)
+                .setKeyAlias("1")
                 .setTrustStorePath(trustStorePath)
+                .setTrustStorePassword(password)
                 .setDapsUrl("https://daps-dev.aisec.fraunhofer.de")
                 .setSecurityRequirements(securityRequirements)
                 .build()
@@ -79,7 +85,10 @@ object RunTLSClient {
         // create secureChannel config
         val nativeTlsConfiguration = NativeTlsConfiguration.Builder()
             .setKeyStorePath(keyStorePath)
+            .setKeyStorePassword(password)
+            .setKeyPassword(password)
             .setTrustStorePath(trustStorePath)
+            .setTrustStorePassword(password)
             .setCertificateAlias("1.0.1")
             .setHost("provider-core")
             .build()
