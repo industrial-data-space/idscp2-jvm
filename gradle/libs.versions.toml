@@ -10,29 +10,29 @@ kotlinxCoroutines = "1.6.4"
 # The used version of the infomodel from IESE
 infomodel = "4.1.0"
 
-camel = "3.14.5"
+camel = "3.18.2"
 
-slf4j = "2.0.0"
+slf4j = "2.0.2"
 
 guava = "31.1-jre"
 junit4 = "4.13.2"
-mockito = "4.7.0"
+mockito = "4.8.0"
 awaitility = "4.2.0"
 
-protobuf = "3.21.5"
+protobuf = "3.21.6"
 
 bouncycastle = "1.70"
 
 # We will pull in a newer version of jackson (required by io.jsonwebtoken) because of security fixes
-jackson = "2.13.3"
+jackson = "2.13.4"
 
 # Needed for token manager to assemble JWTs
 jsonwebtoken = "0.11.5"
 orgJson = "20220320"
-jose4j = "0.7.12"
+jose4j = "0.8.0"
 
 # HTTP client
-ktor = "2.1.0"
+ktor = "2.1.1"
 
 [libraries]
 slf4j-api = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }
@@ -70,5 +70,5 @@ ktor-richClient = ["ktor-client-core", "ktor-client-java", "ktor-client-content-
 protobuf = { id = "com.google.protobuf",  version = "0.8.19" }
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 spotless = { id = "com.diffplug.spotless", version = "6.11.0" }
-license-report = { id = "com.github.jk1.dependency-license-report", version = "1.16" }
+license-report = { id = "com.github.jk1.dependency-license-report", version = "2.1" }
 versions = { id = "com.github.ben-manes.versions", version = "0.42.0" }

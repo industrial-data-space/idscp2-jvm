@@ -36,7 +36,7 @@ allprojects {
 
     tasks.withType<DependencyUpdatesTask> {
         rejectVersionIf {
-            ".*(rc-?[0-9]*|Beta)$".toRegex().matches(candidate.version)
+            ".*(rc-?[0-9]*|beta)$".toRegex(RegexOption.IGNORE_CASE).matches(candidate.version)
         }
     }
 }
