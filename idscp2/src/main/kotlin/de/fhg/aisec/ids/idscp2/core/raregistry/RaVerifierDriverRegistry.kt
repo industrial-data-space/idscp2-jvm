@@ -70,7 +70,7 @@ object RaVerifierDriverRegistry {
      */
     fun unregisterDriver(instance: String) {
         if (LOG.isDebugEnabled) {
-            LOG.debug("Register '{}' driver from RA verifier registry", instance)
+            LOG.debug("Unregister '{}' driver from RA verifier registry", instance)
         }
         drivers.remove(instance)
     }
