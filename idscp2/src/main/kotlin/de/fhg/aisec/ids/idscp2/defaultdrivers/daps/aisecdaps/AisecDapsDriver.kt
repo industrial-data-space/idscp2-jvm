@@ -19,6 +19,7 @@
  */
 package de.fhg.aisec.ids.idscp2.defaultdrivers.daps.aisecdaps
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import de.fhg.aisec.ids.idscp2.core.drivers.DapsDriver
 import de.fhg.aisec.ids.idscp2.core.error.DatException
 import de.fhg.aisec.ids.idscp2.defaultdrivers.keystores.PreConfiguration
@@ -36,6 +37,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters
 import io.ktor.http.cacheControl
 import io.ktor.serialization.jackson.jackson
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.bouncycastle.asn1.ASN1OctetString
 import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier
@@ -72,9 +74,7 @@ import javax.net.ssl.TrustManager
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  * @author Gerd Brost (gerd.brost@aisec.fraunhofer.de)
  */
-class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
-    private val sslContext: SSLContext
-
+class AisecDapsDriver(private val config: AisecDapsDriverConfig) : DapsDriver {
     // Security requirements can be modified at runtime
     private var securityRequirements: SecurityRequirements? = config.securityRequirements
     private val privateKey: Key = PreConfiguration.getKey(
@@ -90,11 +90,6 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
             config.keyStorePassword,
             config.keyAlias
         )
-
-    /**
-     * Lookup table for encodeHexString()
-     */
-    private val hexLookup = HashMap<Byte, CharArray>()
 
     // requires hexLookup to be existent
     private val connectorUUID: String = extractConnectorUUID(localPeerCertificate)
@@ -115,19 +110,17 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
     private val renewalThreshold = config.dapsTokenRenewalThreshold
     private val renewalLock = ReentrantLock(true)
 
-    init {
-        // create ssl socket factory for secure
-        sslContext = try {
-            SSLContext.getInstance("TLS").apply {
-                init(null, arrayOf(config.trustManager), null)
-            }
-        } catch (e: NoSuchAlgorithmException) {
-            LOG.error("Cannot init AisecDapsDriver", e)
-            throw RuntimeException(e)
-        } catch (e: KeyManagementException) {
-            LOG.error("Cannot init AisecDapsDriver", e)
-            throw RuntimeException(e)
+    // create ssl socket factory for secure
+    private val sslContext: SSLContext = try {
+        SSLContext.getInstance("TLS").apply {
+            init(null, arrayOf(config.trustManager), null)
         }
+    } catch (e: NoSuchAlgorithmException) {
+        LOG.error("Cannot init AisecDapsDriver", e)
+        throw RuntimeException(e)
+    } catch (e: KeyManagementException) {
+        LOG.error("Cannot init AisecDapsDriver", e)
+        throw RuntimeException(e)
     }
 
     /**
@@ -159,7 +152,7 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
         val akiOc = ASN1OctetString.getInstance(rawAuthorityKeyIdentifier)
         val aki = AuthorityKeyIdentifier.getInstance(akiOc.octets)
         val authorityKeyIdentifier = aki.keyIdentifier
-        val akiResult = encodeHexString(authorityKeyIdentifier, true).uppercase()
+        val akiResult = authorityKeyIdentifier.toHexString(":").uppercase()
 
         // GET 2.5.29.14 SubjectKeyIdentifier
         val skiOid = Extension.subjectKeyIdentifier.id
@@ -167,14 +160,14 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
         val ski0c = ASN1OctetString.getInstance(rawSubjectKeyIdentifier)
         val ski = SubjectKeyIdentifier.getInstance(ski0c.octets)
         val subjectKeyIdentifier = ski.keyIdentifier
-        val skiResult = encodeHexString(subjectKeyIdentifier, true).uppercase()
+        val skiResult = subjectKeyIdentifier.toHexString(":").uppercase()
 
         if (LOG.isDebugEnabled) {
             LOG.debug("AKI: $akiResult")
             LOG.debug("SKI: $skiResult")
         }
 
-        return skiResult + "keyid:" + akiResult.substring(0, akiResult.length - 1)
+        return "$skiResult:keyid:$akiResult"
     }
 
     /**
@@ -203,7 +196,7 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
 
         val dapsUri = URI.create(dapsUrl)
 
-        return runBlocking {
+        return runBlocking(Dispatchers.IO) {
             val response = httpClient.request(
                 "${dapsUri.scheme}://${dapsUri.host}/.well-known/oauth-authorization-server${dapsUri.path}"
             )
@@ -284,7 +277,7 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
                 // Get OAuth server meta information (Issuer, URLs)
                 val dapsMeta = getDapsMeta()
 
-                return runBlocking {
+                return runBlocking(Dispatchers.IO) {
                     val response = httpClient.submitForm(
                         dapsMeta.tokenEndpoint,
                         formParameters = Parameters.build {
@@ -292,6 +285,20 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
                             append("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
                             append("client_assertion", jwt)
                             append("scope", "idsc:IDS_CONNECTOR_ATTRIBUTES_ALL")
+                            config.transportCertsSha256?.let {
+                                append(
+                                    "claims",
+                                    ObjectMapper().writeValueAsString(
+                                        mapOf(
+                                            "access_token" to mapOf(
+                                                "transportCertsSha256" to mapOf(
+                                                    "value" to it
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            }
                         }
                     )
 
@@ -391,7 +398,7 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
             // Use SimpleGet-Adapter using the common, cached OkHttpClient
             setSimpleHttpGet { url ->
                 object : SimpleResponse {
-                    val response = runBlocking {
+                    val response = runBlocking(Dispatchers.IO) {
                         val request = httpClient.request(url)
                         Triple(request.status, request.headers, request.bodyAsText())
                     }
@@ -466,17 +473,18 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
             // calculate peer certificate SHA256 fingerprint
             val peerCertFingerprint: String
             try {
-                val sha256 = MessageDigest.getInstance("SHA-256")
-                sha256.update(certificate.encoded)
-                val digest = sha256.digest()
-                peerCertFingerprint = encodeHexString(digest, false).lowercase()
+                peerCertFingerprint =
+                    MessageDigest.getInstance("SHA-256").digest(certificate.encoded).toHexString().lowercase()
             } catch (e: Exception) {
                 throw DatException("Cannot calculate peer certificate fingerprint", e)
             }
 
             // check if peer cert fingerprint is a valid fingerprint from the DAT
             if (!datCertFingerprints.contains(peerCertFingerprint)) {
-                throw DatException("Fingerprint of peer certificate does not match an expected fingerprint from DAT")
+                throw DatException(
+                    "Fingerprint of peer certificate ($peerCertFingerprint) " +
+                        "does not match any fingerprint from DAT ($datCertFingerprints)."
+                )
             }
         }
 
@@ -507,34 +515,6 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
         return validityTime
     }
 
-    /**
-     * Convert byte to hexadecimal chars without any dependencies to libraries.
-     * @param num Byte to get hexadecimal representation for
-     * @return The hexadecimal representation of the given byte value
-     */
-    private fun byteToHex(num: Int): CharArray {
-        val hexDigits = CharArray(2)
-        hexDigits[0] = Character.forDigit(num shr 4 and 0xF, 16)
-        hexDigits[1] = Character.forDigit(num and 0xF, 16)
-        return hexDigits
-    }
-
-    /**
-     * Encode a byte array to a hex string
-     * @param byteArray Byte array to get hexadecimal representation for
-     * @return Hexadecimal representation of the given bytes
-     */
-    private fun encodeHexString(byteArray: ByteArray, beautify: Boolean = false): String {
-        val sb = StringBuilder()
-        for (b in byteArray) {
-            sb.append(hexLookup.computeIfAbsent(b) { num: Byte -> byteToHex(num.toInt()) })
-            if (beautify) {
-                sb.append(':')
-            }
-        }
-        return sb.toString()
-    }
-
     companion object {
         private val LOG = LoggerFactory.getLogger(AisecDapsDriver::class.java)
         private const val TARGET_AUDIENCE = "idsc:IDS_CONNECTORS_ALL"
@@ -544,5 +524,30 @@ class AisecDapsDriver(config: AisecDapsDriverConfig) : DapsDriver {
 
         // OkHttpClient pool
         private val HTTP_CLIENTS = synchronizedMap(mutableMapOf<TrustManager, HttpClient>())
+
+        /**
+         * Lookup table for encodeHexString()
+         */
+        private val hexLookup = HashMap<Byte, String>()
+
+        /**
+         * Convert byte to hexadecimal chars without any dependencies to libraries.
+         * @param num Byte to get hexadecimal representation for
+         * @return The hexadecimal representation of the given byte value
+         */
+        private fun byteToHex(num: Int): String {
+            val hexDigits = CharArray(2)
+            hexDigits[0] = Character.forDigit(num shr 4 and 0xF, 16)
+            hexDigits[1] = Character.forDigit(num and 0xF, 16)
+            return String(hexDigits)
+        }
+
+        /**
+         * Encode a byte array to a hex string
+         * @return Hexadecimal representation of the given bytes
+         */
+        fun ByteArray.toHexString(delimiter: CharSequence = ""): String {
+            return this.joinToString(delimiter) { hexLookup.computeIfAbsent(it) { num: Byte -> byteToHex(num.toInt()) } }
+        }
     }
 }

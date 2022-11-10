@@ -25,10 +25,12 @@ import de.fhg.aisec.ids.idscp2.defaultdrivers.daps.aisecdaps.AisecDapsDriver
 import de.fhg.aisec.ids.idscp2.defaultdrivers.daps.aisecdaps.AisecDapsDriverConfig
 import de.fhg.aisec.ids.idscp2.defaultdrivers.daps.aisecdaps.SecurityProfile
 import de.fhg.aisec.ids.idscp2.defaultdrivers.daps.aisecdaps.SecurityRequirements
+import de.fhg.aisec.ids.idscp2.defaultdrivers.keystores.PreConfiguration.loadKeyStore
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaProver
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaVerifier
 import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
 import java.nio.file.Paths
+import java.security.cert.X509Certificate
 import java.util.Objects
 
 object RunTLSClient {
@@ -61,6 +63,12 @@ object RunTLSClient {
 
         val password = "password".toCharArray()
 
+        // Load certificates from local KeyStore
+        val ks = loadKeyStore(keyStorePath, password)
+        val certificates = ks.aliases().asSequence().toList()
+            .filter { ks.isKeyEntry(it) }
+            .map { ks.getCertificateChain(it)[0] as X509Certificate }
+
         val dapsDriver = AisecDapsDriver(
             AisecDapsDriverConfig.Builder()
                 .setKeyStorePath(keyStorePath)
@@ -70,6 +78,7 @@ object RunTLSClient {
                 .setTrustStorePath(trustStorePath)
                 .setTrustStorePassword(password)
                 .setDapsUrl("https://daps-dev.aisec.fraunhofer.de")
+                .setTransportCerts(certificates)
                 .setSecurityRequirements(securityRequirements)
                 .build()
         )

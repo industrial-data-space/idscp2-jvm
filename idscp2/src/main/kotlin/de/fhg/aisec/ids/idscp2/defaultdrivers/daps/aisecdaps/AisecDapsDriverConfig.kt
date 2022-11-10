@@ -20,8 +20,11 @@
 package de.fhg.aisec.ids.idscp2.defaultdrivers.daps.aisecdaps
 
 import de.fhg.aisec.ids.idscp2.core.error.Idscp2Exception
+import de.fhg.aisec.ids.idscp2.defaultdrivers.daps.aisecdaps.AisecDapsDriver.Companion.toHexString
 import de.fhg.aisec.ids.idscp2.defaultdrivers.keystores.PreConfiguration
 import java.nio.file.Path
+import java.security.MessageDigest
+import java.security.cert.X509Certificate
 import javax.net.ssl.TrustManager
 
 /**
@@ -43,6 +46,8 @@ class AisecDapsDriverConfig {
     lateinit var keyStorePassword: CharArray
         private set
     lateinit var keyAlias: String
+        private set
+    var transportCertsSha256: List<String>? = null
         private set
     var securityRequirements: SecurityRequirements? = null
         private set
@@ -91,6 +96,18 @@ class AisecDapsDriverConfig {
 
         fun setTrustManager(trustManager: TrustManager): Builder {
             config.trustManagerInstance = trustManager
+            return this
+        }
+
+        fun setTransportCertsSha256(hashes: List<String>): Builder {
+            config.transportCertsSha256 = hashes
+            return this
+        }
+
+        fun setTransportCerts(certificates: List<X509Certificate>): Builder {
+            config.transportCertsSha256 = certificates.map {
+                MessageDigest.getInstance("SHA-256").digest(it.encoded).toHexString().lowercase()
+            }
             return this
         }
 

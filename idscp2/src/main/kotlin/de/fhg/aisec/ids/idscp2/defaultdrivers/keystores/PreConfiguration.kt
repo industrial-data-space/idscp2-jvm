@@ -47,9 +47,8 @@ object PreConfiguration {
     private val LOG = LoggerFactory.getLogger(PreConfiguration::class.java)
 
     fun loadKeyStore(keyStorePath: Path, keyStorePassword: CharArray): KeyStore {
-        val ks: KeyStore
         val pathString = keyStorePath.toString()
-        ks = when {
+        val ks = when {
             pathString.endsWith(".jks") -> {
                 KeyStore.getInstance("JKS")
             }
