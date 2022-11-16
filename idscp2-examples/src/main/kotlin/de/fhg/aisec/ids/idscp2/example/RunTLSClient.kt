@@ -25,7 +25,7 @@ import de.fhg.aisec.ids.idscp2.defaultdrivers.daps.aisecdaps.AisecDapsDriver
 import de.fhg.aisec.ids.idscp2.defaultdrivers.daps.aisecdaps.AisecDapsDriverConfig
 import de.fhg.aisec.ids.idscp2.defaultdrivers.daps.aisecdaps.SecurityProfile
 import de.fhg.aisec.ids.idscp2.defaultdrivers.daps.aisecdaps.SecurityRequirements
-import de.fhg.aisec.ids.idscp2.defaultdrivers.keystores.PreConfiguration.loadKeyStore
+import de.fhg.aisec.ids.idscp2.defaultdrivers.keystores.KeyStoreUtil.loadKeyStore
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaProver
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaVerifier
 import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration

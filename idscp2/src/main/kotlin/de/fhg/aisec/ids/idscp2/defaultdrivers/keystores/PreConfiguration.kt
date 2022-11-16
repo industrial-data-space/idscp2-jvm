@@ -19,18 +19,17 @@
  */
 package de.fhg.aisec.ids.idscp2.defaultdrivers.keystores
 
-import org.slf4j.LoggerFactory
-import java.io.IOException
-import java.nio.file.Files
+import de.fhg.aisec.ids.idscp2.defaultdrivers.keystores.KeyStoreUtil.loadKeyStore
 import java.nio.file.Path
 import java.security.Key
 import java.security.KeyStore
-import java.security.KeyStoreException
-import java.security.NoSuchAlgorithmException
-import java.security.UnrecoverableKeyException
 import java.security.cert.CertificateException
+import java.security.cert.PKIXBuilderParameters
+import java.security.cert.PKIXParameters
+import java.security.cert.X509CertSelector
 import java.security.cert.X509Certificate
 import java.util.Collections
+import java.util.Date
 import javax.net.ssl.KeyManager
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.TrustManagerFactory
@@ -44,34 +43,6 @@ import kotlin.io.path.absolutePathString
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
 object PreConfiguration {
-    private val LOG = LoggerFactory.getLogger(PreConfiguration::class.java)
-
-    fun loadKeyStore(keyStorePath: Path, keyStorePassword: CharArray): KeyStore {
-        val pathString = keyStorePath.toString()
-        val ks = when {
-            pathString.endsWith(".jks") -> {
-                KeyStore.getInstance("JKS")
-            }
-            pathString.endsWith(".p12") -> {
-                KeyStore.getInstance("PKCS12")
-            }
-            else -> {
-                throw KeyStoreException(
-                    "Unknown file extension \"" +
-                        pathString.substring(pathString.lastIndexOf('.')) +
-                        "\", only JKS (.jks) and PKCS12 (.p12) are supported."
-                )
-            }
-        }
-        Files.newInputStream(keyStorePath).use { keyStoreInputStream ->
-            if (LOG.isTraceEnabled) {
-                LOG.trace("Loading key store: $pathString")
-            }
-            ks.load(keyStoreInputStream, keyStorePassword)
-        }
-        return ks
-    }
-
     private val TRUST_MANAGERS = Collections.synchronizedMap(mutableMapOf<String, X509ExtendedTrustManager>())
 
     /*
@@ -112,43 +83,28 @@ object PreConfiguration {
         certAlias: String,
         keyType: String
     ): Array<KeyManager> {
-        return try {
-            /* create KeyManager for remote authentication */
-            val myKeyManager: Array<KeyManager>
-            val keystore = loadKeyStore(keyStorePath, keyStorePassword)
-            val keyManagerFactory = KeyManagerFactory.getInstance("PKIX") // PKIX from SunJSSE
-            keyManagerFactory.init(keystore, keyPassword)
-            myKeyManager = keyManagerFactory.keyManagers
+        val myKeyManager: Array<KeyManager>
+        val keystore = loadKeyStore(keyStorePath, keyStorePassword)
+        val keyManagerFactory = KeyManagerFactory.getInstance("PKIX") // PKIX from SunJSSE
+        keyManagerFactory.init(keystore, keyPassword)
+        myKeyManager = keyManagerFactory.keyManagers
 
-            /* set up keyManager config */
-            // allow only X509 Authentication
-            if (myKeyManager.size == 1 && myKeyManager[0] is X509ExtendedKeyManager) {
-                // select certificate alias
-                myKeyManager[0] =
-                    CustomX509ExtendedKeyManager(certAlias, keyType, myKeyManager[0] as X509ExtendedKeyManager)
-                myKeyManager
-            } else {
-                throw IllegalStateException(
-                    "Unexpected default key managers:" + myKeyManager.contentToString()
-                )
-            }
-        } catch (e: IOException) {
-            throw RuntimeException(e)
-        } catch (e: KeyStoreException) {
-            throw RuntimeException(e)
-        } catch (e: NoSuchAlgorithmException) {
-            throw RuntimeException(e)
-        } catch (e: UnrecoverableKeyException) {
-            throw RuntimeException(e)
-        } catch (e: CertificateException) {
-            throw RuntimeException(e)
+        /* set up keyManager config */
+        // allow only X509 Authentication
+        if (myKeyManager.size == 1 && myKeyManager[0] is X509ExtendedKeyManager) {
+            // select certificate alias
+            myKeyManager[0] =
+                CustomX509ExtendedKeyManager(certAlias, keyType, myKeyManager[0] as X509ExtendedKeyManager)
+            return myKeyManager
+        } else {
+            throw IllegalStateException(
+                "Unexpected default key managers:" + myKeyManager.contentToString()
+            )
         }
     }
 
-    /*
-     * Get a private key from a JKS Keystore
-     *
-     * throws RuntimeException if key is not available or key access was not permitted
+    /**
+     * Get a (private) Key from a KeyStore
      */
     fun getKey(
         keyStorePath: Path,
@@ -156,77 +112,45 @@ object PreConfiguration {
         keyAlias: String,
         keyPassword: CharArray
     ): Key {
-        return try {
-            val keyStore = loadKeyStore(keyStorePath, keyStorePassword)
-
-            // get private key
-            val key = keyStore.getKey(keyAlias, keyPassword)
-            key ?: throw RuntimeException("No key was found in keystore for given alias")
-        } catch (e: IOException) {
-            throw RuntimeException(e)
-        } catch (e: KeyStoreException) {
-            throw RuntimeException(e)
-        } catch (e: NoSuchAlgorithmException) {
-            throw RuntimeException(e)
-        } catch (e: CertificateException) {
-            throw RuntimeException(e)
-        } catch (e: UnrecoverableKeyException) {
-            throw RuntimeException(e)
-        }
+        val keyStore = loadKeyStore(keyStorePath, keyStorePassword)
+        val key = keyStore.getKey(keyAlias, keyPassword)
+        return key ?: throw RuntimeException("No key was found in keystore for given alias")
     }
 
-    /*
-     * Get the certificate from the key store
-     *
-     * throws RuntimeException if key is not available or key access was not permitted
+    /**
+     * Get a X509Certificate from a KeyStore, also checking for accessibility of the
+     * corresponding (private) Key.
      */
     fun getCertificate(
         keyStorePath: Path,
         keyStorePassword: CharArray,
         keyAlias: String
     ): X509Certificate {
-        return try {
             val keystore = loadKeyStore(keyStorePath, keyStorePassword)
-            // get private key
             val cert = keystore.getCertificate(keyAlias) as X509Certificate
             // Probe key alias
             keystore.getKey(keyAlias, keyStorePassword)
-            cert
-        } catch (e: IOException) {
-            throw RuntimeException(e)
-        } catch (e: KeyStoreException) {
-            throw RuntimeException(e)
-        } catch (e: NoSuchAlgorithmException) {
-            throw RuntimeException(e)
-        } catch (e: CertificateException) {
-            throw RuntimeException(e)
-        } catch (e: UnrecoverableKeyException) {
-            throw RuntimeException(e)
-        }
-    } /*
-     * This method can be used for filtering certificates in the trust store
-     * to avoid expired certificates
+            return cert
+    }
+
+    /**
+     * This method can be used for filtering certificates in a trust store
+     * to avoid expired certificates.
      */
-    //    private static PKIXBuilderParameters filterTrustAnchors(KeyStore keyStore, Date validityUntilDate)
-    //            throws KeyStoreException, InvalidAlgorithmParameterException {
-    //        PKIXParameters params = new PKIXParameters(keyStore);
-    //
-    //        // Obtain CA root certificates
-    //        Set<TrustAnchor> myTrustAnchors = params.getTrustAnchors();
-    //
-    //        // Create new set of CA certificates that are still valid for specified date
-    //        Set<TrustAnchor> validTrustAnchors =
-    //                myTrustAnchors.stream().filter(
-    //                        ta -> {
-    //                            try {
-    //                                ta.getTrustedCert().checkValidity(validityUntilDate);
-    //                            } catch (CertificateException e) {
-    //                                return false;
-    //                            }
-    //                            return true;
-    //                        }).collect(Collectors.toSet());
-    //
-    //        // Create PKIXBuilderParameters parameters
-    //        return new PKIXBuilderParameters(validTrustAnchors, new X509CertSelector());
-    //    }
+    fun filterTrustAnchors(keyStore: KeyStore, validityUntilDate: Date): PKIXBuilderParameters {
+        val params = PKIXParameters(keyStore)
+
+        // Create new set of CA certificates that are still valid for specified date
+        val validTrustAnchors = params.trustAnchors.filter {
+            try {
+                it.trustedCert.checkValidity(validityUntilDate)
+                true
+            } catch (e: CertificateException) {
+                false
+            }
+        }.toSet()
+
+        // Create PKIXBuilderParameters parameters
+        return PKIXBuilderParameters(validTrustAnchors, X509CertSelector())
+    }
 }
