@@ -57,15 +57,15 @@ object PreConfiguration {
     ): X509ExtendedTrustManager {
         // Cache constructed TrustManager instances by TrustStore path
         return TRUST_MANAGERS.computeIfAbsent(trustStorePath.absolutePathString()) {
-            val trustManagers = TrustManagerFactory.getInstance("PKIX").apply {
+            TrustManagerFactory.getInstance("PKIX").apply {
                 init(loadKeyStore(trustStorePath, trustStorePassword))
-            }.trustManagers
-            // Allow only X509 Authentication
-            if (trustManagers.size == 1 && trustManagers[0] is X509ExtendedTrustManager) {
+            }.trustManagers.let {
+                // Allow only X509 Authentication
                 // TODO algorithm constraints (also adapt the caching logic!)
-                trustManagers[0] as X509ExtendedTrustManager
-            } else {
-                throw IllegalStateException("Unexpected default trust manager(s): " + trustManagers.contentToString())
+                if (it.size != 1 || it[0] !is X509ExtendedTrustManager) {
+                    throw IllegalStateException("Unexpected default trust manager(s): " + it.contentToString())
+                }
+                it[0] as X509ExtendedTrustManager
             }
         }
     }
@@ -79,27 +79,16 @@ object PreConfiguration {
     fun getX509ExtKeyManager(
         keyPassword: CharArray,
         keyStorePath: Path,
-        keyStorePassword: CharArray,
-        certAlias: String,
-        keyType: String
+        keyStorePassword: CharArray
     ): Array<KeyManager> {
-        val myKeyManager: Array<KeyManager>
         val keystore = loadKeyStore(keyStorePath, keyStorePassword)
         val keyManagerFactory = KeyManagerFactory.getInstance("PKIX") // PKIX from SunJSSE
         keyManagerFactory.init(keystore, keyPassword)
-        myKeyManager = keyManagerFactory.keyManagers
-
-        /* set up keyManager config */
-        // allow only X509 Authentication
-        if (myKeyManager.size == 1 && myKeyManager[0] is X509ExtendedKeyManager) {
-            // select certificate alias
-            myKeyManager[0] =
-                CustomX509ExtendedKeyManager(certAlias, keyType, myKeyManager[0] as X509ExtendedKeyManager)
-            return myKeyManager
-        } else {
-            throw IllegalStateException(
-                "Unexpected default key managers:" + myKeyManager.contentToString()
-            )
+        return keyManagerFactory.keyManagers.also {
+            // allow only X509 Authentication
+            if (it.size != 1 || it[0] !is X509ExtendedKeyManager) {
+                throw IllegalStateException("Unexpected default key managers:" + it.contentToString())
+            }
         }
     }
 

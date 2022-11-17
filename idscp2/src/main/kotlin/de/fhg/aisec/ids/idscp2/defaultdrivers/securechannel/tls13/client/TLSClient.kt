@@ -256,9 +256,7 @@ class TLSClient<CC : Idscp2Connection>(
         val myKeyManager = PreConfiguration.getX509ExtKeyManager(
             nativeTlsConfiguration.keyPassword,
             nativeTlsConfiguration.keyStorePath,
-            nativeTlsConfiguration.keyStorePassword,
-            nativeTlsConfiguration.certificateAlias,
-            nativeTlsConfiguration.keyStoreKeyType
+            nativeTlsConfiguration.keyStorePassword
         )
         val sslContext = SSLContext.getInstance(TLSConstants.TLS_INSTANCE)
         sslContext.init(myKeyManager, arrayOf(myTrustManager), null)

@@ -229,7 +229,7 @@ class Idscp2ClientEndpoint(uri: String?, private val remaining: String, componen
                     it.trustManagers?.keyStore?.password?.toCharArray()
                         ?: "password".toCharArray()
                 )
-                setCertificateAlias(it.certAlias ?: "1.0.1")
+                setCertificateAlias(it.certAlias ?: "1")
             }
         }
 

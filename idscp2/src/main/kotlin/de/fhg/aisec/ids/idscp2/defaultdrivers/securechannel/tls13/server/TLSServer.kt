@@ -177,9 +177,7 @@ class TLSServer<CC : Idscp2Connection>(
         val myKeyManager = PreConfiguration.getX509ExtKeyManager(
             nativeTlsConfiguration.keyPassword,
             nativeTlsConfiguration.keyStorePath,
-            nativeTlsConfiguration.keyStorePassword,
-            nativeTlsConfiguration.certificateAlias,
-            nativeTlsConfiguration.keyStoreKeyType
+            nativeTlsConfiguration.keyStorePassword
         )
 
         if (LOG.isTraceEnabled) {
