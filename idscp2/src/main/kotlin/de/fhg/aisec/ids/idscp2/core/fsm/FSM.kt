@@ -41,6 +41,7 @@ import java.nio.charset.StandardCharsets
 import java.security.cert.X509Certificate
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 /**
  * The finite state machine FSM of the IDSCP2 protocol
@@ -244,8 +245,7 @@ class FSM(
         val event = Event(message)
         // must wait when fsm is in state STATE_CLOSED --> wait() will be notified when fsm is
         // leaving STATE_CLOSED
-        fsmIsBusy.lock()
-        try {
+        fsmIsBusy.withLock {
             while (currentState == states[FsmState.STATE_CLOSED]) {
                 if (isLocked) {
                     return
@@ -256,9 +256,10 @@ class FSM(
                     Thread.currentThread().interrupt()
                 }
             }
+            if (LOG.isTraceEnabled) {
+                LOG.trace("Feed message event {} to FSM...", event)
+            }
             feedEvent(event)
-        } finally {
-            fsmIsBusy.unlock()
         }
     }
 
@@ -268,11 +269,8 @@ class FSM(
     private fun onControlMessage(controlMessage: InternalControlMessage) {
         // create Internal Control Message Event and pass it to current state and update new state
         val e = Event(controlMessage)
-        fsmIsBusy.lock()
-        try {
+        fsmIsBusy.withLock {
             feedEvent(e)
-        } finally {
-            fsmIsBusy.unlock()
         }
     }
 
@@ -298,16 +296,12 @@ class FSM(
     private fun processRaProverEvent(e: Event) {
         // check for incorrect usage
         checkForFsmCycles()
-
-        fsmIsBusy.lock()
-        try {
+        fsmIsBusy.withLock {
             if (Thread.currentThread().id.toString() == currentRaProverId) {
                 feedEvent(e)
             } else {
                 LOG.warn("An old or unknown Thread (${Thread.currentThread().id}) calls onRaProverMessage()")
             }
-        } finally {
-            fsmIsBusy.unlock()
         }
     }
 
@@ -336,27 +330,20 @@ class FSM(
     private fun processRaVerifierEvent(e: Event) {
         // check for incorrect usage
         checkForFsmCycles()
-
-        fsmIsBusy.lock()
-        try {
+        fsmIsBusy.withLock {
             if (Thread.currentThread().id.toString() == currentRaVerifierId) {
                 feedEvent(e)
             } else {
                 LOG.warn("An old or unknown Thread (${Thread.currentThread().id}) calls onRaVerifierMessage()")
             }
-        } finally {
-            fsmIsBusy.unlock()
         }
     }
 
     private fun onUpperEvent(event: Event): FsmResultCode {
         // check for incorrect usage
         checkForFsmCycles()
-        fsmIsBusy.lock()
-        try {
+        fsmIsBusy.withLock {
             return feedEvent(event)
-        } finally {
-            fsmIsBusy.unlock()
         }
     }
 
@@ -399,33 +386,32 @@ class FSM(
     fun startIdscpHandshake() {
         // check for incorrect usage
         checkForFsmCycles()
-        fsmIsBusy.lock()
         try {
-            if (currentState == states[FsmState.STATE_CLOSED]) {
-                if (isLocked) {
-                    throw Idscp2HandshakeException("FSM is in a final closed state forever")
-                }
+            fsmIsBusy.withLock {
+                if (currentState == states[FsmState.STATE_CLOSED]) {
+                    if (isLocked) {
+                        throw Idscp2HandshakeException("FSM is in a final closed state forever")
+                    }
 
-                // trigger handshake init
-                onControlMessage(InternalControlMessage.START_IDSCP_HANDSHAKE)
+                    // trigger handshake init
+                    onControlMessage(InternalControlMessage.START_IDSCP_HANDSHAKE)
 
-                // wait until handshake was successful or failed
-                while (!handshakeResultAvailable) {
-                    idscpHandshakeLock.await()
-                }
+                    // wait until handshake was successful or failed
+                    while (!handshakeResultAvailable) {
+                        idscpHandshakeLock.await()
+                    }
 
-                // check if not  connected and locked forever, then the handshake has failed
-                if (!isConnected && isLocked) {
-                    // handshake failed, throw exception
-                    throw Idscp2HandshakeException("Handshake failed")
+                    // check if not  connected and locked forever, then the handshake has failed
+                    if (!isConnected && isLocked) {
+                        // handshake failed, throw exception
+                        throw Idscp2HandshakeException("Handshake failed")
+                    }
+                } else {
+                    throw Idscp2HandshakeException("Handshake has already been started")
                 }
-            } else {
-                throw Idscp2HandshakeException("Handshake has already been started")
             }
         } catch (e: InterruptedException) {
             throw Idscp2HandshakeException("Handshake failed because thread was interrupted")
-        } finally {
-            fsmIsBusy.unlock()
         }
     }
 
@@ -526,12 +512,9 @@ class FSM(
      * Notify handshake lock about result
      */
     fun notifyHandshakeCompleteLock() {
-        fsmIsBusy.lock()
-        try {
+        fsmIsBusy.withLock {
             handshakeResultAvailable = true
             idscpHandshakeLock.signal()
-        } finally {
-            fsmIsBusy.unlock()
         }
     }
 

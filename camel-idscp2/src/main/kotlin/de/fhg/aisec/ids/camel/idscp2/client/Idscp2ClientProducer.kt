@@ -57,7 +57,7 @@ class Idscp2ClientProducer(private val endpoint: Idscp2ClientEndpoint) : Default
                         if (connectionFuture.isCompletedExceptionally || t > 1) {
                             endpoint.releaseConnection(connectionFuture)
                             connectionFuture = endpoint.makeConnection()
-                                .also { c -> c.thenAccept { it.unlockMessaging() } }
+                                .apply { thenAccept { it.unlockMessaging() } }
                         }
                         val connection = connectionFuture.get()
                         if (endpoint.awaitResponse) {
@@ -136,9 +136,9 @@ class Idscp2ClientProducer(private val endpoint: Idscp2ClientEndpoint) : Default
         if (endpoint.awaitResponse) {
             reentrantLock = ReentrantLock()
         }
-        connectionFuture = endpoint.makeConnection().also { c ->
+        connectionFuture = endpoint.makeConnection().apply {
             // Unlock messaging immediately after obtaining connection
-            c.thenAccept { it.unlockMessaging() }.exceptionally {
+            thenAccept { it.unlockMessaging() }.exceptionally {
                 LOG.warn("Could not connect to Server ${endpoint.endpointUri}, delaying connect until first message...")
                 null
             }

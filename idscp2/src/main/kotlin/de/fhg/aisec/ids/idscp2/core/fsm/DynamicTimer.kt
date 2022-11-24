@@ -19,7 +19,13 @@
  */
 package de.fhg.aisec.ids.idscp2.core.fsm
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 /**
  * A DynamicTimer class that provides an API to the FSM to start and cancel timeout threads
@@ -29,29 +35,35 @@ import java.util.concurrent.locks.ReentrantLock
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
 class DynamicTimer internal constructor(private val fsmIsBusy: ReentrantLock, private val timeoutHandler: Runnable) {
-    private var thread: TimerThread? = null
-    private val mutex = ReentrantLock(true)
+    private var job: Job? = null
+
     fun resetTimeout(delay: Long) {
         cancelTimeout()
         start(delay)
     }
 
-    /*
-     * Start a timer thread that triggers the timeout handler routine after a given timout delay
+    /**
+     * Start a timer thread that triggers the timeout handler routine after the static delay
      */
+    @Synchronized
     fun start(delay: Long) {
-        mutex.lock()
-        thread = TimerThread(delay, timeoutHandler, fsmIsBusy).also { it.start() }
-        mutex.unlock()
+        job = scope.launch {
+            delay(delay)
+            fsmIsBusy.withLock {
+                timeoutHandler.run()
+            }
+        }
     }
 
-    /*
+    /**
      * Cancel the current timer thread
      */
+    @Synchronized
     fun cancelTimeout() {
-        mutex.lock()
-        thread?.safeStop()
-        thread = null
-        mutex.unlock()
+        job?.cancel()
+    }
+
+    companion object {
+        private val scope = CoroutineScope(Dispatchers.IO)
     }
 }

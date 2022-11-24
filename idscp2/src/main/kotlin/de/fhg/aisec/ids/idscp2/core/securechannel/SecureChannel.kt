@@ -65,7 +65,7 @@ class SecureChannel(private val endpoint: SecureChannelEndpoint, private val pee
         if (LOG.isTraceEnabled) {
             LOG.trace("New raw data has been received via the secure channel")
         }
-        fsmPromise.thenAccept { fsmListener: ScFsmListener -> fsmListener.onMessage(data) }
+        fsmPromise.thenAccept { it.onMessage(data) }
     }
 
     override fun onError(t: Throwable) {
@@ -73,7 +73,7 @@ class SecureChannel(private val endpoint: SecureChannelEndpoint, private val pee
         if (LOG.isTraceEnabled) {
             LOG.trace("Error occurred in secure channel")
         }
-        fsmPromise.thenAccept { fsmListener: ScFsmListener -> fsmListener.onError(t) }
+        fsmPromise.thenAccept { it.onError(t) }
     }
 
     override fun onClose() {
@@ -81,7 +81,7 @@ class SecureChannel(private val endpoint: SecureChannelEndpoint, private val pee
         if (LOG.isTraceEnabled) {
             LOG.trace("Secure channel received EOF")
         }
-        fsmPromise.thenAccept { obj: ScFsmListener -> obj.onClose() }
+        fsmPromise.thenAccept { it.onClose() }
     }
 
     val isConnected: Boolean

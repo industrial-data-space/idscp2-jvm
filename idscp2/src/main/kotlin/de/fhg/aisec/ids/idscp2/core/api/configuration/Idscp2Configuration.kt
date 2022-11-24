@@ -94,6 +94,6 @@ class Idscp2Configuration {
 
     companion object {
         const val DEFAULT_ACK_TIMEOUT_DELAY = "200" // (in ms)
-        const val DEFAULT_HANDSHAKE_TIMEOUT_DELAY = "5000" // (in ms)
+        const val DEFAULT_HANDSHAKE_TIMEOUT_DELAY = "10000" // (in ms)
     }
 }

@@ -47,7 +47,7 @@ class StateWaitForHello(
     override fun runEntryCode(fsm: FSM) {
         if (LOG.isTraceEnabled) {
             LOG.trace("Switched to state STATE_WAIT_FOR_HELLO")
-            LOG.trace("Set handshake timeout to 5 seconds")
+            LOG.trace("Set handshake timeout to ${handshakeTimer.delay} ms.")
         }
         handshakeTimer.resetTimeout()
     }
