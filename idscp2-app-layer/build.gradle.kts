@@ -8,11 +8,11 @@ val api by configurations
 val testImplementation by configurations
 
 dependencies {
-    api(project(":idscp2"))
-
+    api(project(":idscp2-api"))
     api(libs.infomodel.model)
-    implementation(libs.infomodel.serializer)
 
+    implementation(project(":idscp2-core"))
+    implementation(libs.infomodel.serializer)
     implementation(libs.protobuf)
 }
 

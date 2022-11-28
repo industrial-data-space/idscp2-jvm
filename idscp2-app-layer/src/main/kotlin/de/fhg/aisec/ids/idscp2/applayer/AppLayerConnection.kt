@@ -20,13 +20,13 @@
 package de.fhg.aisec.ids.idscp2.applayer
 
 import com.google.protobuf.ByteString
+import de.fhg.aisec.ids.idscp2.api.connection.Idscp2Connection
+import de.fhg.aisec.ids.idscp2.api.connection.Idscp2MessageListener
+import de.fhg.aisec.ids.idscp2.api.fsm.FSM
 import de.fhg.aisec.ids.idscp2.applayer.listeners.GenericMessageListener
 import de.fhg.aisec.ids.idscp2.applayer.listeners.IdsMessageListener
 import de.fhg.aisec.ids.idscp2.applayer.messages.AppLayer
-import de.fhg.aisec.ids.idscp2.core.api.connection.Idscp2Connection
-import de.fhg.aisec.ids.idscp2.core.api.connection.Idscp2ConnectionImpl
-import de.fhg.aisec.ids.idscp2.core.api.connection.Idscp2MessageListener
-import de.fhg.aisec.ids.idscp2.core.fsm.FSM
+import de.fhg.aisec.ids.idscp2.core.connection.Idscp2ConnectionImpl
 import de.fraunhofer.iais.eis.Message
 import org.slf4j.LoggerFactory
 import java.util.Collections

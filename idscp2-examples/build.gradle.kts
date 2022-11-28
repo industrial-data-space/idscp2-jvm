@@ -9,8 +9,10 @@ apply(plugin = "java")
 val api by configurations
 
 dependencies {
-    api(project(":idscp2"))
+    api(project(":idscp2-api"))
 
+    implementation(project(":idscp2-core"))
+    implementation(project(":idscp2-daps-aisec"))
     implementation(libs.slf4j.impl)
 }
 

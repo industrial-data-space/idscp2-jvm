@@ -21,8 +21,8 @@
 
 package de.fhg.aisec.ids.camel.idscp2.client
 
-import de.fhg.aisec.ids.idscp2.core.raregistry.RaProverDriverRegistry
-import de.fhg.aisec.ids.idscp2.core.raregistry.RaVerifierDriverRegistry
+import de.fhg.aisec.ids.idscp2.api.raregistry.RaProverDriverRegistry
+import de.fhg.aisec.ids.idscp2.api.raregistry.RaVerifierDriverRegistry
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaProverDummy
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaProverDummy2
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaVerifierDummy

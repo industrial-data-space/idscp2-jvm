@@ -19,9 +19,9 @@
  */
 package de.fhg.aisec.ids.idscp2.example
 
-import de.fhg.aisec.ids.idscp2.core.api.configuration.AttestationConfig
-import de.fhg.aisec.ids.idscp2.core.api.configuration.Idscp2Configuration
-import de.fhg.aisec.ids.idscp2.core.drivers.DapsDriver
+import de.fhg.aisec.ids.idscp2.api.configuration.AttestationConfig
+import de.fhg.aisec.ids.idscp2.api.configuration.Idscp2Configuration
+import de.fhg.aisec.ids.idscp2.api.drivers.DapsDriver
 import de.fhg.aisec.ids.idscp2.defaultdrivers.daps.nulldaps.NullDaps
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaProver
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaVerifier

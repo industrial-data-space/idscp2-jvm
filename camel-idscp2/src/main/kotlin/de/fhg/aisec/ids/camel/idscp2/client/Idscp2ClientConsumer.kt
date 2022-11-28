@@ -22,10 +22,10 @@ package de.fhg.aisec.ids.camel.idscp2.client
 import de.fhg.aisec.ids.camel.idscp2.Constants.IDSCP2_HEADER
 import de.fhg.aisec.ids.camel.idscp2.ListenerManager
 import de.fhg.aisec.ids.camel.idscp2.Utils
+import de.fhg.aisec.ids.idscp2.api.connection.Idscp2ConnectionListener
 import de.fhg.aisec.ids.idscp2.applayer.AppLayerConnection
 import de.fhg.aisec.ids.idscp2.applayer.listeners.GenericMessageListener
 import de.fhg.aisec.ids.idscp2.applayer.listeners.IdsMessageListener
-import de.fhg.aisec.ids.idscp2.core.api.connection.Idscp2ConnectionListener
 import de.fraunhofer.iais.eis.Message
 import org.apache.camel.Processor
 import org.apache.camel.support.DefaultConsumer

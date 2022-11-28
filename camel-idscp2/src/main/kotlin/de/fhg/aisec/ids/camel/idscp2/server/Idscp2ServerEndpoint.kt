@@ -23,13 +23,13 @@ package de.fhg.aisec.ids.camel.idscp2.server
 
 import de.fhg.aisec.ids.camel.idscp2.ListenerManager
 import de.fhg.aisec.ids.camel.idscp2.Utils
+import de.fhg.aisec.ids.idscp2.api.Idscp2EndpointListener
+import de.fhg.aisec.ids.idscp2.api.configuration.AttestationConfig
+import de.fhg.aisec.ids.idscp2.api.configuration.Idscp2Configuration
+import de.fhg.aisec.ids.idscp2.api.connection.Idscp2ConnectionListener
 import de.fhg.aisec.ids.idscp2.applayer.AppLayerConnection
-import de.fhg.aisec.ids.idscp2.core.api.Idscp2EndpointListener
-import de.fhg.aisec.ids.idscp2.core.api.configuration.AttestationConfig
-import de.fhg.aisec.ids.idscp2.core.api.configuration.Idscp2Configuration
-import de.fhg.aisec.ids.idscp2.core.api.connection.Idscp2ConnectionListener
-import de.fhg.aisec.ids.idscp2.defaultdrivers.daps.aisecdaps.AisecDapsDriver
-import de.fhg.aisec.ids.idscp2.defaultdrivers.daps.aisecdaps.AisecDapsDriverConfig
+import de.fhg.aisec.ids.idscp2.daps.aisecdaps.AisecDapsDriver
+import de.fhg.aisec.ids.idscp2.daps.aisecdaps.AisecDapsDriverConfig
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaProverDummy
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaProverDummy2
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaVerifierDummy

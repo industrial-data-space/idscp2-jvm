@@ -19,14 +19,14 @@
  */
 package de.fhg.aisec.ids.idscp2.example
 
-import de.fhg.aisec.ids.idscp2.core.api.Idscp2EndpointListener
-import de.fhg.aisec.ids.idscp2.core.api.configuration.Idscp2Configuration
-import de.fhg.aisec.ids.idscp2.core.api.connection.Idscp2Connection
-import de.fhg.aisec.ids.idscp2.core.api.connection.Idscp2ConnectionAdapter
-import de.fhg.aisec.ids.idscp2.core.api.connection.Idscp2ConnectionImpl
-import de.fhg.aisec.ids.idscp2.core.api.server.Idscp2ServerFactory
-import de.fhg.aisec.ids.idscp2.core.raregistry.RaProverDriverRegistry
-import de.fhg.aisec.ids.idscp2.core.raregistry.RaVerifierDriverRegistry
+import de.fhg.aisec.ids.idscp2.api.Idscp2EndpointListener
+import de.fhg.aisec.ids.idscp2.api.configuration.Idscp2Configuration
+import de.fhg.aisec.ids.idscp2.api.connection.Idscp2Connection
+import de.fhg.aisec.ids.idscp2.api.connection.Idscp2ConnectionAdapter
+import de.fhg.aisec.ids.idscp2.api.raregistry.RaProverDriverRegistry
+import de.fhg.aisec.ids.idscp2.api.raregistry.RaVerifierDriverRegistry
+import de.fhg.aisec.ids.idscp2.api.server.Idscp2ServerFactory
+import de.fhg.aisec.ids.idscp2.core.connection.Idscp2ConnectionImpl
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaProver
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaVerifier
 import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTLSDriver

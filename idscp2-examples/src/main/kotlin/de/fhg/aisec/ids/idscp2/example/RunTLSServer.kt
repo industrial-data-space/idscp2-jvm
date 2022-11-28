@@ -19,16 +19,16 @@
  */
 package de.fhg.aisec.ids.idscp2.example
 
-import de.fhg.aisec.ids.idscp2.core.api.configuration.AttestationConfig
-import de.fhg.aisec.ids.idscp2.core.api.configuration.Idscp2Configuration
-import de.fhg.aisec.ids.idscp2.defaultdrivers.daps.aisecdaps.AisecDapsDriver
-import de.fhg.aisec.ids.idscp2.defaultdrivers.daps.aisecdaps.AisecDapsDriverConfig
-import de.fhg.aisec.ids.idscp2.defaultdrivers.daps.aisecdaps.SecurityProfile
-import de.fhg.aisec.ids.idscp2.defaultdrivers.daps.aisecdaps.SecurityRequirements
-import de.fhg.aisec.ids.idscp2.defaultdrivers.keystores.KeyStoreUtil.loadKeyStore
+import de.fhg.aisec.ids.idscp2.api.configuration.AttestationConfig
+import de.fhg.aisec.ids.idscp2.api.configuration.Idscp2Configuration
+import de.fhg.aisec.ids.idscp2.daps.aisecdaps.AisecDapsDriver
+import de.fhg.aisec.ids.idscp2.daps.aisecdaps.AisecDapsDriverConfig
+import de.fhg.aisec.ids.idscp2.daps.aisecdaps.SecurityProfile
+import de.fhg.aisec.ids.idscp2.daps.aisecdaps.SecurityRequirements
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaProver
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaVerifier
 import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
+import de.fhg.aisec.ids.idscp2.keystores.KeyStoreUtil.loadKeyStore
 import java.nio.file.Paths
 import java.security.cert.X509Certificate
 import java.util.Objects
