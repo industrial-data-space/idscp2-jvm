@@ -19,8 +19,10 @@ plugins {
 }
 
 val descriptions: Map<String, String> = mapOf(
-    "idscp2" to "IDSCP2 Protocol Implementation",
+    "idscp2-api" to "IDSCP2 Protocol API",
+    "idscp2-core" to "IDSCP2 Protocol Implementation",
     "idscp2-app-layer" to "IDSCP2 Application Layer Implementation",
+    "idscp2-daps-aisec" to "IDSCP2 AISEC DAPS Driver",
     "camel-idscp2" to "Camel IDSCP2 Component Implementation"
 )
 
