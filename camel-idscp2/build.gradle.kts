@@ -4,6 +4,7 @@ dependencies {
     api(project(":idscp2-app-layer"))
     api(libs.infomodel.model)
 
+    implementation(project(":idscp2-core"))
     implementation(project(":idscp2-daps-aisec"))
     implementation(libs.camel.core)
     implementation(libs.protobuf)

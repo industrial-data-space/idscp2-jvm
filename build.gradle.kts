@@ -182,7 +182,7 @@ subprojects {
 
     spotless {
         kotlin {
-            target("src/**/*.kt")
+            target("src/*/kotlin/**/*.kt")
             ktlint(libs.versions.ktlint.get())
             licenseHeader(
                 """/*-

@@ -1,10 +1,10 @@
 [versions]
 # Versions for modules that will be released as libraries
-idscp2 = "0.14.0"
+idscp2 = "0.14.1"
 ktlint = "0.47.1"
 
 # Kotlin library/compiler version
-kotlin = "1.7.21"
+kotlin = "1.7.22"
 kotlinxCoroutines = "1.6.4"
 
 # The used version of the infomodel from IESE
@@ -12,11 +12,11 @@ infomodel = "4.1.0"
 
 camel = "3.18.3"
 
-slf4j = "2.0.3"
+slf4j = "2.0.5"
 
 guava = "31.1-jre"
 junit4 = "4.13.2"
-mockito = "4.8.1"
+mockito = "4.9.0"
 awaitility = "4.2.0"
 
 protobuf = "3.21.9"
@@ -24,7 +24,7 @@ protobuf = "3.21.9"
 bouncycastle = "1.70"
 
 # We will pull in a newer version of jackson (required by io.jsonwebtoken) because of security fixes
-jackson = "2.14.0"
+jackson = "2.14.1"
 
 # Needed for token manager to assemble JWTs
 jsonwebtoken = "0.11.5"
@@ -69,6 +69,6 @@ ktor-richClient = ["ktor-client-core", "ktor-client-java", "ktor-client-content-
 [plugins]
 protobuf = { id = "com.google.protobuf",  version = "0.9.1" }
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
-spotless = { id = "com.diffplug.spotless", version = "6.11.0" }
+spotless = { id = "com.diffplug.spotless", version = "6.12.0" }
 license-report = { id = "com.github.jk1.dependency-license-report", version = "2.1" }
-versions = { id = "com.github.ben-manes.versions", version = "0.43.0" }
+versions = { id = "com.github.ben-manes.versions", version = "0.44.0" }
