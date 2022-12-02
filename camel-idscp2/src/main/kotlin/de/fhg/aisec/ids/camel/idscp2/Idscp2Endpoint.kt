@@ -42,11 +42,11 @@ interface Idscp2Endpoint {
             .setServerPort(port)
 
         (transportSslContextParameters ?: sslContextParameters)?.let {
-            secureChannelConfigBuilder.applySslContextParameters(it)
+            applySslContextParameters(secureChannelConfigBuilder, it)
         }
 
         (dapsSslContextParameters ?: sslContextParameters)?.let {
-            dapsDriverConfigBuilder.applySslContextParameters(it)
+            applySslContextParameters(dapsDriverConfigBuilder, it)
         }
 
         // create idscp config
@@ -58,57 +58,60 @@ interface Idscp2Endpoint {
         return Pair(serverConfiguration, secureChannelConfigBuilder)
     }
 
-    fun NativeTlsConfiguration.Builder.applySslContextParameters(
-        sslContextParameters: SSLContextParameters
-    ): NativeTlsConfiguration.Builder {
-        sslContextParameters.let {
-            setKeyPassword(
-                it.keyManagers?.keyPassword?.toCharArray()
-                    ?: "password".toCharArray()
-            )
-            it.keyManagers?.keyStore?.resource?.let { setKeyStorePath(Paths.get(it)) }
-            it.keyManagers?.keyStore?.type?.let { setKeyStoreKeyType(it) }
-            setKeyStorePassword(
-                it.keyManagers?.keyStore?.password?.toCharArray()
-                    ?: "password".toCharArray()
-            )
-            it.trustManagers?.trustManager?.let { setTrustManager(it) }
-            it.trustManagers?.keyStore?.resource?.let { setTrustStorePath(Paths.get(it)) }
-            setTrustStorePassword(
-                it.trustManagers?.keyStore?.password?.toCharArray()
-                    ?: "password".toCharArray()
-            )
-            setCertificateAlias(it.certAlias ?: "1")
-        }
-        return this
-    }
-
-    fun AisecDapsDriverConfig.Builder.applySslContextParameters(
-        sslContextParameters: SSLContextParameters
-    ): AisecDapsDriverConfig.Builder {
-        sslContextParameters.let {
-            setKeyPassword(
-                it.keyManagers?.keyPassword?.toCharArray()
-                    ?: "password".toCharArray()
-            )
-            it.keyManagers?.keyStore?.resource?.let { setKeyStorePath(Paths.get(it)) }
-            setKeyStorePassword(
-                it.keyManagers?.keyStore?.password?.toCharArray()
-                    ?: "password".toCharArray()
-            )
-            it.trustManagers?.trustManager?.let { setTrustManager(it) }
-            it.trustManagers?.keyStore?.resource?.let { setTrustStorePath(Paths.get(it)) }
-            setTrustStorePassword(
-                it.trustManagers?.keyStore?.password?.toCharArray()
-                    ?: "password".toCharArray()
-            )
-            setKeyAlias(it.certAlias ?: "1")
-        }
-        return this
-    }
-
     companion object {
         private val URI_REGEX = Pattern.compile("(.*?)(?::(\\d+))?/?$")
+
+        fun applySslContextParameters(
+            builder: NativeTlsConfiguration.Builder,
+            sslContextParameters: SSLContextParameters
+        ): NativeTlsConfiguration.Builder {
+            return builder.apply {
+                sslContextParameters.let {
+                    setKeyPassword(
+                        it.keyManagers?.keyPassword?.toCharArray()
+                            ?: "password".toCharArray()
+                    )
+                    it.keyManagers?.keyStore?.resource?.let { setKeyStorePath(Paths.get(it)) }
+                    it.keyManagers?.keyStore?.type?.let { setKeyStoreKeyType(it) }
+                    setKeyStorePassword(
+                        it.keyManagers?.keyStore?.password?.toCharArray()
+                            ?: "password".toCharArray()
+                    )
+                    it.trustManagers?.trustManager?.let { setTrustManager(it) }
+                    it.trustManagers?.keyStore?.resource?.let { setTrustStorePath(Paths.get(it)) }
+                    setTrustStorePassword(
+                        it.trustManagers?.keyStore?.password?.toCharArray()
+                            ?: "password".toCharArray()
+                    )
+                    setCertificateAlias(it.certAlias ?: "1")
+                }
+            }
+        }
+
+        fun applySslContextParameters(
+            builder: AisecDapsDriverConfig.Builder,
+            sslContextParameters: SSLContextParameters
+        ): AisecDapsDriverConfig.Builder {
+            return builder.apply {
+                sslContextParameters.let {
+                setKeyPassword(
+                    it.keyManagers?.keyPassword?.toCharArray()
+                        ?: "password".toCharArray()
+                )
+                it.keyManagers?.keyStore?.resource?.let { setKeyStorePath(Paths.get(it)) }
+                setKeyStorePassword(
+                    it.keyManagers?.keyStore?.password?.toCharArray()
+                        ?: "password".toCharArray()
+                )
+                it.trustManagers?.trustManager?.let { setTrustManager(it) }
+                it.trustManagers?.keyStore?.resource?.let { setTrustStorePath(Paths.get(it)) }
+                setTrustStorePassword(
+                    it.trustManagers?.keyStore?.password?.toCharArray()
+                        ?: "password".toCharArray()
+                )
+                setKeyAlias(it.certAlias ?: "1")
+            } }
+        }
     }
 
 }
