@@ -33,8 +33,6 @@ interface Idscp2Endpoint {
             (transportSslContextParameters ?: sslContextParameters)?.let {
                 applySslContextParameters(secureChannelConfigBuilder, it)
             }
-
-            secureChannelConfigurationBlock?.invoke(secureChannelConfigBuilder)
         }
 
         // Always set (or overwrite) the host and port with information passed by component URI
@@ -44,6 +42,8 @@ interface Idscp2Endpoint {
         val host = matchResult.group(1)
         val port = matchResult.group(2)?.toInt() ?: NativeTlsConfiguration.DEFAULT_SERVER_PORT
         secureChannelConfigBuilder.setHost(host).setServerPort(port)
+        // Always execute secureChannelConfigurationBlock (hostname verification cannot be disabled via beans)
+        secureChannelConfigurationBlock?.invoke(secureChannelConfigBuilder)
         // Finalize the NativeTlsConfiguration
         secureChannelConfiguration = secureChannelConfigBuilder.build()
 
