@@ -26,7 +26,6 @@ import de.fhg.aisec.ids.camel.idscp2.ListenerManager
 import de.fhg.aisec.ids.camel.idscp2.RefCountingHashMap
 import de.fhg.aisec.ids.idscp2.api.configuration.AttestationConfig
 import de.fhg.aisec.ids.idscp2.api.configuration.Idscp2Configuration
-import de.fhg.aisec.ids.idscp2.api.drivers.SecureChannelDriver
 import de.fhg.aisec.ids.idscp2.applayer.AppLayerConnection
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaProverDummy
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaProverDummy2
@@ -52,27 +51,44 @@ import java.util.regex.Pattern
 )
 class Idscp2ClientEndpoint(uri: String?, override val remaining: String, component: Idscp2ClientComponent?) :
     DefaultEndpoint(uri, component), Idscp2Endpoint {
-    private lateinit var secureChannelDriver: SecureChannelDriver<AppLayerConnection, NativeTlsConfiguration>
-    private lateinit var clientConfiguration: Idscp2Configuration
-    private lateinit var secureChannelConfig: NativeTlsConfiguration
+    private val secureChannelDriver = NativeTLSDriver<AppLayerConnection>()
+
+    @UriParam(
+        label = "common",
+        description = "An optional Idscp2Configuration instance. " +
+            "Takes precedence over other parameters included in this configuration."
+    )
+    override var idscp2Configuration: Idscp2Configuration? = null
+
+    @UriParam(
+        label = "common",
+        description = "An optional NativeTlsConfiguration.Builder instance. " +
+            "Takes precedence over other parameters included in this configuration, except for " +
+            "the host and port settings, which will be applied from the URI passed to the component"
+    )
+    override var secureChannelConfigurationBuilder: NativeTlsConfiguration.Builder? = null
+
+    override lateinit var secureChannelConfiguration: NativeTlsConfiguration
 
     @UriParam(
         label = "security",
         description = "The transport encryption SSL context for the IDSCP2 endpoint"
     )
+    @Deprecated("Deprecated in favor of secureChannelConfigurationBuilder")
     override var transportSslContextParameters: SSLContextParameters? = null
 
     @UriParam(
         label = "security",
         description = "The DAPS authentication SSL context for the IDSCP2 endpoint"
     )
+    @Deprecated("Deprecated in favor of idscp2Configuration")
     override var dapsSslContextParameters: SSLContextParameters? = null
 
     @UriParam(
         label = "security",
         description = "The SSL context for the IDSCP2 endpoint (deprecated)"
     )
-    @Deprecated("Depreacted in favor of transportSslContextParameters and dapsSslContextParameters")
+    @Deprecated("Deprecated in favor of idscp2Configuration and secureChannelConfigurationBuilder")
     override var sslContextParameters: SSLContextParameters? = null
 
     @UriParam(
@@ -80,6 +96,7 @@ class Idscp2ClientEndpoint(uri: String?, override val remaining: String, compone
         description = "The validity time of remote attestation and DAT in milliseconds",
         defaultValue = "600000"
     )
+    @Deprecated("Deprecated in favor of idscp2Configuration")
     override var dapsRaTimeoutDelay: Long = AttestationConfig.DEFAULT_RA_TIMEOUT_DELAY.toLong()
 
     @UriParam(
@@ -107,6 +124,7 @@ class Idscp2ClientEndpoint(uri: String?, override val remaining: String, compone
         description = "Locally supported Remote Attestation Suite IDs, separated by \"|\"",
         defaultValue = "${RaProverDummy2.RA_PROVER_DUMMY2_ID}|${RaProverDummy.RA_PROVER_DUMMY_ID}"
     )
+    @Deprecated("Deprecated in favor of idscp2Configuration")
     override var supportedRaSuites: String = "${RaProverDummy2.RA_PROVER_DUMMY2_ID}|${RaProverDummy.RA_PROVER_DUMMY_ID}"
 
     @UriParam(
@@ -115,6 +133,7 @@ class Idscp2ClientEndpoint(uri: String?, override val remaining: String, compone
             "each communication peer must support at least one",
         defaultValue = "${RaVerifierDummy2.RA_VERIFIER_DUMMY2_ID}|${RaVerifierDummy.RA_VERIFIER_DUMMY_ID}"
     )
+    @Deprecated("Deprecated in favor of idscp2Configuration")
     override var expectedRaSuites: String = "${RaVerifierDummy2.RA_VERIFIER_DUMMY2_ID}|${RaVerifierDummy.RA_VERIFIER_DUMMY_ID}"
 
     @UriParam(
@@ -150,17 +169,20 @@ class Idscp2ClientEndpoint(uri: String?, override val remaining: String, compone
     }
 
     private fun makeConnectionInternal(): CompletableFuture<AppLayerConnection> {
-        return secureChannelDriver.connect(::AppLayerConnection, clientConfiguration, secureChannelConfig)
-            .thenApply { c ->
-                if (useIdsMessages) {
-                    c.addIdsMessageListener { connection, header, _, _ ->
-                        header?.let { ListenerManager.publishTransferContractEvent(connection, it.transferContract) }
-                    }
+        return secureChannelDriver.connect(
+            ::AppLayerConnection,
+            requireNotNull(idscp2Configuration) { "Lifecycle error: idscp2Configuration is null" },
+            secureChannelConfiguration
+        ).thenApply { c ->
+            if (useIdsMessages) {
+                c.addIdsMessageListener { connection, header, _, _ ->
+                    header?.let { ListenerManager.publishTransferContractEvent(connection, it.transferContract) }
                 }
-                // Notify connection listeners
-                ListenerManager.publishConnectionEvent(c, this)
-                c
             }
+            // Notify connection listeners
+            ListenerManager.publishConnectionEvent(c, this)
+            c
+        }
     }
 
     fun makeConnection(): CompletableFuture<AppLayerConnection> {
@@ -188,11 +210,7 @@ class Idscp2ClientEndpoint(uri: String?, override val remaining: String, compone
             LOG.debug("Starting IDSCP2 client endpoint $endpointUri")
         }
 
-        val (idscp2Configuration, secureChannelConfigBuilder) = this.createCommonEndpointConfigurations()
-
-        secureChannelDriver = NativeTLSDriver()
-        clientConfiguration = idscp2Configuration
-        secureChannelConfig = secureChannelConfigBuilder.build()
+        this.doCommonEndpointConfiguration()
     }
 
     public override fun doStop() {

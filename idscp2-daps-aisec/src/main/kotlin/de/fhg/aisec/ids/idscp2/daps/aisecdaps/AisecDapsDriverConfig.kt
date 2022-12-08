@@ -23,6 +23,7 @@ import de.fhg.aisec.ids.idscp2.api.error.Idscp2Exception
 import de.fhg.aisec.ids.idscp2.daps.aisecdaps.AisecDapsDriver.Companion.toHexString
 import de.fhg.aisec.ids.idscp2.keystores.PreConfiguration
 import java.nio.file.Path
+import java.security.KeyStore
 import java.security.MessageDigest
 import java.security.cert.X509Certificate
 import javax.net.ssl.TrustManager
@@ -109,6 +110,14 @@ class AisecDapsDriverConfig {
                 MessageDigest.getInstance("SHA-256").digest(it.encoded).toHexString().lowercase()
             }
             return this
+        }
+
+        fun loadTransportCertsFromKeystore(ks: KeyStore): Builder {
+            val certificates = ks.aliases().asSequence()
+                .filter { ks.isKeyEntry(it) }
+                .map { ks.getCertificateChain(it)[0] as X509Certificate }
+                .toList()
+            return this.setTransportCerts(certificates)
         }
 
         fun setSecurityRequirements(securityRequirements: SecurityRequirements): Builder {

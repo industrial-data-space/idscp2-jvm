@@ -843,11 +843,14 @@ class FSMImpl(
         ackTimer = StaticTimer(fsmIsBusy, ackTimeoutHandler, ackTimeoutDelay)
 
         /* ------------- FSM STATE Initialization -------------*/
-        states[FsmState.STATE_CLOSED] = StateClosed(
+        val closedState = StateClosed(
             this,
             onMessageBlock,
             attestationConfig
         )
+        states[FsmState.STATE_CLOSED] = closedState
+        // Set initial state to STATE_CLOSED
+        currentState = closedState
         states[FsmState.STATE_WAIT_FOR_HELLO] = StateWaitForHello(
             this,
             handshakeTimer,
@@ -902,8 +905,5 @@ class FSMImpl(
             handshakeTimer,
             ackTimer
         )
-
-        // Set initial state
-        currentState = states[FsmState.STATE_CLOSED]!!
     }
 }

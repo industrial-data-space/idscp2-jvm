@@ -18,44 +18,57 @@ interface Idscp2Endpoint {
     val transportSslContextParameters: SSLContextParameters?
     val dapsSslContextParameters: SSLContextParameters?
     val sslContextParameters: SSLContextParameters?
+    var idscp2Configuration: Idscp2Configuration?
+    var secureChannelConfigurationBuilder: NativeTlsConfiguration.Builder?
+    var secureChannelConfiguration: NativeTlsConfiguration
 
-    fun Idscp2Endpoint.createCommonEndpointConfigurations(): Pair<Idscp2Configuration, NativeTlsConfiguration.Builder> {
+    fun Idscp2Endpoint.doCommonEndpointConfiguration(
+        secureChannelConfigurationBlock: ((NativeTlsConfiguration.Builder) -> Unit)? = null
+    ) {
+        // Use the provided NativeTlsConfiguration.Builder, or create a new one
+        val secureChannelConfigBuilder = secureChannelConfigurationBuilder ?: run { NativeTlsConfiguration.Builder() }
+
+        // If no Builder has been passed, perform configuration based on passed individual parameters
+        if (secureChannelConfigurationBuilder == null) {
+            (transportSslContextParameters ?: sslContextParameters)?.let {
+                applySslContextParameters(secureChannelConfigBuilder, it)
+            }
+
+            secureChannelConfigurationBlock?.invoke(secureChannelConfigBuilder)
+        }
+
+        // Always set (or overwrite) the host and port with information passed by component URI
         val remainingMatcher = URI_REGEX.matcher(remaining)
         require(remainingMatcher.matches()) { "$remaining is not a valid URI remainder, must be \"host:port\"." }
         val matchResult = remainingMatcher.toMatchResult()
         val host = matchResult.group(1)
         val port = matchResult.group(2)?.toInt() ?: NativeTlsConfiguration.DEFAULT_SERVER_PORT
+        secureChannelConfigBuilder.setHost(host).setServerPort(port)
+        // Finalize the NativeTlsConfiguration
+        secureChannelConfiguration = secureChannelConfigBuilder.build()
 
-        // create attestation config
-        val localAttestationConfig = AttestationConfig.Builder()
-            .setSupportedRaSuite(supportedRaSuites.split('|').toTypedArray())
-            .setExpectedRaSuite(expectedRaSuites.split('|').toTypedArray())
-            .setRaTimeoutDelay(dapsRaTimeoutDelay)
-            .build()
+        if (idscp2Configuration == null) {
+            // create attestation config
+            val localAttestationConfig = AttestationConfig.Builder()
+                .setSupportedRaSuite(supportedRaSuites.split('|').toTypedArray())
+                .setExpectedRaSuite(expectedRaSuites.split('|').toTypedArray())
+                .setRaTimeoutDelay(dapsRaTimeoutDelay)
+                .build()
 
-        // create daps config
-        val dapsDriverConfigBuilder = AisecDapsDriverConfig.Builder()
-            .setDapsUrl(Utils.dapsUrlProducer())
+            // create daps config
+            val dapsDriverConfigBuilder = AisecDapsDriverConfig.Builder()
+                .setDapsUrl(Utils.dapsUrlProducer())
 
-        val secureChannelConfigBuilder = NativeTlsConfiguration.Builder()
-            .setHost(host)
-            .setServerPort(port)
+            (dapsSslContextParameters ?: sslContextParameters)?.let {
+                applySslContextParameters(dapsDriverConfigBuilder, it)
+            }
 
-        (transportSslContextParameters ?: sslContextParameters)?.let {
-            applySslContextParameters(secureChannelConfigBuilder, it)
+            // create idscp config
+            idscp2Configuration = Idscp2Configuration.Builder()
+                .setAttestationConfig(localAttestationConfig)
+                .setDapsDriver(AisecDapsDriver(dapsDriverConfigBuilder.build()))
+                .build()
         }
-
-        (dapsSslContextParameters ?: sslContextParameters)?.let {
-            applySslContextParameters(dapsDriverConfigBuilder, it)
-        }
-
-        // create idscp config
-        val serverConfiguration = Idscp2Configuration.Builder()
-            .setAttestationConfig(localAttestationConfig)
-            .setDapsDriver(AisecDapsDriver(dapsDriverConfigBuilder.build()))
-            .build()
-
-        return Pair(serverConfiguration, secureChannelConfigBuilder)
     }
 
     companion object {
@@ -66,24 +79,24 @@ interface Idscp2Endpoint {
             sslContextParameters: SSLContextParameters
         ): NativeTlsConfiguration.Builder {
             return builder.apply {
-                sslContextParameters.let {
+                sslContextParameters.let { scp ->
                     setKeyPassword(
-                        it.keyManagers?.keyPassword?.toCharArray()
+                        scp.keyManagers?.keyPassword?.toCharArray()
                             ?: "password".toCharArray()
                     )
-                    it.keyManagers?.keyStore?.resource?.let { setKeyStorePath(Paths.get(it)) }
-                    it.keyManagers?.keyStore?.type?.let { setKeyStoreKeyType(it) }
+                    scp.keyManagers?.keyStore?.resource?.let { setKeyStorePath(Paths.get(it)) }
+                    scp.keyManagers?.keyStore?.type?.let { setKeyStoreKeyType(it) }
                     setKeyStorePassword(
-                        it.keyManagers?.keyStore?.password?.toCharArray()
+                        scp.keyManagers?.keyStore?.password?.toCharArray()
                             ?: "password".toCharArray()
                     )
-                    it.trustManagers?.trustManager?.let { setTrustManager(it) }
-                    it.trustManagers?.keyStore?.resource?.let { setTrustStorePath(Paths.get(it)) }
+                    scp.trustManagers?.trustManager?.let { setTrustManager(it) }
+                    scp.trustManagers?.keyStore?.resource?.let { setTrustStorePath(Paths.get(it)) }
                     setTrustStorePassword(
-                        it.trustManagers?.keyStore?.password?.toCharArray()
+                        scp.trustManagers?.keyStore?.password?.toCharArray()
                             ?: "password".toCharArray()
                     )
-                    setCertificateAlias(it.certAlias ?: "1")
+                    setCertificateAlias(scp.certAlias ?: "1")
                 }
             }
         }
@@ -93,24 +106,25 @@ interface Idscp2Endpoint {
             sslContextParameters: SSLContextParameters
         ): AisecDapsDriverConfig.Builder {
             return builder.apply {
-                sslContextParameters.let {
-                setKeyPassword(
-                    it.keyManagers?.keyPassword?.toCharArray()
-                        ?: "password".toCharArray()
-                )
-                it.keyManagers?.keyStore?.resource?.let { setKeyStorePath(Paths.get(it)) }
-                setKeyStorePassword(
-                    it.keyManagers?.keyStore?.password?.toCharArray()
-                        ?: "password".toCharArray()
-                )
-                it.trustManagers?.trustManager?.let { setTrustManager(it) }
-                it.trustManagers?.keyStore?.resource?.let { setTrustStorePath(Paths.get(it)) }
-                setTrustStorePassword(
-                    it.trustManagers?.keyStore?.password?.toCharArray()
-                        ?: "password".toCharArray()
-                )
-                setKeyAlias(it.certAlias ?: "1")
-            } }
+                sslContextParameters.let { scp ->
+                    setKeyPassword(
+                        scp.keyManagers?.keyPassword?.toCharArray()
+                            ?: "password".toCharArray()
+                    )
+                    scp.keyManagers?.keyStore?.resource?.let { setKeyStorePath(Paths.get(it)) }
+                    setKeyStorePassword(
+                        scp.keyManagers?.keyStore?.password?.toCharArray()
+                            ?: "password".toCharArray()
+                    )
+                    scp.trustManagers?.trustManager?.let { setTrustManager(it) }
+                    scp.trustManagers?.keyStore?.resource?.let { setTrustStorePath(Paths.get(it)) }
+                    setTrustStorePassword(
+                        scp.trustManagers?.keyStore?.password?.toCharArray()
+                            ?: "password".toCharArray()
+                    )
+                    setKeyAlias(scp.certAlias ?: "1")
+                }
+            }
         }
     }
 

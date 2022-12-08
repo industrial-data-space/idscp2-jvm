@@ -33,6 +33,7 @@ import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaProverDu
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaProverDummy2
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaVerifierDummy
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaVerifierDummy2
+import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
 import org.apache.camel.Consumer
 import org.apache.camel.Processor
 import org.apache.camel.Producer
@@ -50,27 +51,45 @@ import org.slf4j.LoggerFactory
 )
 class Idscp2ServerEndpoint(uri: String?, override val remaining: String, component: Idscp2ServerComponent?) :
     DefaultEndpoint(uri, component), Idscp2EndpointListener<AppLayerConnection>, Idscp2Endpoint {
-    private lateinit var serverConfiguration: Idscp2Configuration
     private var server: CamelIdscp2Server? = null
     private val consumers: MutableSet<Idscp2ServerConsumer> = HashSet()
+
+    @UriParam(
+        label = "common",
+        description = "An optional Idscp2Configuration instance. " +
+            "Takes precedence over other parameters included in this configuration."
+    )
+    override var idscp2Configuration: Idscp2Configuration? = null
+
+    @UriParam(
+        label = "common",
+        description = "An optional NativeTlsConfiguration.Builder instance. " +
+            "Takes precedence over other parameters included in this configuration, except for " +
+            "the host and port settings, which will be applied from the URI passed to the component"
+    )
+    override var secureChannelConfigurationBuilder: NativeTlsConfiguration.Builder? = null
+
+    override lateinit var secureChannelConfiguration: NativeTlsConfiguration
 
     @UriParam(
         label = "security",
         description = "The transport encryption SSL context for the IDSCP2 endpoint"
     )
+    @Deprecated("Deprecated in favor of secureChannelConfigurationBuilder")
     override var transportSslContextParameters: SSLContextParameters? = null
 
     @UriParam(
         label = "security",
         description = "The DAPS authentication SSL context for the IDSCP2 endpoint"
     )
+    @Deprecated("Deprecated in favor of idscp2Configuration")
     override var dapsSslContextParameters: SSLContextParameters? = null
 
     @UriParam(
         label = "security",
         description = "The SSL context for the IDSCP2 endpoint (deprecated)"
     )
-    @Deprecated("Depreacted in favor of transportSslContextParameters and dapsSslContextParameters")
+    @Deprecated("Deprecated in favor of idscp2Configuration and secureChannelConfigurationBuilder")
     override var sslContextParameters: SSLContextParameters? = null
 
     @UriParam(
@@ -84,6 +103,7 @@ class Idscp2ServerEndpoint(uri: String?, override val remaining: String, compone
         description = "The validity time of remote attestation and DAT in milliseconds",
         defaultValue = "600000"
     )
+    @Deprecated("Deprecated in favor of idscp2Configuration")
     override var dapsRaTimeoutDelay: Long = AttestationConfig.DEFAULT_RA_TIMEOUT_DELAY.toLong()
 
     @UriParam(
@@ -98,6 +118,7 @@ class Idscp2ServerEndpoint(uri: String?, override val remaining: String, compone
         description = "Locally supported Remote Attestation Suite IDs, separated by \"|\"",
         defaultValue = "${RaProverDummy2.RA_PROVER_DUMMY2_ID}|${RaProverDummy.RA_PROVER_DUMMY_ID}"
     )
+    @Deprecated("Deprecated in favor of idscp2Configuration")
     override var supportedRaSuites: String = "${RaProverDummy2.RA_PROVER_DUMMY2_ID}|${RaProverDummy.RA_PROVER_DUMMY_ID}"
 
     @UriParam(
@@ -106,6 +127,7 @@ class Idscp2ServerEndpoint(uri: String?, override val remaining: String, compone
             "each communication peer must support at least one",
         defaultValue = "${RaVerifierDummy2.RA_VERIFIER_DUMMY2_ID}|${RaVerifierDummy.RA_VERIFIER_DUMMY_ID}"
     )
+    @Deprecated("Deprecated in favor of idscp2Configuration")
     override var expectedRaSuites: String = "${RaVerifierDummy2.RA_VERIFIER_DUMMY2_ID}|${RaVerifierDummy.RA_VERIFIER_DUMMY_ID}"
 
     @UriParam(
@@ -200,16 +222,15 @@ class Idscp2ServerEndpoint(uri: String?, override val remaining: String, compone
             LOG.debug("Starting IDSCP2 server endpoint $endpointUri")
         }
 
-        val (idscp2Configuration, secureChannelConfigBuilder) = this.createCommonEndpointConfigurations()
-        serverConfiguration = idscp2Configuration
-
-        if (!tlsClientHostnameVerification) {
-            secureChannelConfigBuilder.unsafeDisableHostnameVerification()
+        this.doCommonEndpointConfiguration {
+            if (!tlsClientHostnameVerification) {
+                it.unsafeDisableHostnameVerification()
+            }
         }
 
         (component as Idscp2ServerComponent).getServer(
-            serverConfiguration,
-            secureChannelConfigBuilder.build(),
+            requireNotNull(idscp2Configuration) { "Lifecycle error: idscp2Configuration is null" },
+            secureChannelConfiguration,
             useIdsMessages
         ).let {
             server = it
@@ -225,8 +246,8 @@ class Idscp2ServerEndpoint(uri: String?, override val remaining: String, compone
         }
         // Remove this endpoint from the server's Idscp2EndpointListener set
         server?.let { it.listeners -= this }
-        if (this::serverConfiguration.isInitialized) {
-            (component as Idscp2ServerComponent).freeServer(serverConfiguration)
+        idscp2Configuration?.let {
+            (component as Idscp2ServerComponent).freeServer(it)
         }
     }
 
