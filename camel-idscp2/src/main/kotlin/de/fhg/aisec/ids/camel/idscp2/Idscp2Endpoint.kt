@@ -5,6 +5,7 @@ import de.fhg.aisec.ids.idscp2.api.configuration.Idscp2Configuration
 import de.fhg.aisec.ids.idscp2.daps.aisecdaps.AisecDapsDriver
 import de.fhg.aisec.ids.idscp2.daps.aisecdaps.AisecDapsDriverConfig
 import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
+import de.fhg.aisec.ids.idscp2.keystores.KeyStoreUtil
 import org.apache.camel.support.jsse.SSLContextParameters
 import java.nio.file.Paths
 import java.util.regex.Pattern
@@ -28,9 +29,10 @@ interface Idscp2Endpoint {
         // Use the provided NativeTlsConfiguration.Builder, or create a new one
         val secureChannelConfigBuilder = secureChannelConfigurationBuilder ?: run { NativeTlsConfiguration.Builder() }
 
+        val transportSSLContextParameters = transportSslContextParameters ?: sslContextParameters
         // If no Builder has been passed, perform configuration based on passed individual parameters
         if (secureChannelConfigurationBuilder == null) {
-            (transportSslContextParameters ?: sslContextParameters)?.let {
+            transportSSLContextParameters?.let {
                 applySslContextParameters(secureChannelConfigBuilder, it)
             }
         }
@@ -60,7 +62,7 @@ interface Idscp2Endpoint {
                 .setDapsUrl(Utils.dapsUrlProducer())
 
             (dapsSslContextParameters ?: sslContextParameters)?.let {
-                applySslContextParameters(dapsDriverConfigBuilder, it)
+                applySslContextParameters(dapsDriverConfigBuilder, it, transportSSLContextParameters)
             }
 
             // create idscp config
@@ -103,10 +105,11 @@ interface Idscp2Endpoint {
 
         fun applySslContextParameters(
             builder: AisecDapsDriverConfig.Builder,
-            sslContextParameters: SSLContextParameters
+            dapsSslContextParameters: SSLContextParameters,
+            transportSslContextParameters: SSLContextParameters?
         ): AisecDapsDriverConfig.Builder {
             return builder.apply {
-                sslContextParameters.let { scp ->
+                dapsSslContextParameters.let { scp ->
                     setKeyPassword(
                         scp.keyManagers?.keyPassword?.toCharArray()
                             ?: "password".toCharArray()
@@ -123,6 +126,15 @@ interface Idscp2Endpoint {
                             ?: "password".toCharArray()
                     )
                     setKeyAlias(scp.certAlias ?: "1")
+                }
+                // Load transport SSL certificates and create fingerprints
+                transportSslContextParameters?.let { scp ->
+                    scp.keyManagers?.keyStore?.resource?.let { Paths.get(it) }?.let { keyStorePath ->
+                        scp.keyManagers?.keyStore?.password?.toCharArray()?.let { keyStorePassword ->
+                            val ks = KeyStoreUtil.loadKeyStore(keyStorePath, keyStorePassword)
+                            loadTransportCertsFromKeystore(ks)
+                        }
+                    }
                 }
             }
         }
