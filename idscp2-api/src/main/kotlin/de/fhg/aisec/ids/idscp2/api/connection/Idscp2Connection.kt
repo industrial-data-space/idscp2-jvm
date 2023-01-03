@@ -19,6 +19,7 @@
  */
 package de.fhg.aisec.ids.idscp2.api.connection
 
+import de.fhg.aisec.ids.idscp2.api.drivers.VerifiedDat
 import de.fhg.aisec.ids.idscp2.api.error.Idscp2Exception
 import de.fhg.aisec.ids.idscp2.api.error.Idscp2NotConnectedException
 import de.fhg.aisec.ids.idscp2.api.error.Idscp2TimeoutException
@@ -89,7 +90,12 @@ interface Idscp2Connection {
     /**
      * Access the local dynamic attribute token
      */
-    val localDynamicAttributeToken: ByteArray
+    val localDat: ByteArray
+
+    /**
+     * Access the remote peer certificate
+     */
+    val peerDat: VerifiedDat
 
     fun addConnectionListener(listener: Idscp2ConnectionListener)
 

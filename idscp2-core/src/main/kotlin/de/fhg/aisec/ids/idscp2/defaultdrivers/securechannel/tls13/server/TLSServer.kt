@@ -81,16 +81,14 @@ class TLSServer<CC : Idscp2Connection>(
                     // create a connection future that will give the new idscp2 connection to the idscp2 server
                     val connectionFuture = CompletableFuture<CC>()
                     connectionFuture.thenAccept { connection ->
-                        connectionListenerPromise.thenAccept { listener ->
-                            listener.onConnectionCreated(connection)
-                        }
+                        connectionListenerPromise.thenAccept { it.onConnectionCreated(connection) }
                     }.exceptionally {
                         // either the TLS handshake or the idscp2 handshake failed, both will cleanup the server thread
                         LOG.warn("Idscp2Connection creation failed", it)
                         null
                     }
 
-                    // create an connection future that will register the connection to the server and notify the user
+                    // Create a connection future that will register the connection to the server and notify the user
                     val serverThread = TLSServerThread(
                         sslSocket,
                         connectionFuture,
@@ -133,18 +131,13 @@ class TLSServer<CC : Idscp2Connection>(
         if (LOG.isTraceEnabled) {
             LOG.trace("Stopping tls server")
         }
+
         /*
          * Set the volatile running variable to false. The serverSocket will receive
          * a socket timeout after at least 5 seconds while it is blocked in accept()
          * and will then check again if isRunning is still true
          */
         isRunning = false
-
-//        try {
-//            serverSocket.close();
-//        } catch (IOException e) {
-//            LOG.warn("Trying to close server socket failed!", e);
-//        }
 
         try {
             serverThread.join()

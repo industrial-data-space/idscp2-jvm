@@ -31,7 +31,7 @@ import java.util.concurrent.CompletableFuture
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
-class SecureChannel(private val endpoint: SecureChannelEndpoint, private val peerCertificate: X509Certificate?) :
+class SecureChannel(private val endpoint: SecureChannelEndpoint, private val peerCertificate: X509Certificate) :
     SecureChannelListener {
     private val fsmPromise = CompletableFuture<ScFsmListener>()
 
@@ -95,9 +95,7 @@ class SecureChannel(private val endpoint: SecureChannelEndpoint, private val pee
             LOG.trace("Bind FSM to secure channel and pass peer certificate to FSM")
         }
         fsmPromise.complete(fsm)
-        if (peerCertificate != null) {
-            fsm.setPeerX509Certificate(peerCertificate)
-        }
+        fsm.setPeerX509Certificate(peerCertificate)
     }
 
     companion object {

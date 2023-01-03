@@ -19,6 +19,7 @@
  */
 package de.fhg.aisec.ids.idscp2.api.fsm
 
+import de.fhg.aisec.ids.idscp2.api.drivers.VerifiedDat
 import java.security.cert.X509Certificate
 
 /**
@@ -39,7 +40,7 @@ interface RaVerifierFsmListener {
     /**
      * Access the remote peer DAT from the RA verifier
      */
-    val remotePeerDat: ByteArray
+    val remotePeerDat: VerifiedDat
 
     /**
      * Access the remote peer transport certificate from the RA verifier

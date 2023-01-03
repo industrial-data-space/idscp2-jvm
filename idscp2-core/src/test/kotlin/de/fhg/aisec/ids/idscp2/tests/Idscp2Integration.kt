@@ -27,6 +27,7 @@ import de.fhg.aisec.ids.idscp2.api.connection.Idscp2ConnectionAdapter
 import de.fhg.aisec.ids.idscp2.api.drivers.DapsDriver
 import de.fhg.aisec.ids.idscp2.api.drivers.RaProverDriver
 import de.fhg.aisec.ids.idscp2.api.drivers.RaVerifierDriver
+import de.fhg.aisec.ids.idscp2.api.drivers.VerifiedDat
 import de.fhg.aisec.ids.idscp2.api.error.DatException
 import de.fhg.aisec.ids.idscp2.api.fsm.InternalControlMessage
 import de.fhg.aisec.ids.idscp2.api.fsm.RaProverFsmListener
@@ -56,7 +57,7 @@ import java.util.concurrent.LinkedBlockingQueue
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
-private const val VALID_DAT: String = "TEST_TOKEN"
+private val VALID_DAT = "TEST_TOKEN".toByteArray()
 
 class Idscp2Integration {
 
@@ -66,21 +67,23 @@ class Idscp2Integration {
      * Some custom DAPS driver classes to test the general behavior
      */
     class DapsRejector : DapsDriver {
-        override val token: ByteArray
-            get() = VALID_DAT.toByteArray()
+        override val token = VALID_DAT
 
-        override fun verifyToken(dat: ByteArray, peerCertificate: X509Certificate?): Long {
+        override val renewalThreshold = 1.0f
+
+        override fun verifyToken(dat: ByteArray, peerCertificate: X509Certificate?) =
             throw DatException("DapsRejector will reject each token")
-        }
     }
 
     class InvalidDaps : DapsDriver {
         override val token: ByteArray
             get() = throw DatException("InvalidDaps cannot issue DAT")
 
-        override fun verifyToken(dat: ByteArray, peerCertificate: X509Certificate?): Long {
-            if (dat.contentEquals(VALID_DAT.toByteArray())) {
-                return 3600
+        override val renewalThreshold = 1.0f
+
+        override fun verifyToken(dat: ByteArray, peerCertificate: X509Certificate?): VerifiedDat {
+            if (dat.contentEquals(VALID_DAT)) {
+                return VerifiedDat(VALID_DAT, "IDENTITY", (System.currentTimeMillis() / 1000) + 3600)
             } else {
                 throw DatException("Dat is not valid")
             }
@@ -88,12 +91,13 @@ class Idscp2Integration {
     }
 
     class DapsAcceptor(private val delay: Long) : DapsDriver {
-        override val token: ByteArray
-            get() = VALID_DAT.toByteArray()
+        override val token = VALID_DAT
 
-        override fun verifyToken(dat: ByteArray, peerCertificate: X509Certificate?): Long {
-            if (dat.contentEquals(VALID_DAT.toByteArray())) {
-                return delay
+        override val renewalThreshold = 1.0f
+
+        override fun verifyToken(dat: ByteArray, peerCertificate: X509Certificate?): VerifiedDat {
+            if (dat.contentEquals(VALID_DAT)) {
+                return VerifiedDat(VALID_DAT, "IDENTITY", (System.currentTimeMillis() / 1000) + delay)
             } else {
                 throw DatException("Dat is not valid")
             }

@@ -63,7 +63,7 @@ object AsyncIdscp2Factory {
             configuration.ackTimeoutDelay,
             configuration.handshakeTimeoutDelay,
             id,
-            connectionFuture.thenApply { it as Idscp2Connection }
+            connectionFuture
         )
 
         // register FSM to secure channel, pass peer certificate to FSM
@@ -85,7 +85,7 @@ object AsyncIdscp2Factory {
                 }
 
                 // create the connection, complete the future and register it to the fsm as listener
-                val connection: CC = connectionFactory(fsm, id)
+                val connection = connectionFactory(fsm, id)
                 connectionFuture.complete(connection)
 
                 // close the connection if it was cancelled

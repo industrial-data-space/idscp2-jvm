@@ -149,7 +149,11 @@ class StateWaitForDatAndRaVerifier(
                 var datValidityPeriod: Long
 
                 try {
-                    if (0 > dapsDriver.verifyToken(dat, fsm.remotePeerCertificate).also { datValidityPeriod = it }) {
+                    dapsDriver.verifyToken(dat, fsm.remotePeerCertificate).also {
+                        fsm.peerDat = it
+                        datValidityPeriod = it.remainingValidity(dapsDriver.renewalThreshold)
+                    }
+                    if (0 > datValidityPeriod) {
                         LOG.warn("No valid remote DAT is available. Send IDSCP_CLOSE")
                         fsm.sendFromFSM(
                             Idscp2MessageHelper.createIdscpCloseMessage(
@@ -176,7 +180,6 @@ class StateWaitForDatAndRaVerifier(
                 if (LOG.isTraceEnabled) {
                     LOG.trace("Remote DAT is valid. Set dat timeout")
                 }
-                fsm.setPeerDat(dat)
                 datTimer.resetTimeout(datValidityPeriod * 1000)
 
                 // start RA Verifier

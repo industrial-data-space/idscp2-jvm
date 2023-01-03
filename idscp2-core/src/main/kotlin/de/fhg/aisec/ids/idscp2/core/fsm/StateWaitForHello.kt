@@ -204,13 +204,13 @@ class StateWaitForHello(
                     return@Transition FsmResult(FsmResultCode.MISSING_DAT, fsm.getState(FsmState.STATE_CLOSED))
                 }
 
-                val remoteDat = idscpHello.dynamicAttributeToken.token.toByteArray()
+                val dat = idscpHello.dynamicAttributeToken.token.toByteArray()
                 try {
-                    if (0 > dapsDriver.verifyToken(
-                            remoteDat,
-                            fsm.remotePeerCertificate
-                        ).also { datValidityPeriod = it }
-                    ) {
+                    dapsDriver.verifyToken(dat, fsm.remotePeerCertificate).also {
+                        fsm.peerDat = it
+                        datValidityPeriod = it.remainingValidity(dapsDriver.renewalThreshold)
+                    }
+                    if (0 > datValidityPeriod) {
                         LOG.warn("No valid remote DAT is available. Send IDSCP_CLOSE")
                         fsm.sendFromFSM(
                             Idscp2MessageHelper.createIdscpCloseMessage(
@@ -237,7 +237,6 @@ class StateWaitForHello(
                 if (LOG.isTraceEnabled) {
                     LOG.trace("Remote DAT is valid. Set dat timeout to its validity period")
                 }
-                fsm.setPeerDat(remoteDat)
                 datTimer.resetTimeout(datValidityPeriod * 1000)
                 fsm.setRaMechanisms(proverMechanism, verifierMechanism)
 

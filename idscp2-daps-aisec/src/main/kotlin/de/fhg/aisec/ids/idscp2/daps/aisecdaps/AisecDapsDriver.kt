@@ -21,6 +21,7 @@ package de.fhg.aisec.ids.idscp2.daps.aisecdaps
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.fhg.aisec.ids.idscp2.api.drivers.DapsDriver
+import de.fhg.aisec.ids.idscp2.api.drivers.VerifiedDat
 import de.fhg.aisec.ids.idscp2.api.error.DatException
 import de.fhg.aisec.ids.idscp2.keystores.PreConfiguration
 import io.jsonwebtoken.Jwts
@@ -28,6 +29,8 @@ import io.jsonwebtoken.SignatureAlgorithm
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.java.Java
+import io.ktor.client.plugins.HttpRequestRetry
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.cache.HttpCache
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.forms.submitForm
@@ -59,7 +62,6 @@ import java.security.KeyManagementException
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import java.security.cert.X509Certificate
-import java.time.Duration
 import java.time.Instant
 import java.util.Collections.synchronizedMap
 import java.util.Date
@@ -107,7 +109,7 @@ class AisecDapsDriver(private val config: AisecDapsDriverConfig) : DapsDriver {
      */
     private var currentToken: ByteArray = "INVALID_TOKEN".toByteArray()
     private var renewalTime: NumericDate = NumericDate.now()
-    private val renewalThreshold = config.dapsTokenRenewalThreshold
+    override val renewalThreshold = config.dapsTokenRenewalThreshold
     private val renewalLock = ReentrantLock(true)
 
     // create ssl socket factory for secure
@@ -131,12 +133,19 @@ class AisecDapsDriver(private val config: AisecDapsDriverConfig) : DapsDriver {
             engine {
                 config {
                     sslContext(sslContext)
-                    connectTimeout(Duration.ofSeconds(15))
                 }
             }
             install(HttpCache)
             install(ContentNegotiation) {
                 jackson()
+            }
+            install(HttpTimeout) {
+                requestTimeoutMillis = 1500
+            }
+            install(HttpRequestRetry) {
+                retryOnServerErrors(3)
+                retryOnException(3, true)
+                exponentialDelay()
             }
         }
     }
@@ -257,6 +266,9 @@ class AisecDapsDriver(private val config: AisecDapsDriverConfig) : DapsDriver {
                     LOG.debug("ConnectorUUID: $connectorUUID")
                 }
 
+                // Get OAuth server meta information (Issuer, URLs)
+                val dapsMeta = getDapsMeta()
+
                 // create signed JWT
                 val expiration = Date.from(Instant.now().plusSeconds(86400))
                 val issuedAt = Date.from(Instant.now())
@@ -270,12 +282,9 @@ class AisecDapsDriver(private val config: AisecDapsDriverConfig) : DapsDriver {
                     .setExpiration(expiration)
                     .setIssuedAt(issuedAt)
                     .setNotBefore(notBefore)
-                    .setAudience(TARGET_AUDIENCE)
+                    .setAudience(dapsMeta.tokenEndpoint)
                     .signWith(privateKey, SignatureAlgorithm.RS256)
                     .compact()
-
-                // Get OAuth server meta information (Issuer, URLs)
-                val dapsMeta = getDapsMeta()
 
                 return runBlocking(Dispatchers.IO) {
                     val response = httpClient.submitForm(
@@ -306,13 +315,14 @@ class AisecDapsDriver(private val config: AisecDapsDriverConfig) : DapsDriver {
                     if (response.status != HttpStatusCode.OK) {
                         LOG.error(
                             "Failed to request token issued with parameters: Issuer: {}, Subject: {}, " +
-                                "Expiration: {}, IssuedAt: {}, NotBefore: {}, Audience: {}",
+                                "Expiration: {}, IssuedAt: {}, NotBefore: {}, Audience: {}, Response body: {}",
                             connectorUUID,
                             connectorUUID,
                             expiration,
                             issuedAt,
                             notBefore,
-                            TARGET_AUDIENCE
+                            dapsMeta.tokenEndpoint,
+                            response.bodyAsText()
                         )
                         throw DatException("Received non-200 status: ${response.status}")
                     }
@@ -361,7 +371,7 @@ class AisecDapsDriver(private val config: AisecDapsDriverConfig) : DapsDriver {
      * @return The number of seconds this DAT is valid
      * @throws DatException
      */
-    override fun verifyToken(dat: ByteArray, peerCertificate: X509Certificate?): Long {
+    override fun verifyToken(dat: ByteArray, peerCertificate: X509Certificate?): VerifiedDat {
         // We expect the peer certificate to validate its fingerprints with the DAT
         if (peerCertificate == null) {
             throw DatException("Missing peer certificate for fingerprint validation")
@@ -388,7 +398,7 @@ class AisecDapsDriver(private val config: AisecDapsDriverConfig) : DapsDriver {
         certificate: X509Certificate,
         setCurrentToken: Boolean,
         dapsMeta: DapsMeta = getDapsMeta()
-    ): Long {
+    ): VerifiedDat {
         if (LOG.isDebugEnabled) {
             LOG.debug("Verifying dynamic attribute token...")
         }
@@ -424,8 +434,8 @@ class AisecDapsDriver(private val config: AisecDapsDriverConfig) : DapsDriver {
             .setAllowedClockSkewInSeconds(30) // leeway in validation time
             .setRequireSubject() // has subject
             .setExpectedAudience(true, "IDS_Connector", TARGET_AUDIENCE)
-            .setExpectedIssuer(dapsMeta.issuer) // e.g. https://daps.aisec.fraunhofer.de
-            .setVerificationKeyResolver(jwksKeyResolver) // get decryption key from jwks
+            .setExpectedIssuer(dapsMeta.issuer)
+            .setVerificationKeyResolver(jwksKeyResolver)
             .setJweAlgorithmConstraints(
                 AlgorithmConstraints(
                     AlgorithmConstraints.ConstraintType.PERMIT,
@@ -434,21 +444,23 @@ class AisecDapsDriver(private val config: AisecDapsDriverConfig) : DapsDriver {
             )
             .build()
 
+        val verifiedDat: VerifiedDat
         val validityTime: Long
         val claims: JwtClaims
         try {
             claims = jwtConsumer.processToClaims(String(dat, StandardCharsets.UTF_8))
-            val expTime = claims.expirationTime
-            validityTime = expTime.value - NumericDate.now().value
+            verifiedDat = VerifiedDat(dat, claims.subject, claims.expirationTime.value)
+            validityTime = claims.expirationTime.value - (System.currentTimeMillis() / 1000)
         } catch (e: Exception) {
-            throw DatException("Error during claims processing", e)
+            throw DatException("Error during DAT verification", e)
         }
 
         if (setCurrentToken) {
             // overwrite current local token in daps driver instance
             currentToken = dat
-            renewalTime = NumericDate.now()
-            renewalTime.addSeconds(validityTime.times(renewalThreshold).toLong())
+            renewalTime = NumericDate.now().apply {
+                addSeconds(verifiedDat.remainingValidity(renewalThreshold))
+            }
         }
 
         // in case of validating remote DAT check the expected fingerprint from the DAT against the peers cert fingerprint
@@ -512,7 +524,8 @@ class AisecDapsDriver(private val config: AisecDapsDriverConfig) : DapsDriver {
         if (LOG.isDebugEnabled) {
             LOG.debug("DAT is valid for {} seconds", validityTime)
         }
-        return validityTime
+
+        return verifiedDat
     }
 
     companion object {

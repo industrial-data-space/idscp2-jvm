@@ -55,8 +55,8 @@ class Idscp2ClientProducer(private val endpoint: Idscp2ClientEndpoint) : Default
                     try {
                         // If connectionFuture completed exceptionally, recreate Connection
                         if (connectionFuture.isCompletedExceptionally || t > 1) {
-                            endpoint.releaseConnection(connectionFuture)
-                            connectionFuture = endpoint.makeConnection()
+                            LOG.warn("Resetting connection...")
+                            connectionFuture = endpoint.resetConnection(connectionFuture)
                                 .apply { thenAccept { it.unlockMessaging() } }
                         }
                         val connection = connectionFuture.get()
@@ -119,8 +119,7 @@ class Idscp2ClientProducer(private val endpoint: Idscp2ClientEndpoint) : Default
                             exchange.setException(x)
                         } else {
                             LOG.warn(
-                                "Message delivery failed in attempt $t, " +
-                                    "reset connection and retry after ${endpoint.retryDelayMs} ms...",
+                                "Message delivery failed in attempt $t, retry after ${endpoint.retryDelayMs} ms...",
                                 x
                             )
                             Thread.sleep(endpoint.retryDelayMs)

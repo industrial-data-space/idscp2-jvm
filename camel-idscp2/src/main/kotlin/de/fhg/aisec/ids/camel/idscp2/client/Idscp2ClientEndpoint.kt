@@ -41,7 +41,6 @@ import org.apache.camel.support.DefaultEndpoint
 import org.apache.camel.support.jsse.SSLContextParameters
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
-import java.util.regex.Pattern
 
 @UriEndpoint(
     scheme = "idscp2client",
@@ -169,6 +168,9 @@ class Idscp2ClientEndpoint(uri: String?, override val remaining: String, compone
     }
 
     private fun makeConnectionInternal(): CompletableFuture<AppLayerConnection> {
+        if (LOG.isDebugEnabled) {
+            LOG.debug("Creating new connection...")
+        }
         return secureChannelDriver.connect(
             ::AppLayerConnection,
             requireNotNull(idscp2Configuration) { "Lifecycle error: idscp2Configuration is null" },
@@ -186,15 +188,20 @@ class Idscp2ClientEndpoint(uri: String?, override val remaining: String, compone
     }
 
     fun makeConnection(): CompletableFuture<AppLayerConnection> {
-        connectionShareId?.let {
-            return sharedConnections.computeIfAbsent(it) {
+        return connectionShareId?.let {
+            sharedConnections.computeIfAbsent(it) {
                 makeConnectionInternal()
             }
-        } ?: return makeConnectionInternal()
+        } ?: makeConnectionInternal()
     }
 
     fun releaseConnection(connectionFuture: CompletableFuture<AppLayerConnection>) {
         connectionShareId?.let { sharedConnections.release(it) } ?: releaseConnectionInternal(connectionFuture)
+    }
+
+    fun resetConnection(connectionFuture: CompletableFuture<AppLayerConnection>): CompletableFuture<AppLayerConnection> {
+        connectionShareId?.let { sharedConnections.remove(it) } ?: releaseConnectionInternal(connectionFuture)
+        return makeConnection()
     }
 
     override fun createProducer(): Producer {
@@ -219,12 +226,14 @@ class Idscp2ClientEndpoint(uri: String?, override val remaining: String, compone
 
     companion object {
         private val LOG = LoggerFactory.getLogger(Idscp2ClientEndpoint::class.java)
-        private val URI_REGEX = Pattern.compile("(.*?)(?::(\\d+))?/?$")
         private val sharedConnections = RefCountingHashMap<String, CompletableFuture<AppLayerConnection>> {
             releaseConnectionInternal(it)
         }
 
         private fun releaseConnectionInternal(connectionFuture: CompletableFuture<AppLayerConnection>) {
+            if (LOG.isDebugEnabled) {
+                LOG.debug("Releasing connection...")
+            }
             if (connectionFuture.isDone) {
                 // Exceptional completion includes cancellation
                 if (!connectionFuture.isCompletedExceptionally) {

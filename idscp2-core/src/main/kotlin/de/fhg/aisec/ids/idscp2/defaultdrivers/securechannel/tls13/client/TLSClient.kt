@@ -220,7 +220,7 @@ class TLSClient<CC : Idscp2Connection>(
             // Set the secure channel to this endpoint
             listenerPromise.complete(secureChannel)
 
-            // initiate idscp2 connection asynchronous.. the connection will be created using the future
+            // Initiate idscp2 connection asynchronously. The connection will be created using the future.
             val success = AsyncIdscp2Factory.initiateIdscp2Connection(
                 secureChannel,
                 clientConfiguration,
@@ -228,7 +228,7 @@ class TLSClient<CC : Idscp2Connection>(
                 connectionFuture
             )
 
-            // start the listener thread when the future was not cancelled
+            // Start the listener thread when the future was not cancelled
             if (success) {
                 inputListenerThread.start()
             }

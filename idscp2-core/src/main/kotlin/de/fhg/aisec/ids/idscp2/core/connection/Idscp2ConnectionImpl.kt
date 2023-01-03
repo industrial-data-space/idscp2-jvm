@@ -23,6 +23,7 @@ import de.fhg.aisec.ids.idscp2.api.FastLatch
 import de.fhg.aisec.ids.idscp2.api.connection.Idscp2Connection
 import de.fhg.aisec.ids.idscp2.api.connection.Idscp2ConnectionListener
 import de.fhg.aisec.ids.idscp2.api.connection.Idscp2MessageListener
+import de.fhg.aisec.ids.idscp2.api.drivers.VerifiedDat
 import de.fhg.aisec.ids.idscp2.api.error.Idscp2Exception
 import de.fhg.aisec.ids.idscp2.api.error.Idscp2NotConnectedException
 import de.fhg.aisec.ids.idscp2.api.error.Idscp2TimeoutException
@@ -213,8 +214,11 @@ class Idscp2ConnectionImpl(
     override val isClosed: Boolean
         get() = fsm.isFsmLocked
 
-    override val localDynamicAttributeToken: ByteArray
+    override val localDat: ByteArray
         get() = fsm.localDat
+
+    override val peerDat: VerifiedDat
+        get() = fsm.peerDat
 
     override fun addConnectionListener(listener: Idscp2ConnectionListener) {
         connectionListeners.add(listener)

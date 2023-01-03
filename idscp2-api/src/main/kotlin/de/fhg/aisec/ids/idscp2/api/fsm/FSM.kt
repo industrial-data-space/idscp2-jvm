@@ -21,6 +21,7 @@ package de.fhg.aisec.ids.idscp2.api.fsm
 
 import de.fhg.aisec.ids.idscp2.api.drivers.RaProverDriver
 import de.fhg.aisec.ids.idscp2.api.drivers.RaVerifierDriver
+import de.fhg.aisec.ids.idscp2.api.drivers.VerifiedDat
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2
 import java.security.cert.X509Certificate
 
@@ -30,11 +31,12 @@ interface FSM {
     val raVerifierDriver: RaVerifierDriver<*>?
     var ackFlag: Boolean
     val dynamicAttributeToken: ByteArray
-    val remotePeerCertificate: X509Certificate?
+    val remotePeerCertificate: X509Certificate
     val isFsmLocked: Boolean
     val isConnected: Boolean
     val remotePeer: String
     val localDat: ByteArray
+    var peerDat: VerifiedDat
 
     fun notifyHandshakeCompleteLock()
     fun getState(state: FsmState): State
@@ -43,7 +45,6 @@ interface FSM {
     fun restartRaVerifierDriver(): Boolean
     fun restartRaProverDriver(): Boolean
     fun recvData(idscpData: IDSCP2.IdscpData)
-    fun setPeerDat(dat: ByteArray)
     fun recvAck(idscpAck: IDSCP2.IdscpAck): Boolean
     fun getRaProverMechanism(localSupportedProver: Array<String>, remoteExpectedVerifier: Array<String>): String?
     fun getRaVerifierMechanism(localExpectedVerifier: Array<String>, remoteSupportedProver: Array<String>): String?

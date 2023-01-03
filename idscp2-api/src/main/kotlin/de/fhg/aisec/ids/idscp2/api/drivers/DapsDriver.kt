@@ -34,9 +34,14 @@ interface DapsDriver {
     val token: ByteArray
 
     /**
+     * The fraction remaining validity time after which renewal is started
+     */
+    val renewalThreshold: Float
+
+    /**
      * Verify a Daps token
      *
      * Return the number of seconds, the DAT is valid
      */
-    fun verifyToken(dat: ByteArray, peerCertificate: X509Certificate?): Long
+    fun verifyToken(dat: ByteArray, peerCertificate: X509Certificate?): VerifiedDat
 }

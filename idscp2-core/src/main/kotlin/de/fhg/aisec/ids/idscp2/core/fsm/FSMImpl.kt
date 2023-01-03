@@ -25,6 +25,7 @@ import de.fhg.aisec.ids.idscp2.api.connection.Idscp2Connection
 import de.fhg.aisec.ids.idscp2.api.drivers.DapsDriver
 import de.fhg.aisec.ids.idscp2.api.drivers.RaProverDriver
 import de.fhg.aisec.ids.idscp2.api.drivers.RaVerifierDriver
+import de.fhg.aisec.ids.idscp2.api.drivers.VerifiedDat
 import de.fhg.aisec.ids.idscp2.api.error.Idscp2HandshakeException
 import de.fhg.aisec.ids.idscp2.api.fsm.Event
 import de.fhg.aisec.ids.idscp2.api.fsm.FSM
@@ -43,7 +44,6 @@ import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpAck
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpData
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpMessage
 import org.slf4j.LoggerFactory
-import java.nio.charset.StandardCharsets
 import java.security.cert.X509Certificate
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.locks.ReentrantLock
@@ -60,14 +60,14 @@ import kotlin.concurrent.withLock
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
-class FSMImpl(
+class FSMImpl<CC : Idscp2Connection>(
     private val secureChannel: SecureChannel,
     private val dapsDriver: DapsDriver,
     attestationConfig: AttestationConfig,
     ackTimeoutDelay: Long,
     handshakeTimeoutDelay: Long,
     private val connectionId: String,
-    private val connection: CompletableFuture<Idscp2Connection>
+    private val connection: CompletableFuture<CC>
 ) : RaProverFsmListener, RaVerifierFsmListener, ScFsmListener, FSM {
     /*  -----------   IDSCP2 Protocol States   ---------- */
     private val states = HashMap<FsmState, State>()
@@ -149,7 +149,7 @@ class FSMImpl(
     /**
      * Peer certificate
      */
-    private var peerCertificate: X509Certificate? = null
+    private lateinit var peerCertificate: X509Certificate
 
     /**
      * Local peer dynamic attribute token
@@ -159,11 +159,7 @@ class FSMImpl(
     /**
      * Remote peer dynamic attribute token
      */
-    private var peerDat: ByteArray = "INVALID_DAT".toByteArray()
-
-    override fun setPeerDat(dat: ByteArray) {
-        this.peerDat = dat
-    }
+    override var peerDat: VerifiedDat = VerifiedDat("INVALID_DAT".toByteArray(), "INVALID", 0)
 
     override val remotePeer: String
         get() = secureChannel.remotePeer()
@@ -287,7 +283,7 @@ class FSMImpl(
         processRaVerifierEvent(Event(controlMessage))
     }
 
-    override val remotePeerDat: ByteArray
+    override val remotePeerDat: VerifiedDat
         get() = peerDat
 
     /**
@@ -414,9 +410,7 @@ class FSMImpl(
 
         // run in async fire-and-forget coroutine to avoid cycles cause by protocol misuse
         if (!isFsmLocked) {
-            connection.thenAcceptAsync { connection: Idscp2Connection ->
-                connection.onError(t)
-            }
+            connection.thenAcceptAsync { it.onError(t) }
         }
 
         // Check for incorrect usage
@@ -441,7 +435,7 @@ class FSMImpl(
         this.peerCertificate = certificate
     }
 
-    override val remotePeerCertificate: X509Certificate?
+    override val remotePeerCertificate: X509Certificate
         get() = this.peerCertificate
 
     /**
@@ -463,16 +457,12 @@ class FSMImpl(
      * Get local Dat
      */
     override val dynamicAttributeToken: ByteArray
-        get() {
-            return try {
-                // get token from DAPS driver, update inner connection token and return
-                val token = dapsDriver.token
-                localDat = token
-                token
-            } catch (e: Exception) {
-                LOG.error("Exception occurred during requesting DAT from DAPS:", e)
-                "INVALID_DAT".toByteArray(StandardCharsets.UTF_8)
-            }
+        // Get token from DAPS driver, update local token and return it
+        get() = try {
+            dapsDriver.token.also { localDat = it }
+        } catch (e: Exception) {
+            LOG.error("Exception occurred during requesting DAT from DAPS:", e)
+            "INVALID_DAT".toByteArray()
         }
 
     /**
@@ -701,9 +691,7 @@ class FSMImpl(
         }
 
         // run in async to avoid cycles caused by protocol misuse
-        connection.thenAcceptAsync { connection: Idscp2Connection ->
-            connection.onClose()
-        }
+        connection.thenAcceptAsync { it.onClose() }
     }
 
     /**
@@ -713,7 +701,6 @@ class FSMImpl(
         // run in async to avoid cycles caused by protocol misuse
         connection.thenAcceptAsync { connection: Idscp2Connection ->
             connection.onMessage(data)
-
             if (LOG.isTraceEnabled) {
                 LOG.trace("Idscp data has been passed to connection listener")
             }

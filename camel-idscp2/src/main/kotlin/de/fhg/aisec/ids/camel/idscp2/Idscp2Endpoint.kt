@@ -1,3 +1,22 @@
+/*-
+ * ========================LICENSE_START=================================
+ * camel-idscp2
+ * %%
+ * Copyright (C) 2022 Fraunhofer AISEC
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * =========================LICENSE_END==================================
+ */
 package de.fhg.aisec.ids.camel.idscp2
 
 import de.fhg.aisec.ids.idscp2.api.configuration.AttestationConfig
@@ -29,10 +48,10 @@ interface Idscp2Endpoint {
         // Use the provided NativeTlsConfiguration.Builder, or create a new one
         val secureChannelConfigBuilder = secureChannelConfigurationBuilder ?: run { NativeTlsConfiguration.Builder() }
 
-        val transportSSLContextParameters = transportSslContextParameters ?: sslContextParameters
+        val transportSslContextParameters = transportSslContextParameters ?: sslContextParameters
         // If no Builder has been passed, perform configuration based on passed individual parameters
         if (secureChannelConfigurationBuilder == null) {
-            transportSSLContextParameters?.let {
+            transportSslContextParameters?.let {
                 applySslContextParameters(secureChannelConfigBuilder, it)
             }
         }
@@ -62,7 +81,7 @@ interface Idscp2Endpoint {
                 .setDapsUrl(Utils.dapsUrlProducer())
 
             (dapsSslContextParameters ?: sslContextParameters)?.let {
-                applySslContextParameters(dapsDriverConfigBuilder, it, transportSSLContextParameters)
+                applySslContextParameters(dapsDriverConfigBuilder, it, transportSslContextParameters)
             }
 
             // create idscp config
@@ -106,7 +125,7 @@ interface Idscp2Endpoint {
         fun applySslContextParameters(
             builder: AisecDapsDriverConfig.Builder,
             dapsSslContextParameters: SSLContextParameters,
-            transportSslContextParameters: SSLContextParameters?
+            transportSslContextParameters: SSLContextParameters? = null
         ): AisecDapsDriverConfig.Builder {
             return builder.apply {
                 dapsSslContextParameters.let { scp ->
@@ -139,5 +158,4 @@ interface Idscp2Endpoint {
             }
         }
     }
-
 }

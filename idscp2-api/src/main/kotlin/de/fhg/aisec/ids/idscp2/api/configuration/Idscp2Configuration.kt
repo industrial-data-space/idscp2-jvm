@@ -94,6 +94,11 @@ class Idscp2Configuration {
 
     companion object {
         const val DEFAULT_ACK_TIMEOUT_DELAY = "200" // (in ms)
-        const val DEFAULT_HANDSHAKE_TIMEOUT_DELAY = "10000" // (in ms)
+
+        /**
+         * The timeout for the connection handshake, in ms.
+         * Chosen with 20 seconds to give enough room even in case of quirky DAPS or similar.
+         */
+        const val DEFAULT_HANDSHAKE_TIMEOUT_DELAY = "20000"
     }
 }

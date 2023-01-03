@@ -67,7 +67,7 @@ object Utils {
                         messageBuilder,
                         DynamicAttributeTokenBuilder()
                             ._tokenFormat_(TokenFormat.JWT)
-                            ._tokenValue_(String(connection.localDynamicAttributeToken, StandardCharsets.UTF_8))
+                            ._tokenValue_(String(connection.localDat, StandardCharsets.UTF_8))
                             .build()
                     )
                 getMethod("_senderAgent_", URI::class.java).invoke(messageBuilder, maintainerUrlProducer())

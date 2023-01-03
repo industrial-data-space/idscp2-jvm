@@ -23,8 +23,6 @@ import de.fhg.aisec.ids.idscp2.api.configuration.AttestationConfig
 import de.fhg.aisec.ids.idscp2.api.configuration.Idscp2Configuration
 import de.fhg.aisec.ids.idscp2.daps.aisecdaps.AisecDapsDriver
 import de.fhg.aisec.ids.idscp2.daps.aisecdaps.AisecDapsDriverConfig
-import de.fhg.aisec.ids.idscp2.daps.aisecdaps.SecurityProfile
-import de.fhg.aisec.ids.idscp2.daps.aisecdaps.SecurityRequirements
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaProver
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaVerifier
 import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
@@ -55,11 +53,6 @@ object RunTLSServer {
             .setRaTimeoutDelay(300 * 1000L) // 300 seconds
             .build()
 
-        // create daps config
-        val securityRequirements = SecurityRequirements.Builder()
-            .setRequiredSecurityLevel(SecurityProfile.INVALID)
-            .build()
-
         val password = "password".toCharArray()
 
         // Load certificates from local KeyStore
@@ -73,9 +66,8 @@ object RunTLSServer {
                 .setKeyAlias("1")
                 .setTrustStorePath(trustStorePath)
                 .setTrustStorePassword(password)
-                .setDapsUrl("https://daps-dev.aisec.fraunhofer.de")
+                .setDapsUrl("https://daps-dev.aisec.fraunhofer.de/v4")
                 .loadTransportCertsFromKeystore(ks)
-                .setSecurityRequirements(securityRequirements)
                 .build()
         )
 

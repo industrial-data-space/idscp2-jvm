@@ -53,6 +53,8 @@ class RefCountingHashMap<K, V>(private val releaseFunction: (V) -> Unit) {
     /**
      * Decrements the reference count of an existing element,
      * deleting it and finalizing it using releaseFunction if reference count becomes zero.
+     *
+     * @param key Key of the element to be released
      */
     @Synchronized
     fun release(key: K) {
@@ -63,6 +65,19 @@ class RefCountingHashMap<K, V>(private val releaseFunction: (V) -> Unit) {
             } else {
                 map[key] = Pair(it.first - 1, it.second)
             }
+        }
+    }
+
+    /**
+     * Removes an existing element, finalizing it using releaseFunction.
+     *
+     * @param key Key of the element to be removed
+     */
+    @Synchronized
+    fun remove(key: K) {
+        map[key]?.let {
+            releaseFunction(it.second)
+            map.remove(key)
         }
     }
 
