@@ -473,10 +473,12 @@ class AisecDapsDriver(private val config: AisecDapsDriverConfig) : DapsDriver {
                 claims.isClaimValueStringList("transportCertsSha256") -> {
                     claims.getStringListClaimValue("transportCertsSha256")
                 }
+
                 claims.isClaimValueString("transportCertsSha256") -> {
                     val fingerprint = claims.getStringClaimValue("transportCertsSha256")
                     listOf(fingerprint)
                 }
+
                 else -> {
                     throw DatException("Missing or invalid 'transportCertsSha256' format in DAT")
                 }

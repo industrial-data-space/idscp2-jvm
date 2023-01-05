@@ -19,7 +19,7 @@
  */
 package de.fhg.aisec.ids.camel.idscp2.client
 
-import de.fhg.aisec.ids.camel.idscp2.Constants.IDSCP2_HEADER
+import de.fhg.aisec.ids.camel.idscp2.Constants.IDS_HEADER
 import de.fhg.aisec.ids.camel.idscp2.ListenerManager
 import de.fhg.aisec.ids.camel.idscp2.Utils
 import de.fhg.aisec.ids.idscp2.applayer.AppLayerConnection
@@ -42,7 +42,7 @@ class Idscp2ClientProducer(private val endpoint: Idscp2ClientEndpoint) : Default
 
     override fun process(exchange: Exchange) {
         exchange.message.let { message ->
-            val header = message.getHeader(IDSCP2_HEADER)
+            val header = message.getHeader(IDS_HEADER)
             val body = message.getBody(ByteArray::class.java)
             val extraHeaders = endpoint.copyHeadersRegexObject?.let { regex ->
                 message.headers
@@ -64,7 +64,7 @@ class Idscp2ClientProducer(private val endpoint: Idscp2ClientEndpoint) : Default
                             val condition = reentrantLock.newCondition()
                             val responseHandler =
                                 { responseHeader: Any?, responsePayload: ByteArray?, responseExtraHeaders: Map<String, String>? ->
-                                    message.setHeader(IDSCP2_HEADER, responseHeader)
+                                    message.setHeader(IDS_HEADER, responseHeader)
                                     message.body = responsePayload
                                     endpoint.copyHeadersRegexObject?.let { regex ->
                                         responseExtraHeaders?.forEach {

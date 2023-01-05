@@ -19,7 +19,7 @@
  */
 package de.fhg.aisec.ids.camel.idscp2.server
 
-import de.fhg.aisec.ids.camel.idscp2.Constants.IDSCP2_HEADER
+import de.fhg.aisec.ids.camel.idscp2.Constants.IDS_HEADER
 import org.apache.camel.Exchange
 import org.apache.camel.support.DefaultProducer
 
@@ -31,7 +31,7 @@ class Idscp2ServerProducer(private val endpoint: Idscp2ServerEndpoint) : Default
 
     override fun process(exchange: Exchange) {
         exchange.message.let { message ->
-            val type = message.getHeader(IDSCP2_HEADER)
+            val type = message.getHeader(IDS_HEADER)
             val body = message.getBody(ByteArray::class.java)
             if (type != null || body != null) {
                 endpoint.sendMessage(
