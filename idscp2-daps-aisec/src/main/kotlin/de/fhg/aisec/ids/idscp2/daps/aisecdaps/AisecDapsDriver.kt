@@ -139,13 +139,14 @@ class AisecDapsDriver(private val config: AisecDapsDriverConfig) : DapsDriver {
             install(ContentNegotiation) {
                 jackson()
             }
-            install(HttpTimeout) {
-                requestTimeoutMillis = 1500
-            }
             install(HttpRequestRetry) {
                 retryOnServerErrors(3)
-                retryOnException(3, true)
+                retryOnExceptionIf(3) { _, _ -> true }
                 exponentialDelay()
+            }
+            // Should be installed AFTER HttpRequestRetry, see retryOnException() docs!
+            install(HttpTimeout) {
+                requestTimeoutMillis = 1500
             }
         }
     }
