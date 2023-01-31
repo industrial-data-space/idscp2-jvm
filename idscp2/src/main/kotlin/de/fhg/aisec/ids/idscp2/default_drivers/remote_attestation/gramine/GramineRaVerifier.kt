@@ -62,6 +62,11 @@ class GramineRaVerifier(fsmListener: RaVerifierFsmListener) : RaVerifierDriver<S
             fsmListener.onRaVerifierMessage(InternalControlMessage.RA_VERIFIER_OK)
             return
         }
+        if (primaryKey == "") {
+            LOG.error("Please enter your Primary Key in order to access the Intel Attestation Services!")
+            fsmListener.onRaVerifierMessage(InternalControlMessage.RA_VERIFIER_FAILED)
+            return
+        }
 
         val nonceRaw = ByteArray(32)
         SecureRandom().nextBytes(nonceRaw)
