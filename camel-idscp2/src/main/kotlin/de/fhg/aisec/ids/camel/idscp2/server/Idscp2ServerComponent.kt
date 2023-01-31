@@ -22,14 +22,14 @@
 package de.fhg.aisec.ids.camel.idscp2.server
 
 import de.fhg.aisec.ids.camel.idscp2.RefCountingHashMap
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaProverDummy
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaProverDummy2
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaVerifierDummy
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaVerifierDummy2
-import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
-import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
-import de.fhg.aisec.ids.idscp2.idscp_core.ra_registry.RaProverDriverRegistry
-import de.fhg.aisec.ids.idscp2.idscp_core.ra_registry.RaVerifierDriverRegistry
+import de.fhg.aisec.ids.idscp2.api.configuration.Idscp2Configuration
+import de.fhg.aisec.ids.idscp2.api.raregistry.RaProverDriverRegistry
+import de.fhg.aisec.ids.idscp2.api.raregistry.RaVerifierDriverRegistry
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaProverDummy
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaProverDummy2
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaVerifierDummy
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.dummy.RaVerifierDummy2
+import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
 import org.apache.camel.Endpoint
 import org.apache.camel.spi.annotations.Component
 import org.apache.camel.support.DefaultComponent
@@ -42,16 +42,24 @@ class Idscp2ServerComponent : DefaultComponent() {
 
     init {
         RaProverDriverRegistry.registerDriver(
-            RaProverDummy.RA_PROVER_DUMMY_ID, ::RaProverDummy, null
+            RaProverDummy.RA_PROVER_DUMMY_ID,
+            ::RaProverDummy,
+            null
         )
         RaProverDriverRegistry.registerDriver(
-            RaProverDummy2.RA_PROVER_DUMMY2_ID, ::RaProverDummy2, null
+            RaProverDummy2.RA_PROVER_DUMMY2_ID,
+            ::RaProverDummy2,
+            null
         )
         RaVerifierDriverRegistry.registerDriver(
-            RaVerifierDummy.RA_VERIFIER_DUMMY_ID, ::RaVerifierDummy, null
+            RaVerifierDummy.RA_VERIFIER_DUMMY_ID,
+            ::RaVerifierDummy,
+            null
         )
         RaVerifierDriverRegistry.registerDriver(
-            RaVerifierDummy2.RA_VERIFIER_DUMMY2_ID, ::RaVerifierDummy2, null
+            RaVerifierDummy2.RA_VERIFIER_DUMMY2_ID,
+            ::RaVerifierDummy2,
+            null
         )
     }
 

@@ -24,7 +24,7 @@ import de.fhg.aisec.ids.camel.idscp2.listeners.ConnectionListener
 import de.fhg.aisec.ids.camel.idscp2.listeners.ExchangeListener
 import de.fhg.aisec.ids.camel.idscp2.listeners.TransferContractListener
 import de.fhg.aisec.ids.camel.idscp2.server.Idscp2ServerEndpoint
-import de.fhg.aisec.ids.idscp2.app_layer.AppLayerConnection
+import de.fhg.aisec.ids.idscp2.applayer.AppLayerConnection
 import org.apache.camel.Exchange
 import org.apache.camel.support.DefaultEndpoint
 import java.net.URI

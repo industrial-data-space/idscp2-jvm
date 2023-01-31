@@ -1,7 +1,0 @@
-Bundle-Name: IDS :: IDSCP2
-Bundle-Description: IDSCP2 protocol implementation
-Export-Package:\
-    de.fhg.aisec.ids.idscp2*
-Import-Package:\
-    !android.os*,\
-    *

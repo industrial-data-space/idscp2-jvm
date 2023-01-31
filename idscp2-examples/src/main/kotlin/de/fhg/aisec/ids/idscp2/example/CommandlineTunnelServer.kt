@@ -19,18 +19,18 @@
  */
 package de.fhg.aisec.ids.idscp2.example
 
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.demo.DemoRaProver
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.demo.DemoRaVerifier
-import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTLSDriver
-import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
-import de.fhg.aisec.ids.idscp2.idscp_core.api.Idscp2EndpointListener
-import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
-import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2Connection
-import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2ConnectionAdapter
-import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2ConnectionImpl
-import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_server.Idscp2ServerFactory
-import de.fhg.aisec.ids.idscp2.idscp_core.ra_registry.RaProverDriverRegistry
-import de.fhg.aisec.ids.idscp2.idscp_core.ra_registry.RaVerifierDriverRegistry
+import de.fhg.aisec.ids.idscp2.api.Idscp2EndpointListener
+import de.fhg.aisec.ids.idscp2.api.configuration.Idscp2Configuration
+import de.fhg.aisec.ids.idscp2.api.connection.Idscp2Connection
+import de.fhg.aisec.ids.idscp2.api.connection.Idscp2ConnectionAdapter
+import de.fhg.aisec.ids.idscp2.api.raregistry.RaProverDriverRegistry
+import de.fhg.aisec.ids.idscp2.api.raregistry.RaVerifierDriverRegistry
+import de.fhg.aisec.ids.idscp2.api.server.Idscp2ServerFactory
+import de.fhg.aisec.ids.idscp2.core.connection.Idscp2ConnectionImpl
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaProver
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaVerifier
+import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTLSDriver
+import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
 import org.slf4j.LoggerFactory
 import java.nio.charset.StandardCharsets
 
@@ -42,11 +42,15 @@ class CommandlineTunnelServer : Idscp2EndpointListener<Idscp2Connection> {
 
         // register ra drivers
         RaProverDriverRegistry.registerDriver(
-            DemoRaProver.DEMO_RA_PROVER_ID, ::DemoRaProver, null
+            DemoRaProver.DEMO_RA_PROVER_ID,
+            ::DemoRaProver,
+            null
         )
 
         RaVerifierDriverRegistry.registerDriver(
-            DemoRaVerifier.DEMO_RA_VERIFIER_ID, ::DemoRaVerifier, null
+            DemoRaVerifier.DEMO_RA_VERIFIER_ID,
+            ::DemoRaVerifier,
+            null
         )
 
         // create server config
@@ -58,7 +62,8 @@ class CommandlineTunnelServer : Idscp2EndpointListener<Idscp2Connection> {
             nativeTlsConfiguration
         )
 
-        @Suppress("UNUSED_VARIABLE") val idscp2Server = serverConfig.listen()
+        @Suppress("UNUSED_VARIABLE")
+        val idscp2Server = serverConfig.listen()
     }
 
     override fun onConnection(connection: Idscp2Connection) {

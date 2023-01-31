@@ -19,7 +19,7 @@
  */
 package de.fhg.aisec.ids.camel.idscp2
 
-import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2Connection
+import de.fhg.aisec.ids.idscp2.api.connection.Idscp2Connection
 import de.fraunhofer.iais.eis.DynamicAttributeToken
 import de.fraunhofer.iais.eis.DynamicAttributeTokenBuilder
 import de.fraunhofer.iais.eis.Message
@@ -67,7 +67,7 @@ object Utils {
                         messageBuilder,
                         DynamicAttributeTokenBuilder()
                             ._tokenFormat_(TokenFormat.JWT)
-                            ._tokenValue_(String(connection.localDynamicAttributeToken, StandardCharsets.UTF_8))
+                            ._tokenValue_(String(connection.localDat, StandardCharsets.UTF_8))
                             .build()
                     )
                 getMethod("_senderAgent_", URI::class.java).invoke(messageBuilder, maintainerUrlProducer())

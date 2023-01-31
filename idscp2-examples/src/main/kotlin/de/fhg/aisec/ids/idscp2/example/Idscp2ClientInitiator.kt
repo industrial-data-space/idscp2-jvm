@@ -19,6 +19,16 @@
  */
 package de.fhg.aisec.ids.idscp2.example
 
+import de.fhg.aisec.ids.idscp2.api.configuration.Idscp2Configuration
+import de.fhg.aisec.ids.idscp2.api.connection.Idscp2Connection
+import de.fhg.aisec.ids.idscp2.api.connection.Idscp2ConnectionAdapter
+import de.fhg.aisec.ids.idscp2.api.raregistry.RaProverDriverRegistry
+import de.fhg.aisec.ids.idscp2.api.raregistry.RaVerifierDriverRegistry
+import de.fhg.aisec.ids.idscp2.core.connection.Idscp2ConnectionImpl
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaProver
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaVerifier
+import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTLSDriver
+import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
 import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.gramine.GramineRaProver
 import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.gramine.GramineRaVerifier
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTLSDriver
@@ -35,7 +45,6 @@ import java.nio.charset.StandardCharsets
 class Idscp2ClientInitiator {
 
     fun init(configuration: Idscp2Configuration, nativeTlsConfiguration: NativeTlsConfiguration) {
-
         // create secure channel driver
         val secureChannelDriver = NativeTLSDriver<Idscp2Connection>()
 
@@ -68,7 +77,7 @@ class Idscp2ClientInitiator {
             connection.unlockMessaging()
             LOG.info("Send PING ...")
             connection.nonBlockingSend("PING".toByteArray(StandardCharsets.UTF_8))
-            LOG.info("Local DAT: " + String(connection.localDynamicAttributeToken, StandardCharsets.UTF_8))
+            LOG.info("Local DAT: " + String(connection.localDat, StandardCharsets.UTF_8))
         }.exceptionally { t: Throwable? ->
             LOG.error("Client endpoint error occurred", t)
             null

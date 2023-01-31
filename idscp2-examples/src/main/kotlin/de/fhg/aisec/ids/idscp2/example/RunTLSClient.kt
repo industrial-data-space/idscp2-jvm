@@ -19,6 +19,14 @@
  */
 package de.fhg.aisec.ids.idscp2.example
 
+import de.fhg.aisec.ids.idscp2.api.configuration.AttestationConfig
+import de.fhg.aisec.ids.idscp2.api.configuration.Idscp2Configuration
+import de.fhg.aisec.ids.idscp2.daps.aisecdaps.AisecDapsDriver
+import de.fhg.aisec.ids.idscp2.daps.aisecdaps.AisecDapsDriverConfig
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaProver
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaVerifier
+import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
+import de.fhg.aisec.ids.idscp2.keystores.KeyStoreUtil.loadKeyStore
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.AisecDapsDriver
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.AisecDapsDriverConfig
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.SecurityProfile
@@ -45,17 +53,21 @@ object RunTLSClient {
             .setRaTimeoutDelay(300 * 1000L) // 300 seconds
             .build()
 
-        // create daps driver
-        val securityRequirements = SecurityRequirements.Builder()
-            .setRequiredSecurityLevel(SecurityProfile.INVALID)
-            .build()
+        val password = "password".toCharArray()
+
+        // Load certificates from local KeyStore
+        val ks = loadKeyStore(keyStorePath, password)
 
         val dapsDriver = AisecDapsDriver(
             AisecDapsDriverConfig.Builder()
                 .setKeyStorePath(keyStorePath)
+                .setKeyStorePassword(password)
+                .setKeyPassword(password)
+                .setKeyAlias("1")
                 .setTrustStorePath(trustStorePath)
-                .setDapsUrl("https://daps.aisec.fraunhofer.de")
-                .setSecurityRequirements(securityRequirements)
+                .setTrustStorePassword(password)
+                .setDapsUrl("https://daps-dev.aisec.fraunhofer.de/v4")
+                .loadTransportCertsFromKeystore(ks)
                 .build()
         )
 
@@ -70,7 +82,10 @@ object RunTLSClient {
         // create secureChannel config
         val nativeTlsConfiguration = NativeTlsConfiguration.Builder()
             .setKeyStorePath(keyStorePath)
+            .setKeyStorePassword(password)
+            .setKeyPassword(password)
             .setTrustStorePath(trustStorePath)
+            .setTrustStorePassword(password)
             .setCertificateAlias("1.0.1")
             .setServerPort(29292)
             .build()

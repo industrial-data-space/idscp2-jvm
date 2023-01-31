@@ -1,5 +1,5 @@
 syntax = "proto3";
-option java_package = "de.fhg.aisec.ids.idscp2.app_layer.messages";
+option java_package = "de.fhg.aisec.ids.idscp2.applayer.messages";
 option java_outer_classname = "AppLayer";
 
 message AppLayerMessage {

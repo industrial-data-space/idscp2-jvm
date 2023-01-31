@@ -19,6 +19,18 @@
  */
 package de.fhg.aisec.ids.idscp2.example
 
+import de.fhg.aisec.ids.idscp2.api.Idscp2EndpointListener
+import de.fhg.aisec.ids.idscp2.api.configuration.Idscp2Configuration
+import de.fhg.aisec.ids.idscp2.api.connection.Idscp2Connection
+import de.fhg.aisec.ids.idscp2.api.connection.Idscp2ConnectionAdapter
+import de.fhg.aisec.ids.idscp2.api.raregistry.RaProverDriverRegistry
+import de.fhg.aisec.ids.idscp2.api.raregistry.RaVerifierDriverRegistry
+import de.fhg.aisec.ids.idscp2.api.server.Idscp2ServerFactory
+import de.fhg.aisec.ids.idscp2.core.connection.Idscp2ConnectionImpl
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaProver
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaVerifier
+import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTLSDriver
+import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
 import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.gramine.GramineRaProver
 import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.gramine.GramineRaVerifier
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTLSDriver
@@ -36,7 +48,6 @@ import java.nio.charset.StandardCharsets
 
 class Idscp2ServerInitiator : Idscp2EndpointListener<Idscp2Connection> {
     fun init(configuration: Idscp2Configuration, nativeTlsConfiguration: NativeTlsConfiguration) {
-
         // create secure channel driver
         val secureChannelDriver = NativeTLSDriver<Idscp2Connection>()
 
@@ -57,8 +68,10 @@ class Idscp2ServerInitiator : Idscp2EndpointListener<Idscp2Connection> {
             secureChannelDriver,
             nativeTlsConfiguration
         )
+
         // run idscp2 server
-        @Suppress("UNUSED_VARIABLE") val idscp2Server = serverConfig.listen()
+        @Suppress("UNUSED_VARIABLE")
+        val idscp2Server = serverConfig.listen()
     }
 
     override fun onConnection(connection: Idscp2Connection) {

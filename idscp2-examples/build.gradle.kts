@@ -3,19 +3,18 @@ plugins {
     id("org.graalvm.buildtools.native") version "0.9.11"
 }
 
-@Suppress("UNCHECKED_CAST")
-val libraryVersions = rootProject.extra.get("libraryVersions") as Map<String, String>
-
-version = libraryVersions["idscp2"] ?: error("IDSCP2 version not specified")
+version = libs.versions.idscp2.get()
 
 apply(plugin = "java")
 
 val api by configurations
 
 dependencies {
-    api(project(":idscp2"))
+    api(project(":idscp2-api"))
 
-    implementation("org.slf4j", "slf4j-simple", libraryVersions["slf4j"])
+    implementation(project(":idscp2-core"))
+    implementation(project(":idscp2-daps-aisec"))
+    implementation(libs.slf4j.impl)
 }
 
 application {

@@ -19,10 +19,10 @@
  */
 package de.fhg.aisec.ids.camel.idscp2.client
 
-import de.fhg.aisec.ids.camel.idscp2.Constants.IDSCP2_HEADER
+import de.fhg.aisec.ids.camel.idscp2.Constants.IDS_HEADER
 import de.fhg.aisec.ids.camel.idscp2.ListenerManager
 import de.fhg.aisec.ids.camel.idscp2.Utils
-import de.fhg.aisec.ids.idscp2.app_layer.AppLayerConnection
+import de.fhg.aisec.ids.idscp2.applayer.AppLayerConnection
 import org.apache.camel.Exchange
 import org.apache.camel.support.DefaultProducer
 import org.slf4j.LoggerFactory
@@ -42,7 +42,7 @@ class Idscp2ClientProducer(private val endpoint: Idscp2ClientEndpoint) : Default
 
     override fun process(exchange: Exchange) {
         exchange.message.let { message ->
-            val header = message.getHeader(IDSCP2_HEADER)
+            val header = message.getHeader(IDS_HEADER)
             val body = message.getBody(ByteArray::class.java)
             val extraHeaders = endpoint.copyHeadersRegexObject?.let { regex ->
                 message.headers
@@ -55,16 +55,16 @@ class Idscp2ClientProducer(private val endpoint: Idscp2ClientEndpoint) : Default
                     try {
                         // If connectionFuture completed exceptionally, recreate Connection
                         if (connectionFuture.isCompletedExceptionally || t > 1) {
-                            endpoint.releaseConnection(connectionFuture)
-                            connectionFuture = endpoint.makeConnection()
-                                .also { c -> c.thenAccept { it.unlockMessaging() } }
+                            LOG.warn("Resetting connection...")
+                            connectionFuture = endpoint.resetConnection(connectionFuture)
+                                .apply { thenAccept { it.unlockMessaging() } }
                         }
                         val connection = connectionFuture.get()
                         if (endpoint.awaitResponse) {
                             val condition = reentrantLock.newCondition()
                             val responseHandler =
                                 { responseHeader: Any?, responsePayload: ByteArray?, responseExtraHeaders: Map<String, String>? ->
-                                    message.setHeader(IDSCP2_HEADER, responseHeader)
+                                    message.setHeader(IDS_HEADER, responseHeader)
                                     message.body = responsePayload
                                     endpoint.copyHeadersRegexObject?.let { regex ->
                                         responseExtraHeaders?.forEach {
@@ -119,8 +119,7 @@ class Idscp2ClientProducer(private val endpoint: Idscp2ClientEndpoint) : Default
                             exchange.setException(x)
                         } else {
                             LOG.warn(
-                                "Message delivery failed in attempt $t, " +
-                                    "reset connection and retry after ${endpoint.retryDelayMs} ms...",
+                                "Message delivery failed in attempt $t, retry after ${endpoint.retryDelayMs} ms...",
                                 x
                             )
                             Thread.sleep(endpoint.retryDelayMs)
@@ -136,9 +135,9 @@ class Idscp2ClientProducer(private val endpoint: Idscp2ClientEndpoint) : Default
         if (endpoint.awaitResponse) {
             reentrantLock = ReentrantLock()
         }
-        connectionFuture = endpoint.makeConnection().also { c ->
+        connectionFuture = endpoint.makeConnection().apply {
             // Unlock messaging immediately after obtaining connection
-            c.thenAccept { it.unlockMessaging() }.exceptionally {
+            thenAccept { it.unlockMessaging() }.exceptionally {
                 LOG.warn("Could not connect to Server ${endpoint.endpointUri}, delaying connect until first message...")
                 null
             }

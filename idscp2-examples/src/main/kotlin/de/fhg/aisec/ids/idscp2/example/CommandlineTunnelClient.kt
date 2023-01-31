@@ -19,16 +19,16 @@
  */
 package de.fhg.aisec.ids.idscp2.example
 
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.demo.DemoRaProver
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.demo.DemoRaVerifier
-import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTLSDriver
-import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
-import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
-import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2Connection
-import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2ConnectionAdapter
-import de.fhg.aisec.ids.idscp2.idscp_core.api.idscp_connection.Idscp2ConnectionImpl
-import de.fhg.aisec.ids.idscp2.idscp_core.ra_registry.RaProverDriverRegistry
-import de.fhg.aisec.ids.idscp2.idscp_core.ra_registry.RaVerifierDriverRegistry
+import de.fhg.aisec.ids.idscp2.api.configuration.Idscp2Configuration
+import de.fhg.aisec.ids.idscp2.api.connection.Idscp2Connection
+import de.fhg.aisec.ids.idscp2.api.connection.Idscp2ConnectionAdapter
+import de.fhg.aisec.ids.idscp2.api.raregistry.RaProverDriverRegistry
+import de.fhg.aisec.ids.idscp2.api.raregistry.RaVerifierDriverRegistry
+import de.fhg.aisec.ids.idscp2.core.connection.Idscp2ConnectionImpl
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaProver
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaVerifier
+import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTLSDriver
+import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
 import org.slf4j.LoggerFactory
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.CompletableFuture
@@ -45,11 +45,15 @@ class CommandlineTunnelClient {
 
         // register ra drivers
         RaProverDriverRegistry.registerDriver(
-            DemoRaProver.DEMO_RA_PROVER_ID, ::DemoRaProver, null
+            DemoRaProver.DEMO_RA_PROVER_ID,
+            ::DemoRaProver,
+            null
         )
 
         RaVerifierDriverRegistry.registerDriver(
-            DemoRaVerifier.DEMO_RA_VERIFIER_ID, ::DemoRaVerifier, null
+            DemoRaVerifier.DEMO_RA_VERIFIER_ID,
+            ::DemoRaVerifier,
+            null
         )
 
         // connect to idscp2 server
@@ -62,7 +66,6 @@ class CommandlineTunnelClient {
 
             connection.addConnectionListener(object : Idscp2ConnectionAdapter() {
                 override fun onError(t: Throwable) {
-
                     LOG.error("Client connection error occurred", t)
                     runningUserJob = false
                 }

@@ -1,13 +1,10 @@
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.yaml.snakeyaml.Yaml
 
 buildscript {
     repositories {
         mavenCentral()
-    }
-    dependencies {
-        classpath("org.yaml:snakeyaml:1.29")
     }
 }
 
@@ -15,23 +12,17 @@ plugins {
     java
     signing
     `maven-publish`
-    id("com.google.protobuf") version "0.8.16"
-    // WARNING: Versions 5.2.x onwards export java.* packages, which is not allowed in Felix OSGi Resolver!
-    // See http://karaf.922171.n3.nabble.com/Manifest-import-problems-td4059042.html
-    id("biz.aQute.bnd") version "5.1.2" apply false
-    id("org.jetbrains.kotlin.jvm") version "1.6.10"
-    id("com.diffplug.spotless") version "5.11.0"
-    id("com.github.jk1.dependency-license-report") version "1.16"
+    alias(libs.plugins.kotlin)
+    alias(libs.plugins.spotless)
+    alias(libs.plugins.license.report)
+    alias(libs.plugins.versions)
 }
 
-@Suppress("UNCHECKED_CAST")
-val libraryVersions: Map<String, String> =
-    Yaml().loadAs(file("$rootDir/libraryVersions.yaml").inputStream(), Map::class.java) as Map<String, String>
-extra.set("libraryVersions", libraryVersions)
-
-val descriptions: Map < String, String > = mapOf(
-    "idscp2" to "IDSCP2 Protocol Implementation",
+val descriptions: Map<String, String> = mapOf(
+    "idscp2-api" to "IDSCP2 Protocol API",
+    "idscp2-core" to "IDSCP2 Protocol Implementation",
     "idscp2-app-layer" to "IDSCP2 Application Layer Implementation",
+    "idscp2-daps-aisec" to "IDSCP2 AISEC DAPS Driver",
     "camel-idscp2" to "Camel IDSCP2 Component Implementation"
 )
 
@@ -43,12 +34,27 @@ allprojects {
         // References IAIS repository that contains the infomodel artifacts
         maven("https://maven.iais.fraunhofer.de/artifactory/eis-ids-public/")
     }
+
+    val versionRegex = ".*(rc-?[0-9]*|beta)$".toRegex(RegexOption.IGNORE_CASE)
+
+    tasks.withType<DependencyUpdatesTask> {
+        rejectVersionIf {
+            // Reject release candidates and betas and pin Apache Camel to 3.18 LTS version
+            versionRegex.matches(candidate.version)
+                || (candidate.group in setOf("org.apache.camel", "org.apache.camel.springboot")
+                && !candidate.version.startsWith("3.18"))
+                || (candidate.group.startsWith("de.fraunhofer.iais.eis.ids") && !candidate.version.startsWith("4.1."))
+        }
+    }
 }
 
 subprojects {
-    apply(plugin = "biz.aQute.bnd.builder")
     apply(plugin = "java")
     apply(plugin = "kotlin")
+
+    tasks.withType<Javadoc> {
+        exclude("de/fhg/aisec/ids/idscp2/messages/**", "de/fhg/aisec/ids/idscp2/applayer/messages/**")
+    }
 
     java {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -80,39 +86,9 @@ subprojects {
     // define some Bill of Materials (BOM) for all subprojects
     dependencies {
         // Logging API
-        api("org.slf4j", "slf4j-api", libraryVersions["slf4j"])
-
-        // Needed for kotlin modules, provided at runtime via kotlin-osgi-bundle in karaf-features-ids
-        api("org.jetbrains.kotlin", "kotlin-stdlib-jdk8", libraryVersions["kotlin"])
-
-        // Some versions are downgraded for unknown reasons, fix this here
-        val groupPins = mapOf(
-            "org.jetbrains.kotlin" to mapOf(
-                "*" to "kotlin"
-            )
-        )
-        // We need to explicitly specify the kotlin version for all kotlin dependencies,
-        // because otherwise something (maybe a plugin) downgrades the kotlin version,
-        // which produces errors in the kotlin compiler. This is really nasty.
-        configurations.all {
-            resolutionStrategy.eachDependency {
-                groupPins[requested.group]?.let { pins ->
-                    pins["*"]?.let {
-                        // Pin all names when asterisk is set
-                        useVersion(
-                            libraryVersions[it]
-                                ?: throw RuntimeException("Key \"$it\" not set in libraryVersions.yaml")
-                        )
-                    } ?: pins[requested.name]?.let { pin ->
-                        // Pin only for specific names given in map
-                        useVersion(
-                            libraryVersions[pin]
-                                ?: throw RuntimeException("Key \"$pin\" not set in libraryVersions.yaml")
-                        )
-                    }
-                }
-            }
-        }
+        api(rootProject.libs.slf4j.api)
+        // Kotlin JVM library
+        api(rootProject.libs.kotlin.stdlib)
     }
 
     tasks.withType<KotlinCompile> {
@@ -207,8 +183,8 @@ subprojects {
 
     spotless {
         kotlin {
-            target("**/*.kt")
-            ktlint(libraryVersions["ktlint"])
+            target("src/*/kotlin/**/*.kt")
+            ktlint(libs.versions.ktlint.get())
             licenseHeader(
                 """/*-
  * ========================LICENSE_START=================================
