@@ -53,4 +53,9 @@ interface SecureChannelEndpoint {
      * check if the endpoint is connected
      */
     val isConnected: Boolean
+
+    /**
+     * The connected remote peer
+     */
+    fun remotePeer(): String
 }

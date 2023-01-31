@@ -189,6 +189,10 @@ class FSM(
         this.peerDat = dat
     }
 
+    fun remotePeer(): String {
+        return secureChannel.remotePeer()
+    }
+
     private fun checkForFsmCycles() {
         // check if current thread holds already the fsm lock, then we have a circle
         // this runs into an issue: onControlMessage must be called only from other threads!
