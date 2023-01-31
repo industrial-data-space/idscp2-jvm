@@ -19,10 +19,8 @@
  */
 package de.fhg.aisec.ids.idscp2.example
 
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.demo.DemoRaProver
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.demo.DemoRaVerifier
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaProverDummy2
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaVerifierDummy2
+import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.gramine.GramineRaProver
+import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.gramine.GramineRaVerifier
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTLSDriver
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
@@ -43,11 +41,11 @@ class Idscp2ClientInitiator {
 
         // register ra drivers
         RaProverDriverRegistry.registerDriver(
-            RaProverDummy2.RA_PROVER_DUMMY2_ID, ::RaProverDummy2, null
+            GramineRaProver.GRAMINE_RA_PROVER_ID, ::GramineRaProver, "Client"
         )
 
         RaVerifierDriverRegistry.registerDriver(
-            RaVerifierDummy2.RA_VERIFIER_DUMMY2_ID, ::RaVerifierDummy2, null
+            GramineRaVerifier.GRAMINE_RA_VERIFIER_ID, ::GramineRaVerifier, "Client"
         )
 
         // connect to idscp2 server

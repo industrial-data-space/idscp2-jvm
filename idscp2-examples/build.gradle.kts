@@ -21,25 +21,24 @@ dependencies {
 application {
     mainClass.set(
         findProperty("mainClass")?.toString()
-            ?: "de.fhg.aisec.ids.idscp2.example.RunTLSClient"
+            ?: "de.fhg.aisec.ids.idscp2.example.RunTLSServer"
     )
 }
 
 graalvmNative {
     binaries {
         named("main") {
-            imageName.set("idscp2-native")
+            imageName.set(
+                findProperty("nativeImageName")?.toString()
+                    ?: "idscp2-native"
+            )
             mainClass.set(
                 findProperty("mainNativeClass")?.toString()
-                    ?: "de.fhg.aisec.ids.idscp2.example.RunTLSClient"
+                    ?: "de.fhg.aisec.ids.idscp2.example.RunTLSServer"
             )
             runtimeArgs.add("--report-unsupported-elements-at-runtime")
             buildArgs.add("-H:ReflectionConfigurationFiles=../../../src/main/resources/reflect-config.json")
             buildArgs.add("-H:ResourceConfigurationFiles=../../../src/main/resources/resource-config.json")
-//            buildArgs.add("-Ob") // Enables quick build, DISABLE THIS FOR PRODUCTION!
-//            verbose.set(true)
-//            debug.set(true)
-//            agent.set(true)
         }
     }
 }

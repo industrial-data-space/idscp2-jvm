@@ -1,3 +1,13 @@
+# Gramine
+*.token
+*.sig
+*.manifest.sgx
+*.manifest
+idscp2-native-*
+
+# SSL
+idscp2-examples/src/main/resources/ssl/localhost.p12
+
 # Gradle
 .gradle/
 

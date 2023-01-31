@@ -23,8 +23,8 @@ import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.AisecDapsDriver
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.AisecDapsDriverConfig
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.SecurityProfile
 import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.SecurityRequirements
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaProverDummy2
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.dummy.RaVerifierDummy2
+import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.gramine.GramineRaProver
+import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.gramine.GramineRaVerifier
 import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.AttestationConfig
 import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
@@ -34,27 +34,14 @@ object RunTLSClient {
     @JvmStatic
     fun main(args: Array<String>) {
 
-//        val keyStorePath = Paths.get(
-//            Objects.requireNonNull(
-//                RunTLSClient::class.java.classLoader
-//                    .getResource("ssl/localhost.p12")
-//            ).path
-//        )
-//
-//        val trustStorePath = Paths.get(
-//            Objects.requireNonNull(
-//                RunTLSClient::class.java.classLoader
-//                    .getResource("ssl/truststore.p12")
-//            ).path
-//        )
-
-        val keyStorePath = Paths.get("src/main/resources/ssl/localhost.p12")
-
-        val trustStorePath = Paths.get("src/main/resources/ssl/truststore.p12")
+        // absolute paths to facilitate native-image compilation
+        // TODO: Key Store file 'localhost.p12' missing and must be provided!
+        val keyStorePath = Paths.get("idscp2-examples/src/main/resources/ssl/localhost.p12")
+        val trustStorePath = Paths.get("idscp2-examples/src/main/resources/ssl/truststore.p12")
 
         val localAttestationConfig = AttestationConfig.Builder()
-            .setSupportedRaSuite(arrayOf(RaProverDummy2.RA_PROVER_DUMMY2_ID))
-            .setExpectedRaSuite(arrayOf(RaVerifierDummy2.RA_VERIFIER_DUMMY2_ID))
+            .setSupportedRaSuite(arrayOf(GramineRaProver.GRAMINE_RA_PROVER_ID))
+            .setExpectedRaSuite(arrayOf(GramineRaVerifier.GRAMINE_RA_VERIFIER_ID))
             .setRaTimeoutDelay(300 * 1000L) // 300 seconds
             .build()
 
@@ -74,8 +61,8 @@ object RunTLSClient {
 
         // create idscp2 config
         val settings = Idscp2Configuration.Builder()
-            .setAckTimeoutDelay(500) //  500 ms
-            .setHandshakeTimeoutDelay(5 * 1000L) // 5 seconds
+            .setAckTimeoutDelay(20 * 1000L) //  20 seconds
+            .setHandshakeTimeoutDelay(50 * 1000L) // 50 seconds
             .setAttestationConfig(localAttestationConfig)
             .setDapsDriver(dapsDriver)
             .build()
@@ -85,6 +72,7 @@ object RunTLSClient {
             .setKeyStorePath(keyStorePath)
             .setTrustStorePath(trustStorePath)
             .setCertificateAlias("1.0.1")
+            .setServerPort(29292)
             .build()
 
         val initiator = Idscp2ClientInitiator()
