@@ -24,6 +24,7 @@ package de.fhg.aisec.ids.camel.idscp2.server
 import de.fhg.aisec.ids.camel.idscp2.Idscp2Endpoint
 import de.fhg.aisec.ids.camel.idscp2.ListenerManager
 import de.fhg.aisec.ids.camel.idscp2.Utils
+import de.fhg.aisec.ids.camel.idscp2.doCommonEndpointConfiguration
 import de.fhg.aisec.ids.idscp2.api.Idscp2EndpointListener
 import de.fhg.aisec.ids.idscp2.api.configuration.AttestationConfig
 import de.fhg.aisec.ids.idscp2.api.configuration.Idscp2Configuration

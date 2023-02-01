@@ -34,11 +34,9 @@ class InputListenerThread(inputStream: InputStream, private var listener: DataAv
     private val dataInputStream: DataInputStream = DataInputStream(inputStream)
 
     @Volatile
-    private var running = true
+    var running = true
+        private set
 
-    /*
-     * Run the input listener thread that reads from wire and provides data to upper layer
-     */
     override fun run() {
         var buf: ByteArray
         while (running) {
@@ -53,11 +51,11 @@ class InputListenerThread(inputStream: InputStream, private var listener: DataAv
             } catch (ignore: SocketTimeoutException) {
                 // timeout to catch safeStop() call
             } catch (e: EOFException) {
+                running = false
                 listener.onClose()
-                running = false
             } catch (e: Exception) {
-                listener.onError(e)
                 running = false
+                listener.onError(e)
             }
         }
         try {

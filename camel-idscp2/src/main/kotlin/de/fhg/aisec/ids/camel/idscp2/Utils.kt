@@ -19,16 +19,26 @@
  */
 package de.fhg.aisec.ids.camel.idscp2
 
+import de.fhg.aisec.ids.idscp2.api.configuration.AttestationConfig
+import de.fhg.aisec.ids.idscp2.api.configuration.Idscp2Configuration
 import de.fhg.aisec.ids.idscp2.api.connection.Idscp2Connection
+import de.fhg.aisec.ids.idscp2.daps.aisecdaps.AisecDapsDriver
+import de.fhg.aisec.ids.idscp2.daps.aisecdaps.AisecDapsDriverConfig
+import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
+import de.fhg.aisec.ids.idscp2.keystores.KeyStoreUtil
 import de.fraunhofer.iais.eis.DynamicAttributeToken
 import de.fraunhofer.iais.eis.DynamicAttributeTokenBuilder
 import de.fraunhofer.iais.eis.Message
 import de.fraunhofer.iais.eis.TokenFormat
+import org.apache.camel.support.jsse.SSLContextParameters
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.net.URI
 import java.nio.charset.StandardCharsets
+import java.nio.file.Paths
 import java.util.GregorianCalendar
+import java.util.regex.Pattern
+import javax.net.ssl.X509TrustManager
 import javax.xml.datatype.DatatypeFactory
 import javax.xml.datatype.XMLGregorianCalendar
 
@@ -37,6 +47,7 @@ object Utils {
 
     lateinit var maintainerUrlProducer: () -> URI
     lateinit var connectorUrlProducer: () -> URI
+    @Suppress("MemberVisibilityCanBePrivate")
     lateinit var infomodelVersion: String
     var dapsUrlProducer: () -> String = { Constants.DEFAULT_DAPS_URL }
 
@@ -96,6 +107,119 @@ object Utils {
                     "the object passed as IDSCP2 header must be an IDS MessageBuilder.",
                 t
             )
+        }
+    }
+}
+
+val URI_REGEX: Pattern = Pattern.compile("(.*?)(?::(\\d+))?/?$")
+
+fun Idscp2Endpoint.doCommonEndpointConfiguration(
+    secureChannelConfigurationBlock: ((NativeTlsConfiguration.Builder) -> Unit)? = null
+) {
+    // Use the provided NativeTlsConfiguration.Builder, or create a new one
+    val secureChannelConfigBuilder = secureChannelConfigurationBuilder ?: run { NativeTlsConfiguration.Builder() }
+
+    val transportSslContextParameters = transportSslContextParameters ?: sslContextParameters
+    // If no Builder has been passed, perform configuration based on passed individual parameters
+    if (secureChannelConfigurationBuilder == null) {
+        transportSslContextParameters?.let {
+            secureChannelConfigBuilder.applySslContextParameters(it)
+        }
+    }
+
+    // Always set (or overwrite) the host and port with information passed by component URI
+    val remainingMatcher = URI_REGEX.matcher(remaining)
+    require(remainingMatcher.matches()) { "$remaining is not a valid URI remainder, must be \"host:port\"." }
+    val matchResult = remainingMatcher.toMatchResult()
+    val host = matchResult.group(1)
+    val port = matchResult.group(2)?.toInt() ?: NativeTlsConfiguration.DEFAULT_SERVER_PORT
+    secureChannelConfigBuilder.setHost(host).setServerPort(port)
+    // Always execute secureChannelConfigurationBlock (hostname verification cannot be disabled via beans)
+    secureChannelConfigurationBlock?.invoke(secureChannelConfigBuilder)
+    // Finalize the NativeTlsConfiguration
+    secureChannelConfiguration = secureChannelConfigBuilder.build()
+
+    if (idscp2Configuration == null) {
+        // create attestation config
+        val localAttestationConfig = AttestationConfig.Builder()
+            .setSupportedRaSuite(supportedRaSuites.split('|').toTypedArray())
+            .setExpectedRaSuite(expectedRaSuites.split('|').toTypedArray())
+            .setRaTimeoutDelay(dapsRaTimeoutDelay)
+            .build()
+
+        // create daps config
+        val dapsDriverConfigBuilder = AisecDapsDriverConfig.Builder()
+            .setDapsUrl(Utils.dapsUrlProducer())
+
+        (dapsSslContextParameters ?: sslContextParameters)?.let {
+            dapsDriverConfigBuilder.applySslContextParameters(it, transportSslContextParameters)
+        }
+
+        // create idscp config
+        idscp2Configuration = Idscp2Configuration.Builder()
+            .setAttestationConfig(localAttestationConfig)
+            .setDapsDriver(AisecDapsDriver(dapsDriverConfigBuilder.build()))
+            .build()
+    }
+}
+
+fun NativeTlsConfiguration.Builder.applySslContextParameters(
+    sslContextParameters: SSLContextParameters
+): NativeTlsConfiguration.Builder {
+    return apply {
+        sslContextParameters.let { scp ->
+            setKeyPassword(
+                scp.keyManagers?.keyPassword?.toCharArray()
+                    ?: "password".toCharArray()
+            )
+            scp.keyManagers?.keyStore?.resource?.let { setKeyStorePath(Paths.get(it)) }
+            scp.keyManagers?.keyStore?.type?.let { setKeyStoreKeyType(it) }
+            setKeyStorePassword(
+                scp.keyManagers?.keyStore?.password?.toCharArray()
+                    ?: "password".toCharArray()
+            )
+            scp.trustManagers?.trustManager?.let { setTrustManager(it as X509TrustManager) }
+            scp.trustManagers?.keyStore?.resource?.let { setTrustStorePath(Paths.get(it)) }
+            setTrustStorePassword(
+                scp.trustManagers?.keyStore?.password?.toCharArray()
+                    ?: "password".toCharArray()
+            )
+            setCertificateAlias(scp.certAlias ?: "1")
+        }
+    }
+}
+
+fun AisecDapsDriverConfig.Builder.applySslContextParameters(
+    dapsSslContextParameters: SSLContextParameters,
+    transportSslContextParameters: SSLContextParameters? = null
+): AisecDapsDriverConfig.Builder {
+    return apply {
+        dapsSslContextParameters.let { scp ->
+            setKeyPassword(
+                scp.keyManagers?.keyPassword?.toCharArray()
+                    ?: "password".toCharArray()
+            )
+            scp.keyManagers?.keyStore?.resource?.let { setKeyStorePath(Paths.get(it)) }
+            setKeyStorePassword(
+                scp.keyManagers?.keyStore?.password?.toCharArray()
+                    ?: "password".toCharArray()
+            )
+            scp.trustManagers?.trustManager?.let { setTrustManager(it) }
+            scp.trustManagers?.keyStore?.resource?.let { setTrustStorePath(Paths.get(it)) }
+            setTrustStorePassword(
+                scp.trustManagers?.keyStore?.password?.toCharArray()
+                    ?: "password".toCharArray()
+            )
+            setKeyAlias(scp.certAlias ?: "1")
+        }
+        // Load transport SSL certificates and create fingerprints
+        transportSslContextParameters?.let { scp ->
+            scp.keyManagers?.keyStore?.resource?.let { Paths.get(it) }?.let { keyStorePath ->
+                scp.keyManagers?.keyStore?.password?.toCharArray()?.let { keyStorePassword ->
+                    val ks = KeyStoreUtil.loadKeyStore(keyStorePath, keyStorePassword)
+                    loadTransportCertsFromKeystore(ks)
+                }
+            }
         }
     }
 }
