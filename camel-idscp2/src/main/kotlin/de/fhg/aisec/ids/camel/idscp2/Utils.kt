@@ -45,8 +45,8 @@ import javax.xml.datatype.XMLGregorianCalendar
 object Utils {
     private val LOG: Logger = LoggerFactory.getLogger(Utils::class.java)
 
-    lateinit var maintainerUrlProducer: () -> URI
-    lateinit var connectorUrlProducer: () -> URI
+    lateinit var senderAgentProducer: () -> URI
+    lateinit var issuerProducer: () -> URI
     @Suppress("MemberVisibilityCanBePrivate")
     lateinit var infomodelVersion: String
     var dapsUrlProducer: () -> String = { Constants.DEFAULT_DAPS_URL }
@@ -81,8 +81,8 @@ object Utils {
                             ._tokenValue_(String(connection.localDat, StandardCharsets.UTF_8))
                             .build()
                     )
-                getMethod("_senderAgent_", URI::class.java).invoke(messageBuilder, maintainerUrlProducer())
-                getMethod("_issuerConnector_", URI::class.java).invoke(messageBuilder, connectorUrlProducer())
+                getMethod("_senderAgent_", URI::class.java).invoke(messageBuilder, senderAgentProducer())
+                getMethod("_issuerConnector_", URI::class.java).invoke(messageBuilder, issuerProducer())
                 getMethod("_issued_", XMLGregorianCalendar::class.java)
                     .invoke(messageBuilder, createGregorianCalendarTimestamp(System.currentTimeMillis()))
                 getMethod("_modelVersion_", String::class.java).invoke(messageBuilder, infomodelVersion)
