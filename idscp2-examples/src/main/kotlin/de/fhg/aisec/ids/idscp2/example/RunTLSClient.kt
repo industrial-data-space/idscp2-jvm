@@ -28,7 +28,6 @@ import de.fhg.aisec.ids.idscp2.daps.aisecdaps.SecurityRequirements
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.gramine.GramineRaProver
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.gramine.GramineRaVerifier
 import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
-import de.fhg.aisec.ids.idscp2.keystores.KeyStoreUtil.loadKeyStore
 import java.nio.file.Paths
 
 object RunTLSClient {
