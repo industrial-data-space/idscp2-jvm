@@ -71,7 +71,7 @@ class Idscp2Integration {
 
         override val renewalThreshold = 1.0f
 
-        override fun verifyToken(dat: ByteArray, peerCertificate: X509Certificate?) =
+        override fun verifyToken(dat: ByteArray, peerCertificateFingerprint: String): VerifiedDat =
             throw DatException("DapsRejector will reject each token")
     }
 
@@ -81,7 +81,7 @@ class Idscp2Integration {
 
         override val renewalThreshold = 1.0f
 
-        override fun verifyToken(dat: ByteArray, peerCertificate: X509Certificate?): VerifiedDat {
+        override fun verifyToken(dat: ByteArray, peerCertificateFingerprint: String): VerifiedDat {
             if (dat.contentEquals(VALID_DAT)) {
                 return VerifiedDat(VALID_DAT, "IDENTITY", (System.currentTimeMillis() / 1000) + 3600)
             } else {
@@ -95,7 +95,7 @@ class Idscp2Integration {
 
         override val renewalThreshold = 1.0f
 
-        override fun verifyToken(dat: ByteArray, peerCertificate: X509Certificate?): VerifiedDat {
+        override fun verifyToken(dat: ByteArray, peerCertificateFingerprint: String): VerifiedDat {
             if (dat.contentEquals(VALID_DAT)) {
                 return VerifiedDat(VALID_DAT, "IDENTITY", (System.currentTimeMillis() / 1000) + delay)
             } else {

@@ -29,7 +29,7 @@ import java.util.concurrent.LinkedBlockingQueue
 
 /**
  * An RaProver that, when ran by the client, produces an Intel SGX Attestation Report
- * containing the nocne sent by the RaVerifier.
+ * containing the nonce sent by the RaVerifier.
  *
  * @author Andrei-Cosmin Aprodu (andrei-cosmin.aprodu@aisec.fraunhofer.de)
  */
@@ -50,7 +50,7 @@ class GramineRaProver(fsmListener: RaProverFsmListener) : RaProverDriver<String>
 
     override fun run() {
         // Only the client can issue an attestation certificate, so we cannot consider
-        // the current authentication process symmatrical anymore.
+        // the current authentication process symmetrical anymore.
         if (currentTarget == "Server") {
             fsmListener.onRaProverMessage(InternalControlMessage.RA_PROVER_OK)
             return

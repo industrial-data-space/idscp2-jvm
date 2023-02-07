@@ -42,7 +42,7 @@ class GramineRaVerifier(fsmListener: RaVerifierFsmListener) : RaVerifierDriver<S
     // TODO: Insert Primary Key corresponding to the current SPID here!
     private val primaryKey = ""
 
-    fun ByteArray.toHexString() = joinToString("") { "%02x".format(it) }
+    private fun ByteArray.toHexString() = joinToString("") { "%02x".format(it) }
 
     override fun delegate(message: ByteArray) {
         queue.add(message)
@@ -93,7 +93,7 @@ class GramineRaVerifier(fsmListener: RaVerifierFsmListener) : RaVerifierDriver<S
             // 1st check: verify whether the quote is authentic
             val quoteVerifierProcess = ProcessBuilder("../quote-verifier.sh", primaryKey).start()
             quoteVerifierProcess.waitFor()
-            if (String(quoteVerifierProcess.getInputStream().readAllBytes()).trim().toInt() != 1) {
+            if (String(quoteVerifierProcess.inputStream.readAllBytes()).trim().toInt() != 1) {
                 LOG.error("Check 1: Quote not authentic! Aborting...")
                 if (running) {
                     fsmListener.onRaVerifierMessage(InternalControlMessage.RA_VERIFIER_FAILED)
@@ -106,7 +106,7 @@ class GramineRaVerifier(fsmListener: RaVerifierFsmListener) : RaVerifierDriver<S
             // 2nd check: verify whether nonce is included in quote
             // TODO: Include verification step into the Kotlin codebase in future update
             val quoteContents = File("/tmp/QUOTE").readBytes()
-            if (!quoteContents.copyOfRange(368, 432).toString(Charsets.US_ASCII).equals(nonce)) {
+            if (quoteContents.copyOfRange(368, 432).toString(Charsets.US_ASCII) != nonce) {
                 LOG.error("Check 2: Quote does not contain nonce! Aborting...")
                 if (running) {
                     fsmListener.onRaVerifierMessage(InternalControlMessage.RA_VERIFIER_FAILED)
