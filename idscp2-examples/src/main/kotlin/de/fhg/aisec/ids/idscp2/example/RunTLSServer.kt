@@ -23,26 +23,18 @@ import de.fhg.aisec.ids.idscp2.api.configuration.AttestationConfig
 import de.fhg.aisec.ids.idscp2.api.configuration.Idscp2Configuration
 import de.fhg.aisec.ids.idscp2.daps.aisecdaps.AisecDapsDriver
 import de.fhg.aisec.ids.idscp2.daps.aisecdaps.AisecDapsDriverConfig
-import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaProver
-import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaVerifier
+import de.fhg.aisec.ids.idscp2.daps.aisecdaps.SecurityProfile
+import de.fhg.aisec.ids.idscp2.daps.aisecdaps.SecurityRequirements
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.gramine.GramineRaProver
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.gramine.GramineRaVerifier
 import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
 import de.fhg.aisec.ids.idscp2.keystores.KeyStoreUtil.loadKeyStore
-import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.AisecDapsDriver
-import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.AisecDapsDriverConfig
-import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.SecurityProfile
-import de.fhg.aisec.ids.idscp2.default_drivers.daps.aisec_daps.SecurityRequirements
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.gramine.GramineRaProver
-import de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.gramine.GramineRaVerifier
-import de.fhg.aisec.ids.idscp2.default_drivers.secure_channel.tlsv1_3.NativeTlsConfiguration
-import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.AttestationConfig
-import de.fhg.aisec.ids.idscp2.idscp_core.api.configuration.Idscp2Configuration
 import java.nio.file.Paths
 import java.util.Objects
 
 object RunTLSServer {
     @JvmStatic
     fun main(argv: Array<String>) {
-
         // TODO: Key Store file 'localhost.p12' missing and must be provided!
         val keyStorePath = Paths.get(
             Objects.requireNonNull(
@@ -66,19 +58,21 @@ object RunTLSServer {
 
         val password = "password".toCharArray()
 
-        // Load certificates from local KeyStore
-        val ks = loadKeyStore(keyStorePath, password)
+        // create daps config
+        val securityRequirements = SecurityRequirements.Builder()
+            .setRequiredSecurityLevel(SecurityProfile.INVALID)
+            .build()
 
         val dapsDriver = AisecDapsDriver(
             AisecDapsDriverConfig.Builder()
                 .setKeyStorePath(keyStorePath)
                 .setKeyStorePassword(password)
                 .setKeyPassword(password)
-                .setKeyAlias("1")
                 .setTrustStorePath(trustStorePath)
                 .setTrustStorePassword(password)
-                .setDapsUrl("https://daps-dev.aisec.fraunhofer.de/v4")
-                .loadTransportCertsFromKeystore(ks)
+                .setKeyAlias("1")
+                .setDapsUrl("https://daps.aisec.fraunhofer.de")
+                .setSecurityRequirements(securityRequirements)
                 .build()
         )
 

@@ -1,6 +1,6 @@
 /*-
  * ========================LICENSE_START=================================
- * idscp2
+ * idscp2-core
  * %%
  * Copyright (C) 2022 Fraunhofer AISEC
  * %%
@@ -17,11 +17,11 @@
  * limitations under the License.
  * =========================LICENSE_END==================================
  */
-package de.fhg.aisec.ids.idscp2.default_drivers.remote_attestation.gramine
+package de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.gramine
 
-import de.fhg.aisec.ids.idscp2.idscp_core.drivers.RaVerifierDriver
-import de.fhg.aisec.ids.idscp2.idscp_core.fsm.InternalControlMessage
-import de.fhg.aisec.ids.idscp2.idscp_core.fsm.fsmListeners.RaVerifierFsmListener
+import de.fhg.aisec.ids.idscp2.api.drivers.RaVerifierDriver
+import de.fhg.aisec.ids.idscp2.api.fsm.InternalControlMessage
+import de.fhg.aisec.ids.idscp2.api.fsm.RaVerifierFsmListener
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.lang.ProcessBuilder
@@ -39,7 +39,7 @@ class GramineRaVerifier(fsmListener: RaVerifierFsmListener) : RaVerifierDriver<S
     private val queue: BlockingQueue<ByteArray> = LinkedBlockingQueue()
     private lateinit var currentTarget: String
 
-    // Insert Primary Key corresponding to the current SPID here!
+    // TODO: Insert Primary Key corresponding to the current SPID here!
     private val primaryKey = ""
 
     fun ByteArray.toHexString() = joinToString("") { "%02x".format(it) }

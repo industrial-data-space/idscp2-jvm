@@ -30,7 +30,7 @@ sgx.enclave_size = "512M"
 sgx.remote_attestation = "epid"
 sgx.ra_client_linkable = true
 
-# Insert SPID from https://api.portal.trustedservices.intel.com/developer here!
+# TODO: Insert SPID from https://api.portal.trustedservices.intel.com/developer here!
 sgx.ra_client_spid = ""
 
 sgx.trusted_files = [
