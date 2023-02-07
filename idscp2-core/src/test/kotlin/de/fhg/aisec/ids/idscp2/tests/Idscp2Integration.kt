@@ -45,7 +45,6 @@ import org.junit.Assert
 import org.junit.Test
 import java.nio.charset.StandardCharsets
 import java.nio.file.Paths
-import java.security.cert.X509Certificate
 import java.util.Objects
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.CountDownLatch
