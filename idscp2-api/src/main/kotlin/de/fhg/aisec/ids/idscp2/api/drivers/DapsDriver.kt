@@ -19,8 +19,6 @@
  */
 package de.fhg.aisec.ids.idscp2.api.drivers
 
-import java.security.cert.X509Certificate
-
 /**
  * An interface for the DAPS driver, which is used to verify and request dynamicAttributeTokens
  *
@@ -43,5 +41,5 @@ interface DapsDriver {
      *
      * Return the number of seconds, the DAT is valid
      */
-    fun verifyToken(dat: ByteArray, peerCertificate: X509Certificate?): VerifiedDat
+    fun verifyToken(dat: ByteArray, peerCertificateFingerprint: String): VerifiedDat
 }

@@ -28,6 +28,7 @@ import de.fhg.aisec.ids.idscp2.api.fsm.FsmState
 import de.fhg.aisec.ids.idscp2.api.fsm.InternalControlMessage
 import de.fhg.aisec.ids.idscp2.api.fsm.State
 import de.fhg.aisec.ids.idscp2.api.fsm.Transition
+import de.fhg.aisec.ids.idscp2.api.sha256Fingerprint
 import de.fhg.aisec.ids.idscp2.core.messages.Idscp2MessageHelper
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpClose.CloseCause
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpMessage
@@ -193,7 +194,7 @@ class StateWaitForDatAndRa(
                 var datValidityPeriod: Long
 
                 try {
-                    dapsDriver.verifyToken(dat, fsm.remotePeerCertificate).also {
+                    dapsDriver.verifyToken(dat, fsm.remotePeerCertificate.sha256Fingerprint).also {
                         fsm.peerDat = it
                         datValidityPeriod = it.remainingValidity(dapsDriver.renewalThreshold)
                     }

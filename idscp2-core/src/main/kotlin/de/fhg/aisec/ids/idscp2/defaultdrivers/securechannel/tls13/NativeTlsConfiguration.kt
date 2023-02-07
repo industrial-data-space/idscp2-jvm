@@ -22,7 +22,7 @@ package de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13
 import de.fhg.aisec.ids.idscp2.api.error.Idscp2Exception
 import de.fhg.aisec.ids.idscp2.keystores.PreConfiguration
 import java.nio.file.Path
-import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
 
 /**
  * NativeTLS SecureChannel configuration class, contains information about NativeTLS stuff
@@ -36,7 +36,7 @@ class NativeTlsConfiguration private constructor() {
         private set
     private lateinit var trustStorePath: Path
     private lateinit var trustStorePassword: CharArray
-    private var trustManagerInstance: TrustManager? = null
+    private var trustManagerInstance: X509TrustManager? = null
     lateinit var keyPassword: CharArray
         private set
     lateinit var keyStorePath: Path
@@ -77,7 +77,7 @@ class NativeTlsConfiguration private constructor() {
             return this
         }
 
-        fun setTrustManager(trustManager: TrustManager): Builder {
+        fun setTrustManager(trustManager: X509TrustManager): Builder {
             config.trustManagerInstance = trustManager
             return this
         }

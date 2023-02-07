@@ -46,10 +46,8 @@ import javax.net.ssl.SSLSocket
 
 /**
  * A TLSServerThread that notifies an IDSCP2Config when a secure channel was created and the
- * TLS handshake is done
- *
- *
- * When new data are available the serverThread transfers it to the SecureChannelListener
+ * TLS handshake is done.
+ * When new data are available the serverThread transfers it to the SecureChannelListener.
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
@@ -60,10 +58,10 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
     private val serverConfiguration: Idscp2Configuration,
     private val connectionFactory: (FSM, String) -> CC
 ) : Thread(), HandshakeCompletedListener, SecureChannelEndpoint, Closeable {
-
-    @Volatile private var running = true
-    private val `in`: DataInputStream
-    private val out: DataOutputStream
+    @Volatile
+    private var running = true
+    private val inputStream: DataInputStream
+    private val outputStream: DataOutputStream
     private val listenerPromise = CompletableFuture<SecureChannelListener>()
     private val tlsVerificationLatch = FastLatch()
     private var remotePeer = "NotConnected"
@@ -89,18 +87,18 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
         var buf: ByteArray
         while (running) {
             try {
-                val len = `in`.readInt()
+                val len = inputStream.readInt()
                 buf = ByteArray(len)
-                `in`.readFully(buf, 0, len)
+                inputStream.readFully(buf, 0, len)
                 onMessage(buf)
             } catch (ignore: SocketTimeoutException) {
                 // Timeout catches safeStop() call and allows to send server_goodbye
             } catch (e: EOFException) {
+                running = false
                 onClose()
-                running = false
             } catch (e: Exception) {
-                onError(e)
                 running = false
+                onError(e)
             }
         }
         closeSockets()
@@ -108,25 +106,31 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
 
     private fun closeSockets() {
         try {
-            out.close()
-            `in`.close()
+            outputStream.close()
+            inputStream.close()
             sslSocket.close()
         } catch (ignore: IOException) {}
     }
 
     override fun send(bytes: ByteArray): Boolean {
         return if (!isConnected) {
-            LOG.warn("Server cannot send data because socket is not connected")
+            LOG.warn("Server cannot send data because TLS socket is not connected.")
             closeSockets()
+            false
+        } else if (!running) {
+            LOG.debug("Server cannot send data because socket is not in running state anymore.")
             false
         } else {
             try {
-                out.writeInt(bytes.size)
-                out.write(bytes)
-                out.flush()
+                LOG.trace("Server is sending message...")
+                outputStream.run {
+                    writeInt(bytes.size)
+                    write(bytes)
+                    flush()
+                }
                 true
             } catch (e: Exception) {
-                LOG.warn("Server could not send data", e)
+                LOG.warn("Server could not send data.", e)
                 false
             }
         }
@@ -216,7 +220,7 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
     init {
         // Set timeout for blocking read
         sslSocket.soTimeout = nativeTlsConfiguration.socketTimeout
-        `in` = DataInputStream(sslSocket.inputStream)
-        out = DataOutputStream(sslSocket.outputStream)
+        inputStream = DataInputStream(sslSocket.inputStream)
+        outputStream = DataOutputStream(sslSocket.outputStream)
     }
 }

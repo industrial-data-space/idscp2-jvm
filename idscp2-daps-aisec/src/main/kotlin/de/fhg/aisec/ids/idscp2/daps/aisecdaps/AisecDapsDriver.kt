@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import de.fhg.aisec.ids.idscp2.api.drivers.DapsDriver
 import de.fhg.aisec.ids.idscp2.api.drivers.VerifiedDat
 import de.fhg.aisec.ids.idscp2.api.error.DatException
+import de.fhg.aisec.ids.idscp2.api.toHexString
 import de.fhg.aisec.ids.idscp2.keystores.PreConfiguration
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
@@ -59,7 +60,6 @@ import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.security.Key
 import java.security.KeyManagementException
-import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import java.security.cert.X509Certificate
 import java.time.Instant
@@ -68,6 +68,7 @@ import java.util.Date
 import java.util.concurrent.locks.ReentrantLock
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
+import kotlin.concurrent.withLock
 
 /**
  * Default DAPS Driver Implementation for requesting valid dynamicAttributeToken and verifying DAT
@@ -248,8 +249,7 @@ class AisecDapsDriver(private val config: AisecDapsDriverConfig) : DapsDriver {
      * @throws DatException
      */
     override val token: ByteArray
-        get() {
-            renewalLock.lock()
+        get() = renewalLock.withLock {
             try {
                 if (NumericDate.now().isBefore(renewalTime)) {
                     // the current token is still valid
@@ -348,7 +348,7 @@ class AisecDapsDriver(private val config: AisecDapsDriverConfig) : DapsDriver {
                     innerVerifyToken(
                         token.toByteArray(StandardCharsets.UTF_8),
                         null,
-                        localPeerCertificate,
+                        null,
                         true,
                         dapsMeta
                     )
@@ -360,8 +360,6 @@ class AisecDapsDriver(private val config: AisecDapsDriverConfig) : DapsDriver {
                 } else {
                     DatException("Error whilst retrieving DAT", e)
                 }
-            } finally {
-                renewalLock.unlock()
             }
         }
 
@@ -372,13 +370,8 @@ class AisecDapsDriver(private val config: AisecDapsDriverConfig) : DapsDriver {
      * @return The number of seconds this DAT is valid
      * @throws DatException
      */
-    override fun verifyToken(dat: ByteArray, peerCertificate: X509Certificate?): VerifiedDat {
-        // We expect the peer certificate to validate its fingerprints with the DAT
-        if (peerCertificate == null) {
-            throw DatException("Missing peer certificate for fingerprint validation")
-        }
-
-        return innerVerifyToken(dat, securityRequirements, peerCertificate, false)
+    override fun verifyToken(dat: ByteArray, peerCertificateFingerprint: String): VerifiedDat {
+        return innerVerifyToken(dat, securityRequirements, peerCertificateFingerprint, false)
     }
 
     /**
@@ -396,7 +389,7 @@ class AisecDapsDriver(private val config: AisecDapsDriverConfig) : DapsDriver {
     private fun innerVerifyToken(
         dat: ByteArray,
         securityRequirements: SecurityRequirements?,
-        certificate: X509Certificate,
+        peerCertificateFingerprint: String?,
         setCurrentToken: Boolean,
         dapsMeta: DapsMeta = getDapsMeta()
     ): VerifiedDat {
@@ -465,7 +458,7 @@ class AisecDapsDriver(private val config: AisecDapsDriverConfig) : DapsDriver {
         }
 
         // in case of validating remote DAT check the expected fingerprint from the DAT against the peers cert fingerprint
-        if (certificate != localPeerCertificate) {
+        peerCertificateFingerprint?.let {
             if (LOG.isDebugEnabled) {
                 LOG.debug("Validate peer certificate fingerprint against expected fingerprint from DAT")
             }
@@ -485,19 +478,10 @@ class AisecDapsDriver(private val config: AisecDapsDriverConfig) : DapsDriver {
                 }
             }
 
-            // calculate peer certificate SHA256 fingerprint
-            val peerCertFingerprint: String
-            try {
-                peerCertFingerprint =
-                    MessageDigest.getInstance("SHA-256").digest(certificate.encoded).toHexString().lowercase()
-            } catch (e: Exception) {
-                throw DatException("Cannot calculate peer certificate fingerprint", e)
-            }
-
             // check if peer cert fingerprint is a valid fingerprint from the DAT
-            if (!datCertFingerprints.contains(peerCertFingerprint)) {
+            if (!datCertFingerprints.contains(it)) {
                 throw DatException(
-                    "Fingerprint of peer certificate ($peerCertFingerprint) " +
+                    "Fingerprint of peer certificate ($it) " +
                         "does not match any fingerprint from DAT ($datCertFingerprints)."
                 )
             }
@@ -540,30 +524,5 @@ class AisecDapsDriver(private val config: AisecDapsDriverConfig) : DapsDriver {
 
         // OkHttpClient pool
         private val HTTP_CLIENTS = synchronizedMap(mutableMapOf<TrustManager, HttpClient>())
-
-        /**
-         * Lookup table for encodeHexString()
-         */
-        private val hexLookup = HashMap<Byte, String>()
-
-        /**
-         * Convert byte to hexadecimal chars without any dependencies to libraries.
-         * @param num Byte to get hexadecimal representation for
-         * @return The hexadecimal representation of the given byte value
-         */
-        private fun byteToHex(num: Int): String {
-            val hexDigits = CharArray(2)
-            hexDigits[0] = Character.forDigit(num shr 4 and 0xF, 16)
-            hexDigits[1] = Character.forDigit(num and 0xF, 16)
-            return String(hexDigits)
-        }
-
-        /**
-         * Encode a byte array to a hex string
-         * @return Hexadecimal representation of the given bytes
-         */
-        fun ByteArray.toHexString(delimiter: CharSequence = ""): String {
-            return this.joinToString(delimiter) { hexLookup.computeIfAbsent(it) { num: Byte -> byteToHex(num.toInt()) } }
-        }
     }
 }

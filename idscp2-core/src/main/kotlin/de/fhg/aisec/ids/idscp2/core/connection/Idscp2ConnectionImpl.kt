@@ -33,6 +33,7 @@ import de.fhg.aisec.ids.idscp2.api.fsm.FsmResultCode
 import org.slf4j.LoggerFactory
 import java.util.Collections
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 /**
  * The IDSCP2 Connection class holds connections between connectors
@@ -78,9 +79,7 @@ class Idscp2ConnectionImpl(
          * or not, we should synchronize this sequence to avoid race conditions on the error
          * parsing, as well as avoiding error message loss.
          */
-        try {
-            closedLock.lock()
-
+        closedLock.withLock {
             when (val res = fsm.closeConnection()) {
                 FsmResultCode.FSM_NOT_STARTED -> {
                     // not closed
@@ -94,8 +93,6 @@ class Idscp2ConnectionImpl(
                     }
                 }
             }
-        } finally {
-            closedLock.unlock()
         }
     }
 
@@ -104,9 +101,7 @@ class Idscp2ConnectionImpl(
      */
 
     override fun nonBlockingSend(msg: ByteArray) {
-        if (LOG.isInfoEnabled) {
-            LOG.info("Sending data via connection {}...", id)
-        }
+        LOG.debug("Sending data (non-blocking) via connection {}...", id)
 
         when (val res = fsm.send(msg)) {
             FsmResultCode.OK -> return
@@ -120,9 +115,7 @@ class Idscp2ConnectionImpl(
     }
 
     override fun blockingSend(msg: ByteArray, timeout: Long, retryInterval: Long) {
-        if (LOG.isInfoEnabled) {
-            LOG.info("Sending data via connection {}...", id)
-        }
+        LOG.debug("Sending data (blocking) via connection {}...", id)
 
         val start = System.currentTimeMillis()
 
@@ -151,9 +144,7 @@ class Idscp2ConnectionImpl(
     }
 
     override fun repeatRa() {
-        if (LOG.isInfoEnabled) {
-            LOG.info("Repeat RA for connection {}...", id)
-        }
+        LOG.info("Repeat RA for connection {}...", id)
 
         // match result
         when (val res = fsm.repeatRa()) {
@@ -169,16 +160,12 @@ class Idscp2ConnectionImpl(
     override fun onMessage(msg: ByteArray) {
         // When unlock is called, although not synchronized, this will eventually stop blocking.
         connectionListenerLatch.await()
-        if (LOG.isDebugEnabled) {
-            LOG.debug("Received new IDSCP Message, notifying {} listeners", messageListeners.size)
-        }
+        LOG.debug("Received new IDSCP Message, notifying {} listeners", messageListeners.size)
         messageListeners.forEach { l: Idscp2MessageListener -> l.onMessage(this, msg) }
     }
 
     override fun onError(t: Throwable) {
-        try {
-            closedLock.lock()
-
+        closedLock.withLock {
             // check if connection has been closed, then we do not want to pass errors to the user
             if (!closed) {
                 connectionListenerLatch.await()
@@ -186,8 +173,6 @@ class Idscp2ConnectionImpl(
                     idscp2ConnectionListener.onError(t)
                 }
             }
-        } finally {
-            closedLock.unlock()
         }
     }
 

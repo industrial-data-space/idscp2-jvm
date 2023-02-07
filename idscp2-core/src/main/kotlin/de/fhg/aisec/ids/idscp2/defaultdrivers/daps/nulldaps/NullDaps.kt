@@ -21,7 +21,6 @@ package de.fhg.aisec.ids.idscp2.defaultdrivers.daps.nulldaps
 
 import de.fhg.aisec.ids.idscp2.api.drivers.DapsDriver
 import de.fhg.aisec.ids.idscp2.api.drivers.VerifiedDat
-import java.security.cert.X509Certificate
 
 /**
  * NullDaps for testing purpose only
@@ -33,6 +32,6 @@ class NullDaps : DapsDriver {
 
     override val renewalThreshold = 1.0f
 
-    override fun verifyToken(dat: ByteArray, peerCertificate: X509Certificate?) =
+    override fun verifyToken(dat: ByteArray, peerCertificateFingerprint: String) =
         VerifiedDat(token, "INVALID", (System.currentTimeMillis() / 1000) + 100)
 }

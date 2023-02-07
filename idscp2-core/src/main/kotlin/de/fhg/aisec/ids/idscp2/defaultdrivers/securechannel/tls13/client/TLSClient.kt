@@ -60,7 +60,7 @@ class TLSClient<CC : Idscp2Connection>(
     private val connectionFuture: CompletableFuture<CC>
 ) : HandshakeCompletedListener, DataAvailableListener, SecureChannelEndpoint {
     private val clientSocket: Socket
-    private var dataOutputStream: DataOutputStream? = null
+    private lateinit var dataOutputStream: DataOutputStream
     private lateinit var inputListenerThread: InputListenerThread
     private val listenerPromise = CompletableFuture<SecureChannelListener>()
     private var remotePeer = "NotConnected"
@@ -155,19 +155,20 @@ class TLSClient<CC : Idscp2Connection>(
         return if (!isConnected) {
             LOG.warn("Client cannot send data because TLS socket is not connected")
             false
+        } else if (!inputListenerThread.running) {
+            LOG.debug("Client cannot send data because socket is not in running state anymore.")
+            false
         } else {
             try {
-                dataOutputStream?.let {
-                    it.writeInt(bytes.size)
-                    it.write(bytes)
-                    it.flush()
-                } ?: throw IOException("DataOutputStream not available")
-                if (LOG.isTraceEnabled) {
-                    LOG.trace("Sending message...")
+                LOG.trace("Client is sending message...")
+                dataOutputStream.run {
+                    writeInt(bytes.size)
+                    write(bytes)
+                    flush()
                 }
                 true
             } catch (e: Exception) {
-                LOG.warn("Client cannot send data", e)
+                LOG.warn("Client could not send data", e)
                 false
             }
         }

@@ -20,7 +20,7 @@
 package de.fhg.aisec.ids.idscp2.daps.aisecdaps
 
 import de.fhg.aisec.ids.idscp2.api.error.Idscp2Exception
-import de.fhg.aisec.ids.idscp2.daps.aisecdaps.AisecDapsDriver.Companion.toHexString
+import de.fhg.aisec.ids.idscp2.api.toHexString
 import de.fhg.aisec.ids.idscp2.keystores.PreConfiguration
 import java.nio.file.Path
 import java.security.KeyStore
