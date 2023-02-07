@@ -141,7 +141,7 @@ Before building and running either of the two parties, we must provide **3** pie
 
 Having configured our environment, we can now execute IDSCP2 using Intel SGX. From the root directory of this project, we first run the Server:
 ```bash
-./gradlew build
+./gradlew run
 ```
 
 From a separate command prompt, we build the Client using the given Makefile:
