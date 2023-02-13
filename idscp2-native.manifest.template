@@ -1,0 +1,48 @@
+libos.entrypoint = "{{ entrypoint }}"
+
+loader.entrypoint = "file:{{ gramine.libos }}"
+loader.log_level = "error"
+loader.argv0_override = ""
+
+#sys.stack.size = "256M"
+#sys.brk.max_size = "512M"
+sys.enable_sigterm_injection = true
+sys.insecure__allow_eventfd = true
+
+loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/lib:/usr/{{ arch_libdir }}"
+
+fs.mounts = [
+    {type = "chroot", path = "/lib", uri = "file:{{ gramine.runtimedir() }}"},
+    {type = "chroot", path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}"},
+    {type = "tmpfs", path = "/tmp", uri = "file:/tmp"},
+    {path = "/etc/resolv.conf", uri = "file:/etc/resolv.conf"},
+    {path = "/etc/nsswitch.conf", uri = "file:/etc/nsswitch.conf"},
+    {path = "/etc/passwd", uri = "file:/etc/passwd"},
+    {path = "/etc/timezone", uri = "file:/etc/timezone"},
+    {path = "/etc/host.conf", uri = "file:/etc/host.conf"},
+    {path = "/etc/hosts", uri = "file:/etc/hosts"},
+]
+
+sgx.thread_num = 32
+sgx.nonpie_binary = true
+sgx.enclave_size = "512M"
+
+sgx.remote_attestation = "epid"
+sgx.ra_client_linkable = true
+
+# TODO: Insert SPID from https://api.portal.trustedservices.intel.com/developer here!
+sgx.ra_client_spid = ""
+
+sgx.trusted_files = [
+    "file:{{ entrypoint }}",
+    "file:{{ gramine.libos }}",
+    "file:{{ gramine.runtimedir() }}/",
+    "file:{{ arch_libdir }}/",
+    "file:idscp2-examples/src/main/resources/ssl/",
+    "file:/etc/resolv.conf",
+    "file:/etc/nsswitch.conf",
+    "file:/etc/passwd",
+    "file:/etc/timezone",
+    "file:/etc/host.conf",
+    "file:/etc/hosts",
+]

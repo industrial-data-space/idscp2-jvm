@@ -1,5 +1,6 @@
 plugins {
     application
+    id("org.graalvm.buildtools.native") version "0.9.11"
 }
 
 version = libs.versions.idscp2.get()
@@ -21,4 +22,22 @@ application {
         findProperty("mainClass")?.toString()
             ?: "de.fhg.aisec.ids.idscp2.example.RunTLSServer"
     )
+}
+
+graalvmNative {
+    binaries {
+        named("main") {
+            imageName.set(
+                findProperty("nativeImageName")?.toString()
+                    ?: "idscp2-native"
+            )
+            mainClass.set(
+                findProperty("mainNativeClass")?.toString()
+                    ?: "de.fhg.aisec.ids.idscp2.example.RunTLSServer"
+            )
+            runtimeArgs.add("--report-unsupported-elements-at-runtime")
+            buildArgs.add("-H:ReflectionConfigurationFiles=../../../src/main/resources/reflect-config.json")
+            buildArgs.add("-H:ResourceConfigurationFiles=../../../src/main/resources/resource-config.json")
+        }
+    }
 }

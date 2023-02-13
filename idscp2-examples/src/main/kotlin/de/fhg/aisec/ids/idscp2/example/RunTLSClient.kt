@@ -23,58 +23,51 @@ import de.fhg.aisec.ids.idscp2.api.configuration.AttestationConfig
 import de.fhg.aisec.ids.idscp2.api.configuration.Idscp2Configuration
 import de.fhg.aisec.ids.idscp2.daps.aisecdaps.AisecDapsDriver
 import de.fhg.aisec.ids.idscp2.daps.aisecdaps.AisecDapsDriverConfig
-import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaProver
-import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaVerifier
+import de.fhg.aisec.ids.idscp2.daps.aisecdaps.SecurityProfile
+import de.fhg.aisec.ids.idscp2.daps.aisecdaps.SecurityRequirements
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.gramine.GramineRaProver
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.gramine.GramineRaVerifier
 import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
-import de.fhg.aisec.ids.idscp2.keystores.KeyStoreUtil.loadKeyStore
 import java.nio.file.Paths
-import java.util.Objects
 
 object RunTLSClient {
     @JvmStatic
     fun main(args: Array<String>) {
-        val keyStorePath = Paths.get(
-            Objects.requireNonNull(
-                RunTLSClient::class.java.classLoader
-                    .getResource("ssl/consumer-keystore.p12")
-            ).path
-        )
-
-        val trustStorePath = Paths.get(
-            Objects.requireNonNull(
-                RunTLSClient::class.java.classLoader
-                    .getResource("ssl/truststore.p12")
-            ).path
-        )
+        // absolute paths to facilitate native-image compilation
+        // TODO: Key Store file 'localhost.p12' missing and must be provided!
+        val keyStorePath = Paths.get("idscp2-examples/src/main/resources/ssl/localhost.p12")
+        val trustStorePath = Paths.get("idscp2-examples/src/main/resources/ssl/truststore.p12")
 
         val localAttestationConfig = AttestationConfig.Builder()
-            .setSupportedRaSuite(arrayOf(DemoRaProver.DEMO_RA_PROVER_ID))
-            .setExpectedRaSuite(arrayOf(DemoRaVerifier.DEMO_RA_VERIFIER_ID))
+            .setSupportedRaSuite(arrayOf(GramineRaProver.GRAMINE_RA_PROVER_ID))
+            .setExpectedRaSuite(arrayOf(GramineRaVerifier.GRAMINE_RA_VERIFIER_ID))
             .setRaTimeoutDelay(300 * 1000L) // 300 seconds
             .build()
 
         val password = "password".toCharArray()
 
-        // Load certificates from local KeyStore
-        val ks = loadKeyStore(keyStorePath, password)
+        // create daps driver
+        val securityRequirements = SecurityRequirements.Builder()
+            .setRequiredSecurityLevel(SecurityProfile.INVALID)
+            .build()
 
         val dapsDriver = AisecDapsDriver(
             AisecDapsDriverConfig.Builder()
                 .setKeyStorePath(keyStorePath)
                 .setKeyStorePassword(password)
                 .setKeyPassword(password)
-                .setKeyAlias("1")
                 .setTrustStorePath(trustStorePath)
                 .setTrustStorePassword(password)
-                .setDapsUrl("https://daps-dev.aisec.fraunhofer.de/v4")
-                .loadTransportCertsFromKeystore(ks)
+                .setKeyAlias("1")
+                .setDapsUrl("https://daps.aisec.fraunhofer.de")
+                .setSecurityRequirements(securityRequirements)
                 .build()
         )
 
         // create idscp2 config
         val settings = Idscp2Configuration.Builder()
-            .setAckTimeoutDelay(500) //  500 ms
-            .setHandshakeTimeoutDelay(5 * 1000L) // 5 seconds
+            .setAckTimeoutDelay(20 * 1000L) //  20 seconds
+            .setHandshakeTimeoutDelay(50 * 1000L) // 50 seconds
             .setAttestationConfig(localAttestationConfig)
             .setDapsDriver(dapsDriver)
             .build()
@@ -87,7 +80,7 @@ object RunTLSClient {
             .setTrustStorePath(trustStorePath)
             .setTrustStorePassword(password)
             .setCertificateAlias("1.0.1")
-            .setHost("provider-core")
+            .setServerPort(29292)
             .build()
 
         val initiator = Idscp2ClientInitiator()

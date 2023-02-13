@@ -27,8 +27,8 @@ import de.fhg.aisec.ids.idscp2.api.raregistry.RaProverDriverRegistry
 import de.fhg.aisec.ids.idscp2.api.raregistry.RaVerifierDriverRegistry
 import de.fhg.aisec.ids.idscp2.api.server.Idscp2ServerFactory
 import de.fhg.aisec.ids.idscp2.core.connection.Idscp2ConnectionImpl
-import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaProver
-import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaVerifier
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.gramine.GramineRaProver
+import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.gramine.GramineRaVerifier
 import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTLSDriver
 import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
 import org.slf4j.LoggerFactory
@@ -41,15 +41,15 @@ class Idscp2ServerInitiator : Idscp2EndpointListener<Idscp2Connection> {
 
         // register ra drivers
         RaProverDriverRegistry.registerDriver(
-            DemoRaProver.DEMO_RA_PROVER_ID,
-            ::DemoRaProver,
-            null
+            GramineRaProver.GRAMINE_RA_PROVER_ID,
+            ::GramineRaProver,
+            "Server"
         )
 
         RaVerifierDriverRegistry.registerDriver(
-            DemoRaVerifier.DEMO_RA_VERIFIER_ID,
-            ::DemoRaVerifier,
-            null
+            GramineRaVerifier.GRAMINE_RA_VERIFIER_ID,
+            ::GramineRaVerifier,
+            "Server"
         )
 
         // create server config
