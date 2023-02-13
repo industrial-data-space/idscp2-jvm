@@ -82,6 +82,11 @@ In this section we detail the setup process for SGX support of a system running 
     - `sgx-aesm-service/sgx-aesm-service`
     - `sgx-aesm-service/libsgx-aesm-*`
 
+    The installation of a package can be performed with the following command:
+    ```bash
+    sudo apt install ./<package-name>.deb
+    ```
+
 #### GraalVM for Java 17
 
 1. The latest version of GraalVM upon writing this document is **22.3.0**. We download the GraalVM archive using the following download [link](https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-22.3.0/graalvm-ce-java17-linux-amd64-22.3.0.tar.gz). We then extract the contents using:
@@ -137,7 +142,7 @@ In this section we detail the setup process for SGX support of a system running 
 Before building and running either of the two parties, we must provide **3** pieces of information to the underlying codebase:
 1. In [idscp2-native.manifest.template](idscp2-native.manifest.template), insert the **SPID** of the _Intel SGX Attestation Service (Linkable)_ subscription,
 2. In [GramineRaVerifier.kt](idscp2-core/src/main/kotlin/de/fhg/aisec/ids/idscp2/defaultdrivers/remoteattestation/gramine/GramineRaVerifier.kt), insert the corresponding **Primary Key**,
-3. In the directory [idscp2-examples/src/main/resources/ssl](idscp2-examples/src/main/resources/ssl), the **Key Store** file named `localhost.p12`.
+3. In the directory [idscp2-examples/src/main/resources/ssl](idscp2-examples/src/main/resources/ssl), insert the **Key Store** file named `localhost.p12`.
 
 Having configured our environment, we can now execute IDSCP2 using Intel SGX. From the root directory of this project, we first run the Server:
 ```bash
