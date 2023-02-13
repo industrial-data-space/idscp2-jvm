@@ -139,22 +139,35 @@ In this section we detail the setup process for SGX support of a system running 
 
 ### Execution Instructions
 
-Before building and running either of the two parties, we must provide **3** pieces of information to the underlying codebase:
+Before building and running either of the two parties, we must provide **4** pieces of information to the underlying codebase:
 1. In [idscp2-native.manifest.template](idscp2-native.manifest.template), insert the **SPID** of the _Intel SGX Attestation Service (Linkable)_ subscription,
 2. In [GramineRaVerifier.kt](idscp2-core/src/main/kotlin/de/fhg/aisec/ids/idscp2/defaultdrivers/remoteattestation/gramine/GramineRaVerifier.kt), insert the corresponding **Primary Key**,
 3. In the directory [idscp2-examples/src/main/resources/ssl](idscp2-examples/src/main/resources/ssl), insert the **Key Store** file named `localhost.p12`.
+4. In the file [expected-client-mrenclave.txt](expected-client-mrenclave.txt), insert the **MRENCLAVE** value obtained after compiling and signing the executable (see below).
 
-Having configured our environment, we can now execute IDSCP2 using Intel SGX. From the root directory of this project, we first run the Server:
-```bash
-./gradlew run
-```
-
-From a separate command prompt, we build the Client using the given Makefile:
+First, we build the Client using the given Makefile:
 ```bash
 make all
 ```
 
-After the build process is done, we run the Client:
+After it is finished, the output of the build process should contain the following lines:
+```
+Attributes:
+    mr_enclave:  <32-byte-string-in-hex-format>
+    .....
+
+```
+
+We copy the MRENCLAVE value and insert it into the [expected-client-mrenclave.txt](expected-client-mrenclave.txt) file. This will ensure that the server will not accept connections to clients with different builds or altered in any way.
+
+> Note that, in production, our goal is not to add the expected MRENCLAVE value to a file, but to **extract it directly from the DAT** (new field in the JWT body)!
+
+Having configured all our parameters, we can now execute IDSCP2 using Intel SGX. From the root directory of this project, we first run the Server:
+```bash
+./gradlew run
+```
+
+After the build process is done, we run the Client from a separate command prompt:
 ```bash
 sudo gramine-sgx idscp2-native
 ```

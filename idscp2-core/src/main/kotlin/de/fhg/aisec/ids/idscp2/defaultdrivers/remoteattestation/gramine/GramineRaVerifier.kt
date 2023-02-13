@@ -85,7 +85,7 @@ class GramineRaVerifier(fsmListener: RaVerifierFsmListener) : RaVerifierDriver<S
             }
             val msg = queue.take()
             if (LOG.isDebugEnabled) {
-                LOG.debug("Verifier received response. Searching for nonce...")
+                LOG.debug("Verifier received response. Starting checks...")
             }
 
             File("/tmp/QUOTE").writeBytes(msg)
@@ -103,9 +103,9 @@ class GramineRaVerifier(fsmListener: RaVerifierFsmListener) : RaVerifierDriver<S
                 LOG.info("Check 1: Quote authentic.")
             }
 
-            // 2nd check: verify whether nonce is included in quote
-            // TODO: Include verification step into the Kotlin codebase in future update
             val quoteContents = File("/tmp/QUOTE").readBytes()
+
+            // 2nd check: verify whether nonce is included in quote
             if (quoteContents.copyOfRange(368, 432).toString(Charsets.US_ASCII) != nonce) {
                 LOG.error("Check 2: Quote does not contain nonce! Aborting...")
                 if (running) {
@@ -114,6 +114,19 @@ class GramineRaVerifier(fsmListener: RaVerifierFsmListener) : RaVerifierDriver<S
                 return
             } else {
                 LOG.info("Check 2: Quote contains nonce.")
+            }
+
+            // 3rd check: verify whether MRENCLAVE (enclave measurement hash) is the expected one
+            // TODO: rather than extracting the expected MRENCLAVE from a file, extract it from a new DAT field.
+            val expectedMeasurement = File("../expected-client-mrenclave.txt").readBytes().toString(Charsets.US_ASCII).trim()
+            if (quoteContents.copyOfRange(112, 144).toHexString() != expectedMeasurement) {
+                LOG.error("Check 3: Client MRENCLAVE does not match expected value! Aborting...")
+                if (running) {
+                    fsmListener.onRaVerifierMessage(InternalControlMessage.RA_VERIFIER_FAILED)
+                }
+                return
+            } else {
+                LOG.info("Check 3: Quote contains valid MRENCLAVE.")
             }
         } catch (e: InterruptedException) {
             if (running) {
