@@ -26,7 +26,6 @@ import de.fhg.aisec.ids.idscp2.api.error.DatException
 import de.fhg.aisec.ids.idscp2.api.toHexString
 import de.fhg.aisec.ids.idscp2.keystores.PreConfiguration
 import io.jsonwebtoken.Jwts
-import io.jsonwebtoken.SignatureAlgorithm
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.java.Java
@@ -276,15 +275,15 @@ class AisecDapsDriver(private val config: AisecDapsDriverConfig) : DapsDriver {
                 val notBefore = Date.from(Instant.now())
 
                 val jwt = Jwts.builder()
-                    .setIssuer(connectorUUID)
-                    .setSubject(connectorUUID)
+                    .issuer(connectorUUID)
+                    .subject(connectorUUID)
                     .claim("@context", "https://w3id.org/idsa/contexts/context.jsonld")
                     .claim("@type", "ids:DatRequestToken")
-                    .setExpiration(expiration)
-                    .setIssuedAt(issuedAt)
-                    .setNotBefore(notBefore)
-                    .setAudience(dapsMeta.tokenEndpoint)
-                    .signWith(privateKey, SignatureAlgorithm.RS256)
+                    .expiration(expiration)
+                    .issuedAt(issuedAt)
+                    .notBefore(notBefore)
+                    .audience().add(dapsMeta.tokenEndpoint).and()
+                    .signWith(privateKey)
                     .compact()
 
                 return runBlocking(Dispatchers.IO) {
