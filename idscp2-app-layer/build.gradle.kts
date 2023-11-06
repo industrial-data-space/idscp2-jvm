@@ -9,10 +9,9 @@ val testImplementation by configurations
 
 dependencies {
     api(project(":idscp2-api"))
-    api(libs.infomodel.model)
+    api(project(":infomodel"))
+    api(project(":idscp2-core"))
 
-    implementation(project(":idscp2-core"))
-    implementation(libs.infomodel.serializer)
     implementation(libs.protobuf)
 }
 

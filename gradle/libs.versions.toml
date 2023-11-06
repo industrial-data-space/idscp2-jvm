@@ -22,7 +22,7 @@ protobuf = "3.25.0"
 
 bouncycastle = "1.70"
 
-# We will pull in a newer version of jackson (required by io.jsonwebtoken) because of security fixes
+# We will pull in an up-to-date version of jackson for security fixes
 jackson = "2.15.3"
 
 # Needed for token manager to assemble JWTs

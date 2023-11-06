@@ -23,7 +23,8 @@ val descriptions: Map<String, String> = mapOf(
     "idscp2-core" to "IDSCP2 Protocol Implementation",
     "idscp2-app-layer" to "IDSCP2 Application Layer Implementation",
     "idscp2-daps-aisec" to "IDSCP2 AISEC DAPS Driver",
-    "camel-idscp2" to "Camel IDSCP2 Component Implementation"
+    "camel-idscp2" to "Camel IDSCP2 Component Implementation",
+    "infomodel" to "Legacy IAIS Infomodel Classes"
 )
 
 allprojects {
@@ -31,8 +32,6 @@ allprojects {
 
     repositories {
         mavenCentral()
-        // References IAIS repository that contains the infomodel artifacts
-        maven("https://maven.iais.fraunhofer.de/artifactory/eis-ids-public/")
     }
 
     val versionRegex = ".*(rc-?[0-9]*|beta)$".toRegex(RegexOption.IGNORE_CASE)
@@ -43,7 +42,6 @@ allprojects {
             versionRegex.matches(candidate.version)
                 || (candidate.group in setOf("org.apache.camel", "org.apache.camel.springboot")
                 && !candidate.version.startsWith("3.18"))
-                || (candidate.group.startsWith("de.fraunhofer.iais.eis.ids") && !candidate.version.startsWith("4.1."))
         }
     }
 }
