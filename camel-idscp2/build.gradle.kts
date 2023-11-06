@@ -3,7 +3,7 @@ version = libs.versions.idscp2.get()
 dependencies {
     api(project(":idscp2-app-layer"))
     api(project(":idscp2-daps-aisec"))
-    api(project(":infomodel"))
+    api(libs.infomodel)
 
     implementation(project(":idscp2-core"))
     implementation(libs.camel.core)

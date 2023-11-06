@@ -1,6 +1,9 @@
 [versions]
 # Versions for modules that will be released as libraries
 idscp2 = "0.18.1"
+
+infomodel = "4.1.3"
+
 ktlint = "0.50.0"
 
 # Kotlin library/compiler version
@@ -30,6 +33,7 @@ jsonwebtoken = "0.12.3"
 jose4j = "0.9.3"
 
 [libraries]
+infomodel = { group = "de.fhg.aisec.ids", name = "infomodel", version.ref = "infomodel" }
 slf4j-api = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }
 slf4j-impl = { group = "org.slf4j", name = "slf4j-simple", version.ref = "slf4j" }
 kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", version.ref = "kotlin" }

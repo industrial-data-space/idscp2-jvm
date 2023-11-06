@@ -32,6 +32,8 @@ allprojects {
 
     repositories {
         mavenCentral()
+        // Legacy IAIS Infomodel artifact repo
+        maven("https://gitlab.cc-asp.fraunhofer.de/api/v4/projects/55371/packages/maven")
     }
 
     val versionRegex = ".*(rc-?[0-9]*|beta)$".toRegex(RegexOption.IGNORE_CASE)
