@@ -52,7 +52,11 @@ class Idscp2ClientInitiator {
         )
 
         // connect to idscp2 server
-        val connectionFuture = secureChannelDriver.connect(::Idscp2ConnectionImpl, configuration, nativeTlsConfiguration)
+        val connectionFuture = secureChannelDriver.connect(
+            ::Idscp2ConnectionImpl,
+            configuration,
+            nativeTlsConfiguration
+        )
         connectionFuture.thenAccept { connection: Idscp2Connection ->
             LOG.info("Client: New connection with id " + connection.id)
             connection.addConnectionListener(object : Idscp2ConnectionAdapter() {

@@ -54,14 +54,14 @@ object KeyStoreUtil {
         }
 
         /*
-		 * Check for PKCS#12. Expected ASN.1 format:
-		 *
-		 * PFX ::= ASN1Sequence {
-		 * 		version ASN1Integer {v3(3)}(v3,...),
-		 * 		authSafe ContentInfo,
-		 * 		macData MacData OPTIONAL
-		 * }
-		 */
+         * Check for PKCS#12. Expected ASN.1 format:
+         *
+         * PFX ::= ASN1Sequence {
+         * 		version ASN1Integer {v3(3)}(v3,...),
+         * 		authSafe ContentInfo,
+         * 		macData MacData OPTIONAL
+         * }
+         */
         val pfx = try {
             ASN1Primitive.fromByteArray(data)
         } catch (e: IOException) {

@@ -489,7 +489,10 @@ class FSMImpl<CC : Idscp2Connection>(
      *
      * @return The String of the cipher or null if no match was found
      */
-    override fun getRaProverMechanism(localSupportedProver: Array<String>, remoteExpectedVerifier: Array<String>): String? {
+    override fun getRaProverMechanism(
+        localSupportedProver: Array<String>,
+        remoteExpectedVerifier: Array<String>
+    ): String? {
         if (localSupportedProver.isEmpty()) {
             LOG.warn("Got empty RA localSupportedProver suite")
             return null
@@ -523,7 +526,10 @@ class FSMImpl<CC : Idscp2Connection>(
      *
      * @return The String of the cipher or null if no match was found
      */
-    override fun getRaVerifierMechanism(localExpectedVerifier: Array<String>, remoteSupportedProver: Array<String>): String? {
+    override fun getRaVerifierMechanism(
+        localExpectedVerifier: Array<String>,
+        remoteSupportedProver: Array<String>
+    ): String? {
         if (localExpectedVerifier.isEmpty()) {
             LOG.warn("Got empty RA localExpectedVerifier suite")
             return null
@@ -757,7 +763,9 @@ class FSMImpl<CC : Idscp2Connection>(
 
         if (idscpData.alternatingBit != expectedAlternatingBit.asBoolean()) {
             if (LOG.isTraceEnabled) {
-                LOG.trace("Received IdscpData with unexpected alternating bit. Could be an old packet replayed. Ignore it.")
+                LOG.trace(
+                    "Received IdscpData with unexpected alternating bit. Could be an old packet replayed. Ignore it."
+                )
             }
         } else {
             if (LOG.isTraceEnabled) {

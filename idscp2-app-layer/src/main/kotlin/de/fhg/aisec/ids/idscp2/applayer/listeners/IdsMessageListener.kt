@@ -23,5 +23,10 @@ import de.fhg.aisec.ids.idscp2.applayer.AppLayerConnection
 import de.fraunhofer.iais.eis.Message
 
 fun interface IdsMessageListener {
-    fun onMessage(connection: AppLayerConnection, header: Message?, payload: ByteArray?, extraHeaders: Map<String, String>)
+    fun onMessage(
+        connection: AppLayerConnection,
+        header: Message?,
+        payload: ByteArray?,
+        extraHeaders: Map<String, String>
+    )
 }

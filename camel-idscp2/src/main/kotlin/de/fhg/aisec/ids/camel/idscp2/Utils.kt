@@ -47,6 +47,7 @@ object Utils {
 
     lateinit var senderAgentProducer: () -> URI
     lateinit var issuerProducer: () -> URI
+
     @Suppress("MemberVisibilityCanBePrivate")
     lateinit var infomodelVersion: String
     var dapsUrlProducer: () -> String = { Constants.DEFAULT_DAPS_URL }
