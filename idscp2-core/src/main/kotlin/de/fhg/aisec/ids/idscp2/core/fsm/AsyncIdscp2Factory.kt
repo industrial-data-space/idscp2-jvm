@@ -21,9 +21,11 @@ package de.fhg.aisec.ids.idscp2.core.fsm
 
 import de.fhg.aisec.ids.idscp2.api.configuration.Idscp2Configuration
 import de.fhg.aisec.ids.idscp2.api.connection.Idscp2Connection
-import de.fhg.aisec.ids.idscp2.api.error.Idscp2HandshakeException
 import de.fhg.aisec.ids.idscp2.api.fsm.FSM
 import de.fhg.aisec.ids.idscp2.api.securechannel.SecureChannel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
@@ -40,6 +42,7 @@ import java.util.concurrent.CompletableFuture
 
 object AsyncIdscp2Factory {
     private val LOG = LoggerFactory.getLogger(AsyncIdscp2Factory::class.java)
+    private val ioScope = CoroutineScope(Dispatchers.IO)
 
     fun <CC : Idscp2Connection> initiateIdscp2Connection(
         secureChannel: SecureChannel,
@@ -69,10 +72,11 @@ object AsyncIdscp2Factory {
         // register FSM to secure channel, pass peer certificate to FSM
         secureChannel.setFsm(fsm)
 
-        CompletableFuture.runAsync {
+        // ForkJoinPool exhibits strange deadlocking behavior when used here, reason unknown yet.
+        ioScope.launch {
             try {
                 if (LOG.isDebugEnabled) {
-                    LOG.debug("Starting IDSCP2 handshake for future connection with id {}", id)
+                    LOG.debug("Asynchronously starting IDSCP2 handshake for connection {}...", id)
                 }
                 fsm.startIdscpHandshake()
 
@@ -81,9 +85,8 @@ object AsyncIdscp2Factory {
                  * secure server (server)
                  */
                 if (LOG.isDebugEnabled) {
-                    LOG.debug("Handshake successful. Create new IDSCP2 connection with id {}", id)
+                    LOG.debug("Handshake successful. Creating IDSCP2 connection {}...", id)
                 }
-
                 // create the connection, complete the future and register it to the fsm as listener
                 val connection = connectionFactory(fsm, id)
                 connectionFuture.complete(connection)
@@ -92,8 +95,9 @@ object AsyncIdscp2Factory {
                 if (connectionFuture.isCancelled) {
                     connection.close()
                 }
-            } catch (e: Idscp2HandshakeException) {
+            } catch (e: Throwable) {
                 // idscp2 handshake failed
+                LOG.error("Error in IDSCP2 handshake thread", e)
                 connectionFuture.completeExceptionally(e)
             }
         }

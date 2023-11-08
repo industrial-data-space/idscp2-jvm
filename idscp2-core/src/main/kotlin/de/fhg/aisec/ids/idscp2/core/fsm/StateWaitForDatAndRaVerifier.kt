@@ -50,6 +50,7 @@ class StateWaitForDatAndRaVerifier(
 ) : State() {
     override fun runEntryCode(fsm: FSM) {
         if (LOG.isTraceEnabled) {
+            LOG.trace("Switched to state STATE_WAIT_FOR_DAT_AND_RA_VERIFIER")
             LOG.trace("Set handshake timeout")
         }
     }

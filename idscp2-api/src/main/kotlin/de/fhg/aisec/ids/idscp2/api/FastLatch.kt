@@ -46,7 +46,6 @@ class FastLatch {
                 // before this critical section.
                 if (locked.toInt() != 0) {
                     try {
-                        @Suppress("BlockingMethodInNonBlockingContext")
                         (this as Object).wait()
                     } catch (ie: InterruptedException) {
                         LOG.warn("Ignored InterruptException, awaiting unlock...", ie)

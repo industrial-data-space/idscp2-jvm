@@ -19,11 +19,11 @@
  */
 package de.fhg.aisec.ids.idscp2.api.securechannel
 
+import de.fhg.aisec.ids.idscp2.api.FastLatch
 import de.fhg.aisec.ids.idscp2.api.drivers.SecureChannelEndpoint
 import de.fhg.aisec.ids.idscp2.api.fsm.ScFsmListener
 import org.slf4j.LoggerFactory
 import java.security.cert.X509Certificate
-import java.util.concurrent.CompletableFuture
 
 /**
  * A secureChannel which is the secure underlying basis of the IDSCP2 protocol,
@@ -33,7 +33,9 @@ import java.util.concurrent.CompletableFuture
  */
 class SecureChannel(private val endpoint: SecureChannelEndpoint, private val peerCertificate: X509Certificate) :
     SecureChannelListener {
-    private val fsmPromise = CompletableFuture<ScFsmListener>()
+    // This latch is used to block Threads performing on[Message/Error/Close] calls until fsm is available
+    private val fsmLatch = FastLatch()
+    private lateinit var fsm: ScFsmListener
 
     /*
      * close the secure channel forever
@@ -65,23 +67,26 @@ class SecureChannel(private val endpoint: SecureChannelEndpoint, private val pee
         if (LOG.isTraceEnabled) {
             LOG.trace("New raw data has been received via the secure channel")
         }
-        fsmPromise.thenAccept { it.onMessage(data) }
+        fsmLatch.await()
+        fsm.onMessage(data)
     }
 
     override fun onError(t: Throwable) {
-        // Tell fsm an error occurred in secure channel
         if (LOG.isTraceEnabled) {
-            LOG.trace("Error occurred in secure channel")
+            LOG.debug("Error occurred in secure channel")
         }
-        fsmPromise.thenAccept { it.onError(t) }
+        fsmLatch.await()
+        // Tell fsm an error occurred in secure channel
+        fsm.onError(t)
     }
 
     override fun onClose() {
-        // Tell fsm secure channel received EOF
         if (LOG.isTraceEnabled) {
-            LOG.trace("Secure channel received EOF")
+            LOG.debug("Secure channel received EOF")
         }
-        fsmPromise.thenAccept { it.onClose() }
+        fsmLatch.await()
+        // Tell fsm secure channel received EOF
+        fsm.onClose()
     }
 
     val isConnected: Boolean
@@ -91,11 +96,10 @@ class SecureChannel(private val endpoint: SecureChannelEndpoint, private val pee
      * set the corresponding finite state machine, pass peer certificate to FSM
      */
     fun setFsm(fsm: ScFsmListener) {
-        if (LOG.isTraceEnabled) {
-            LOG.trace("Bind FSM to secure channel and pass peer certificate to FSM")
-        }
-        fsmPromise.complete(fsm)
+        LOG.trace("Bind FSM to secure channel and pass peer certificate to FSM")
+        this.fsm = fsm
         fsm.setPeerX509Certificate(peerCertificate)
+        fsmLatch.unlock()
     }
 
     companion object {

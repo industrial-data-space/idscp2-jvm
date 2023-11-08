@@ -88,10 +88,9 @@ internal class StateClosed(
 
                 // FSM not locked, start handshake
                 if (LOG.isTraceEnabled) {
-                    LOG.trace("Get DAT Token vom DAT_DRIVER")
+                    LOG.trace("Get DAT Token vom DAT driver...")
                 }
                 val dat = fsm.dynamicAttributeToken
-
                 if (LOG.isTraceEnabled) {
                     LOG.trace("Send IDSCP_HELLO")
                 }
