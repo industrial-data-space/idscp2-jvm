@@ -203,7 +203,8 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
                 connectionFuture
             )
         } catch (e: Exception) {
-            running = false // set running false before tlsVerificationLatch is decremented, this will cleanup the server thread
+            // set running false before tlsVerificationLatch is decremented to clean up the server thread
+            running = false
             connectionFuture.completeExceptionally(
                 Idscp2Exception("TLS session was not valid", e)
             )
