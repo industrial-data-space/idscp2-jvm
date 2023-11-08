@@ -45,7 +45,6 @@ import org.junit.Assert
 import org.junit.Test
 import java.nio.charset.StandardCharsets
 import java.nio.file.Paths
-import java.security.cert.X509Certificate
 import java.util.Objects
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.CountDownLatch
@@ -59,7 +58,7 @@ import java.util.concurrent.LinkedBlockingQueue
  */
 private val VALID_DAT = "TEST_TOKEN".toByteArray()
 
-class Idscp2Integration {
+class Idscp2IT {
 
     private lateinit var idscpServer: Idscp2Server<Idscp2Connection>
 
@@ -71,7 +70,7 @@ class Idscp2Integration {
 
         override val renewalThreshold = 1.0f
 
-        override fun verifyToken(dat: ByteArray, peerCertificate: X509Certificate?) =
+        override fun verifyToken(dat: ByteArray, peerCertificateFingerprint: String) =
             throw DatException("DapsRejector will reject each token")
     }
 
@@ -81,7 +80,7 @@ class Idscp2Integration {
 
         override val renewalThreshold = 1.0f
 
-        override fun verifyToken(dat: ByteArray, peerCertificate: X509Certificate?): VerifiedDat {
+        override fun verifyToken(dat: ByteArray, peerCertificateFingerprint: String): VerifiedDat {
             if (dat.contentEquals(VALID_DAT)) {
                 return VerifiedDat(VALID_DAT, "IDENTITY", (System.currentTimeMillis() / 1000) + 3600)
             } else {
@@ -95,7 +94,7 @@ class Idscp2Integration {
 
         override val renewalThreshold = 1.0f
 
-        override fun verifyToken(dat: ByteArray, peerCertificate: X509Certificate?): VerifiedDat {
+        override fun verifyToken(dat: ByteArray, peerCertificateFingerprint: String): VerifiedDat {
             if (dat.contentEquals(VALID_DAT)) {
                 return VerifiedDat(VALID_DAT, "IDENTITY", (System.currentTimeMillis() / 1000) + delay)
             } else {
@@ -235,16 +234,16 @@ class Idscp2Integration {
             .build()
     }
 
-    private fun createTlsConfig(keystore: String): NativeTlsConfiguration {
+    private fun createTlsConfig(): NativeTlsConfiguration {
         val keyStorePath = Paths.get(
             Objects.requireNonNull(
-                Idscp2Integration::class.java.classLoader
-                    .getResource("ssl/$keystore")
+                Idscp2IT::class.java.classLoader
+                    .getResource("ssl/localhost.p12")
             ).path
         )
         val trustStorePath = Paths.get(
             Objects.requireNonNull(
-                Idscp2Integration::class.java.classLoader
+                Idscp2IT::class.java.classLoader
                     .getResource("ssl/truststore.p12")
             ).path
         )
@@ -448,7 +447,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
+        val clientTlsConfig = createTlsConfig()
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
@@ -459,7 +458,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val serverTlsConfig = createTlsConfig("provider-keystore.p12")
+        val serverTlsConfig = createTlsConfig()
 
         // register RA drivers in shared Registry
         RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, CustomRaConfig(100))
@@ -484,7 +483,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
+        val clientTlsConfig = createTlsConfig()
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
@@ -495,7 +494,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val serverTlsConfig = createTlsConfig("provider-keystore.p12")
+        val serverTlsConfig = createTlsConfig()
 
         RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, CustomRaConfig(100))
         RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierAcceptor, CustomRaConfig(100))
@@ -519,7 +518,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
+        val clientTlsConfig = createTlsConfig()
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
@@ -530,7 +529,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val serverTlsConfig = createTlsConfig("provider-keystore.p12")
+        val serverTlsConfig = createTlsConfig()
 
         RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, CustomRaConfig(100))
         RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierAcceptor, CustomRaConfig(100))
@@ -552,7 +551,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
+        val clientTlsConfig = createTlsConfig()
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
@@ -563,7 +562,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val serverTlsConfig = createTlsConfig("provider-keystore.p12")
+        val serverTlsConfig = createTlsConfig()
 
         // register RA drivers in shared Registry
         RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, CustomRaConfig(100))
@@ -589,7 +588,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
+        val clientTlsConfig = createTlsConfig()
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
@@ -600,7 +599,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val serverTlsConfig = createTlsConfig("provider-keystore.p12")
+        val serverTlsConfig = createTlsConfig()
 
         // register RA drivers in shared Registry
         RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, CustomRaConfig(raDriverDelay))
@@ -626,7 +625,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
+        val clientTlsConfig = createTlsConfig()
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
@@ -637,7 +636,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val serverTlsConfig = createTlsConfig("provider-keystore.p12")
+        val serverTlsConfig = createTlsConfig()
 
         // register RA drivers in shared Registry
         RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, CustomRaConfig(raDriverDelay))
@@ -660,7 +659,7 @@ class Idscp2Integration {
             arrayOf("NullRa"),
             arrayOf("NullRa")
         )
-        val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
+        val clientTlsConfig = createTlsConfig()
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
@@ -671,7 +670,7 @@ class Idscp2Integration {
             arrayOf("NoNullRa"),
             arrayOf("NoNullRa")
         )
-        val serverTlsConfig = createTlsConfig("provider-keystore.p12")
+        val serverTlsConfig = createTlsConfig()
 
         // register RA drivers in shared Registry
         RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, null)
@@ -694,7 +693,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
+        val clientTlsConfig = createTlsConfig()
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
@@ -705,7 +704,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val serverTlsConfig = createTlsConfig("provider-keystore.p12")
+        val serverTlsConfig = createTlsConfig()
 
         expectHandshakeFailure(clientIdscpConfig, serverIdscpConfig, clientTlsConfig, serverTlsConfig)
     }
@@ -724,7 +723,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
+        val clientTlsConfig = createTlsConfig()
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
@@ -735,7 +734,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val serverTlsConfig = createTlsConfig("provider-keystore.p12")
+        val serverTlsConfig = createTlsConfig()
 
         RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, null)
         RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierAcceptor, null)
@@ -757,7 +756,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
+        val clientTlsConfig = createTlsConfig()
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
@@ -768,7 +767,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val serverTlsConfig = createTlsConfig("provider-keystore.p12")
+        val serverTlsConfig = createTlsConfig()
 
         RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, null)
         RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierAcceptor, null)
@@ -790,7 +789,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
+        val clientTlsConfig = createTlsConfig()
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
@@ -801,7 +800,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val serverTlsConfig = createTlsConfig("provider-keystore.p12")
+        val serverTlsConfig = createTlsConfig()
 
         RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, null)
         RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierAcceptor, null)
@@ -823,7 +822,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
+        val clientTlsConfig = createTlsConfig()
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
@@ -834,7 +833,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val serverTlsConfig = createTlsConfig("provider-keystore.p12")
+        val serverTlsConfig = createTlsConfig()
 
         RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, null)
         RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierAcceptor, null)
@@ -856,7 +855,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
+        val clientTlsConfig = createTlsConfig()
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
@@ -867,7 +866,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val serverTlsConfig = createTlsConfig("provider-keystore.p12")
+        val serverTlsConfig = createTlsConfig()
 
         // register RA drivers in shared Registry
         RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, CustomRaConfig(200))
@@ -890,7 +889,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
+        val clientTlsConfig = createTlsConfig()
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
@@ -901,7 +900,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val serverTlsConfig = createTlsConfig("provider-keystore.p12")
+        val serverTlsConfig = createTlsConfig()
 
         // register RA drivers in shared Registry
         RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, CustomRaConfig(200))
@@ -924,7 +923,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
+        val clientTlsConfig = createTlsConfig()
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
@@ -935,7 +934,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val serverTlsConfig = createTlsConfig("provider-keystore.p12")
+        val serverTlsConfig = createTlsConfig()
 
         RaProverDriverRegistry.registerDriver("NullRa", ::RaProverAcceptor, null)
         RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierRejector, null)
@@ -957,7 +956,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
+        val clientTlsConfig = createTlsConfig()
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
@@ -968,7 +967,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val serverTlsConfig = createTlsConfig("provider-keystore.p12")
+        val serverTlsConfig = createTlsConfig()
 
         RaProverDriverRegistry.registerDriver("NullRa", ::RaProverRejector, null)
         RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierAcceptor, null)
@@ -990,7 +989,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val clientTlsConfig = createTlsConfig("consumer-keystore.p12")
+        val clientTlsConfig = createTlsConfig()
 
         // create server config
         val serverIdscpConfig = createIdscp2Config(
@@ -1001,7 +1000,7 @@ class Idscp2Integration {
             arrayOf("NotUsed", "NullRa"),
             arrayOf("NullRa", "NotUsed")
         )
-        val serverTlsConfig = createTlsConfig("provider-keystore.p12")
+        val serverTlsConfig = createTlsConfig()
 
         RaProverDriverRegistry.registerDriver("NullRa", ::RaProverRejector, null)
         RaVerifierDriverRegistry.registerDriver("NullRa", ::RaVerifierRejector, null)

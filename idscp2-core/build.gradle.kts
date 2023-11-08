@@ -13,4 +13,5 @@ dependencies {
     testImplementation(libs.awaitility)
     testImplementation(libs.junit)
     testImplementation(libs.mockito)
+    testImplementation(libs.slf4j.impl)
 }
