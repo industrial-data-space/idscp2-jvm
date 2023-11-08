@@ -134,7 +134,8 @@ class Idscp2ClientEndpoint(uri: String?, override val remaining: String, compone
         defaultValue = "${RaVerifierDummy2.RA_VERIFIER_DUMMY2_ID}|${RaVerifierDummy.RA_VERIFIER_DUMMY_ID}"
     )
     @Deprecated("Deprecated in favor of idscp2Configuration")
-    override var expectedRaSuites: String = "${RaVerifierDummy2.RA_VERIFIER_DUMMY2_ID}|${RaVerifierDummy.RA_VERIFIER_DUMMY_ID}"
+    override var expectedRaSuites: String =
+        "${RaVerifierDummy2.RA_VERIFIER_DUMMY2_ID}|${RaVerifierDummy.RA_VERIFIER_DUMMY_ID}"
 
     @UriParam(
         label = "common",
@@ -200,7 +201,9 @@ class Idscp2ClientEndpoint(uri: String?, override val remaining: String, compone
         connectionShareId?.let { sharedConnections.release(it) } ?: releaseConnectionInternal(connectionFuture)
     }
 
-    fun resetConnection(connectionFuture: CompletableFuture<AppLayerConnection>): CompletableFuture<AppLayerConnection> {
+    fun resetConnection(
+        connectionFuture: CompletableFuture<AppLayerConnection>
+    ): CompletableFuture<AppLayerConnection> {
         connectionShareId?.let { sharedConnections.remove(it) } ?: releaseConnectionInternal(connectionFuture)
         return makeConnection()
     }

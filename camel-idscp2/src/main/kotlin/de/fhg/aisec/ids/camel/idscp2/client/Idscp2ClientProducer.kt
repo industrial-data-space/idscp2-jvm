@@ -63,11 +63,11 @@ class Idscp2ClientProducer(private val endpoint: Idscp2ClientEndpoint) : Default
                         if (endpoint.awaitResponse) {
                             val condition = reentrantLock.newCondition()
                             val responseHandler =
-                                { responseHeader: Any?, responsePayload: ByteArray?, responseExtraHeaders: Map<String, String>? ->
-                                    message.setHeader(IDS_HEADER, responseHeader)
-                                    message.body = responsePayload
+                                { resHeader: Any?, resPayload: ByteArray?, resExtraHeaders: Map<String, String>? ->
+                                    message.setHeader(IDS_HEADER, resHeader)
+                                    message.body = resPayload
                                     endpoint.copyHeadersRegexObject?.let { regex ->
-                                        responseExtraHeaders?.forEach {
+                                        resExtraHeaders?.forEach {
                                             if (regex.matches(it.key)) {
                                                 message.setHeader(it.key, it.value)
                                             }
@@ -81,8 +81,8 @@ class Idscp2ClientProducer(private val endpoint: Idscp2ClientEndpoint) : Default
                                 if (endpoint.useIdsMessages) {
                                     // Response might require UC protection, so register exchange if not yet registered
                                     ListenerManager.publishExchangeEvent(connection, exchange)
-                                    connection.addIdsMessageListener { _, responseHeader, responsePayload, responseExtraHeaders ->
-                                        responseHandler(responseHeader, responsePayload, responseExtraHeaders)
+                                    connection.addIdsMessageListener { _, resHeader, resPayload, resExtraHeaders ->
+                                        responseHandler(resHeader, resPayload, resExtraHeaders)
                                     }
                                     connection.sendIdsMessage(
                                         header?.let { Utils.finalizeMessage(it, connection) },
@@ -90,8 +90,8 @@ class Idscp2ClientProducer(private val endpoint: Idscp2ClientEndpoint) : Default
                                         extraHeaders
                                     )
                                 } else {
-                                    connection.addGenericMessageListener { _, responseHeader, responsePayload, responseExtraHeaders ->
-                                        responseHandler(responseHeader, responsePayload, responseExtraHeaders)
+                                    connection.addGenericMessageListener { _, resHeader, resPayload, resExtraHeaders ->
+                                        responseHandler(resHeader, resPayload, resExtraHeaders)
                                     }
                                     connection.sendGenericMessage(header?.toString(), body, extraHeaders)
                                 }

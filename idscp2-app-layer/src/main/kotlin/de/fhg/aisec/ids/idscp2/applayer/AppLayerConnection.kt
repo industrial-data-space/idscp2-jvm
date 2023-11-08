@@ -113,7 +113,12 @@ class AppLayerConnection private constructor(private val idscp2Connection: Idscp
 
     fun removeGenericMessageListener(listener: GenericMessageListener) = genericMessageListeners.remove(listener)
 
-    fun sendIdsMessage(header: Message?, payload: ByteArray?, headers: Map<String, String>?, sendTimeout: Long = DEFAULT_TIMEOUT) {
+    fun sendIdsMessage(
+        header: Message?,
+        payload: ByteArray?,
+        headers: Map<String, String>?,
+        sendTimeout: Long = DEFAULT_TIMEOUT
+    ) {
         val message = AppLayer.AppLayerMessage.newBuilder()
             .setIdsMessage(
                 AppLayer.IdsMessage.newBuilder()

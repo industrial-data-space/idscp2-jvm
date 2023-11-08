@@ -184,7 +184,9 @@ subprojects {
     spotless {
         kotlin {
             target("src/*/kotlin/**/*.kt")
-            ktlint(libs.versions.ktlint.get())
+            ktlint(libs.versions.ktlint.get()).editorConfigOverride(mapOf(
+                "ktlint_code_style" to "intellij_idea"
+            ))
             licenseHeader(
                 """/*-
  * ========================LICENSE_START=================================
