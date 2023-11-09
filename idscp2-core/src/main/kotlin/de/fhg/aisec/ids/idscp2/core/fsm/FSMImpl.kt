@@ -43,6 +43,7 @@ import de.fhg.aisec.ids.idscp2.core.messages.Idscp2MessageHelper
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpAck
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpData
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpMessage
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -224,6 +225,7 @@ class FSMImpl<CC : Idscp2Connection>(
                     return
                 }
                 try {
+                    LOG.trace("Awaiting onMessageBlock...")
                     onMessageBlock.await() // while waiting the fsmIsBusy lock is free for other threads
                 } catch (e: InterruptedException) {
                     Thread.currentThread().interrupt()
@@ -367,6 +369,7 @@ class FSMImpl<CC : Idscp2Connection>(
                     }
 
                     // trigger handshake init
+                    LOG.trace("Sending START_IDSCP_HANDSHAKE message...")
                     onControlMessage(InternalControlMessage.START_IDSCP_HANDSHAKE)
 
                     // wait until handshake was successful or failed
@@ -640,8 +643,6 @@ class FSMImpl<CC : Idscp2Connection>(
         proverHandshakeTimer.cancelTimeout()
         raProverDriver?.let {
             if (it.isAlive) {
-                it.interrupt()
-
                 // Run in async fire-and-forget coroutine to avoid cycles caused by protocol misuse
                 ioScope.launch { it.terminate() }
             }
@@ -688,9 +689,7 @@ class FSMImpl<CC : Idscp2Connection>(
 
         // Notify upper layer via handshake or closeListener
         if (!handshakeResultAvailable) {
-            if (LOG.isTraceEnabled) {
-                LOG.trace("Notify handshake lock...")
-            }
+            LOG.trace("Notify handshake lock...")
             notifyHandshakeCompleteLock()
         }
 
@@ -705,9 +704,7 @@ class FSMImpl<CC : Idscp2Connection>(
         // run in async to avoid cycles caused by protocol misuse
         connection.thenAccept { connection: Idscp2Connection ->
             ioScope.launch {
-                if (LOG.isTraceEnabled) {
-                    LOG.trace("Passing on IDSCP2 data to connection message listener...")
-                }
+                LOG.trace("Passing on IDSCP2 data to connection message listener...")
                 connection.onMessage(data)
             }
         }
@@ -738,9 +735,7 @@ class FSMImpl<CC : Idscp2Connection>(
                 LOG.trace("Received IdscpAck with alternating bit {}, cancel flag in fsm", idscpAck.alternatingBit)
             }
             if (nextSendAlternatingBit.asBoolean() != idscpAck.alternatingBit) {
-                if (LOG.isTraceEnabled) {
-                    LOG.trace("Received IdscpAck with wrong alternating bit. Ignoring")
-                }
+                LOG.trace("Received IdscpAck with wrong alternating bit. Ignoring")
             } else {
                 ackFlag = false
                 ackTimer.cancelTimeout()
@@ -762,11 +757,7 @@ class FSMImpl<CC : Idscp2Connection>(
         }
 
         if (idscpData.alternatingBit != expectedAlternatingBit.asBoolean()) {
-            if (LOG.isTraceEnabled) {
-                LOG.trace(
-                    "Received IdscpData with unexpected alternating bit. Could be an old packet replayed. Ignore it."
-                )
-            }
+            LOG.trace("Received IdscpData with unexpected alternating bit. Could be an old packet replayed. Ignore it.")
         } else {
             if (LOG.isTraceEnabled) {
                 LOG.trace("Send IdscpAck with received alternating bit {}", idscpData.alternatingBit)
@@ -790,7 +781,9 @@ class FSMImpl<CC : Idscp2Connection>(
 
     companion object {
         private val LOG = LoggerFactory.getLogger(FSM::class.java)
-        private val ioScope = CoroutineScope(Dispatchers.IO)
+        private val ioScope = CoroutineScope(Dispatchers.IO + CoroutineExceptionHandler { _, throwable ->
+            LOG.error("Error in async FSM code", throwable)
+        })
     }
 
     init {

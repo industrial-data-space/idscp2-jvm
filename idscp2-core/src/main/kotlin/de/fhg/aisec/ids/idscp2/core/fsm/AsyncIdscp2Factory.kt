@@ -95,10 +95,10 @@ object AsyncIdscp2Factory {
                 if (connectionFuture.isCancelled) {
                     connection.close()
                 }
-            } catch (e: Throwable) {
+            } catch (t: Throwable) {
                 // idscp2 handshake failed
-                LOG.error("Error in IDSCP2 handshake thread", e)
-                connectionFuture.completeExceptionally(e)
+                LOG.error("Error in IDSCP2 handshake task", t)
+                connectionFuture.completeExceptionally(t)
             }
         }
         return true

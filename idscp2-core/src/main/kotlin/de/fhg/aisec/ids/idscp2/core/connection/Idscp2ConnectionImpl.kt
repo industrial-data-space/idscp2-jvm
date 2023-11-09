@@ -30,6 +30,7 @@ import de.fhg.aisec.ids.idscp2.api.error.Idscp2TimeoutException
 import de.fhg.aisec.ids.idscp2.api.error.Idscp2WouldBlockException
 import de.fhg.aisec.ids.idscp2.api.fsm.FSM
 import de.fhg.aisec.ids.idscp2.api.fsm.FsmResultCode
+import de.fhg.aisec.ids.idscp2.core.forEachResilient
 import org.slf4j.LoggerFactory
 import java.util.Collections
 import java.util.concurrent.locks.ReentrantLock
@@ -161,7 +162,7 @@ class Idscp2ConnectionImpl(
         // When unlock is called, although not synchronized, this will eventually stop blocking.
         connectionListenerLatch.await()
         LOG.debug("Received new IDSCP Message, notifying {} listeners", messageListeners.size)
-        messageListeners.forEach { l: Idscp2MessageListener -> l.onMessage(this, msg) }
+        messageListeners.forEachResilient(LOG) { l: Idscp2MessageListener -> l.onMessage(this, msg) }
     }
 
     override fun onError(t: Throwable) {
@@ -169,7 +170,7 @@ class Idscp2ConnectionImpl(
             // check if connection has been closed, then we do not want to pass errors to the user
             if (!closed) {
                 connectionListenerLatch.await()
-                connectionListeners.forEach { idscp2ConnectionListener: Idscp2ConnectionListener ->
+                connectionListeners.forEachResilient(LOG) { idscp2ConnectionListener: Idscp2ConnectionListener ->
                     idscp2ConnectionListener.onError(t)
                 }
             }
@@ -181,7 +182,7 @@ class Idscp2ConnectionImpl(
         if (LOG.isInfoEnabled) {
             LOG.info("Connection with id {} is closing, notify listeners...", id)
         }
-        connectionListeners.forEach { l: Idscp2ConnectionListener -> l.onClose() }
+        connectionListeners.forEachResilient(LOG) { l: Idscp2ConnectionListener -> l.onClose() }
     }
 
     override fun remotePeer(): String {
