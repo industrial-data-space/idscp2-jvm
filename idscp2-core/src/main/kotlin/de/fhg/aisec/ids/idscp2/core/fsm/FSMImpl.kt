@@ -781,9 +781,11 @@ class FSMImpl<CC : Idscp2Connection>(
 
     companion object {
         private val LOG = LoggerFactory.getLogger(FSM::class.java)
-        private val ioScope = CoroutineScope(Dispatchers.IO + CoroutineExceptionHandler { _, throwable ->
-            LOG.error("Error in async FSM code", throwable)
-        })
+        private val ioScope = CoroutineScope(
+            Dispatchers.IO + CoroutineExceptionHandler { _, throwable ->
+                LOG.error("Error in async FSM code", throwable)
+            }
+        )
     }
 
     init {
