@@ -43,6 +43,9 @@ import de.fhg.aisec.ids.idscp2.core.messages.Idscp2MessageHelper
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpAck
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpData
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpMessage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import java.security.cert.X509Certificate
 import java.util.concurrent.CompletableFuture
@@ -410,7 +413,7 @@ class FSMImpl<CC : Idscp2Connection>(
 
         // run in async fire-and-forget coroutine to avoid cycles cause by protocol misuse
         if (!isFsmLocked) {
-            connection.thenAcceptAsync { it.onError(t) }
+            connection.thenAccept { ioScope.launch { it.onError(t) } }
         }
 
         // Check for incorrect usage
@@ -599,11 +602,8 @@ class FSMImpl<CC : Idscp2Connection>(
         raVerifierDriver?.let {
             if (it.isAlive) {
                 it.interrupt()
-
                 // run in async fire-and-forget coroutine to avoid cycles caused by protocol misuse
-                CompletableFuture.runAsync {
-                    it.terminate()
-                }
+                ioScope.launch { it.terminate() }
             }
         }
     }
@@ -643,9 +643,7 @@ class FSMImpl<CC : Idscp2Connection>(
                 it.interrupt()
 
                 // Run in async fire-and-forget coroutine to avoid cycles caused by protocol misuse
-                CompletableFuture.runAsync {
-                    it.terminate()
-                }
+                ioScope.launch { it.terminate() }
             }
         }
     }
@@ -666,7 +664,7 @@ class FSMImpl<CC : Idscp2Connection>(
         isLocked = true
 
         // run in async fire-and-forget coroutine to avoid cycles caused by protocol misuse
-        CompletableFuture.runAsync {
+        ioScope.launch {
             if (LOG.isTraceEnabled) {
                 LOG.trace("Closing secure channel of connection {}...", connectionId)
             }
@@ -697,7 +695,7 @@ class FSMImpl<CC : Idscp2Connection>(
         }
 
         // run in async to avoid cycles caused by protocol misuse
-        connection.thenAcceptAsync { it.onClose() }
+        connection.thenAccept { ioScope.launch { it.onClose() } }
     }
 
     /**
@@ -705,10 +703,12 @@ class FSMImpl<CC : Idscp2Connection>(
      */
     private fun notifyIdscpMsgListener(data: ByteArray) {
         // run in async to avoid cycles caused by protocol misuse
-        connection.thenAcceptAsync { connection: Idscp2Connection ->
-            connection.onMessage(data)
-            if (LOG.isTraceEnabled) {
-                LOG.trace("Idscp data has been passed to connection listener")
+        connection.thenAccept { connection: Idscp2Connection ->
+            ioScope.launch {
+                if (LOG.isTraceEnabled) {
+                    LOG.trace("Passing on IDSCP2 data to connection message listener...")
+                }
+                connection.onMessage(data)
             }
         }
     }
@@ -790,6 +790,7 @@ class FSMImpl<CC : Idscp2Connection>(
 
     companion object {
         private val LOG = LoggerFactory.getLogger(FSM::class.java)
+        private val ioScope = CoroutineScope(Dispatchers.IO)
     }
 
     init {

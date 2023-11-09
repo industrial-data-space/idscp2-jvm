@@ -25,13 +25,11 @@ import de.fhg.aisec.ids.idscp2.api.fsm.FsmResult
 import de.fhg.aisec.ids.idscp2.api.fsm.FsmResultCode
 import de.fhg.aisec.ids.idscp2.api.fsm.FsmState
 import de.fhg.aisec.ids.idscp2.api.fsm.InternalControlMessage
-import de.fhg.aisec.ids.idscp2.api.fsm.State
 import de.fhg.aisec.ids.idscp2.api.fsm.Transition
 import de.fhg.aisec.ids.idscp2.core.messages.Idscp2MessageHelper
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpClose.CloseCause
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpMessage
 import org.slf4j.LoggerFactory
-import java.util.concurrent.CompletableFuture
 
 /**
  * The Wait_For_Ra State of the FSM of the IDSCP2 protocol.
@@ -46,7 +44,7 @@ class StateWaitForRa(
     verifierHandshakeTimer: StaticTimer,
     proverHandshakeTimer: StaticTimer,
     raTimer: StaticTimer
-) : State() {
+) : RaState() {
     override fun runEntryCode(fsm: FSM) {
         if (LOG.isTraceEnabled) {
             LOG.trace("Switched to state STATE_WAIT_FOR_RA")
@@ -256,7 +254,7 @@ class StateWaitForRa(
 
                 fsm.raProverDriver?.let {
                     // Run in async fire-and-forget coroutine to avoid cycles caused by protocol misuse
-                    CompletableFuture.runAsync {
+                    runAsync {
                         it.delegate(event.idscpMessage.idscpRaVerifier.data.toByteArray())
                     }
                 } ?: run {
@@ -283,7 +281,7 @@ class StateWaitForRa(
 
                 fsm.raVerifierDriver?.let {
                     // Run in async fire-and-forget coroutine to avoid cycles caused by protocol misuse
-                    CompletableFuture.runAsync {
+                    runAsync {
                         it.delegate(event.idscpMessage.idscpRaProver.data.toByteArray())
                     }
                 } ?: run {
