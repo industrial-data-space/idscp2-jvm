@@ -1,6 +1,6 @@
 [versions]
 # Versions for modules that will be released as libraries
-idscp2 = "0.19.0"
+idscp2 = "0.19.1"
 
 infomodel = "4.1.3"
 
@@ -23,7 +23,7 @@ awaitility = "4.2.0"
 
 protobuf = "3.25.1"
 
-bouncycastle = "1.70"
+bouncycastle = "1.77"
 
 # We will pull in an up-to-date version of jackson for security fixes
 jackson = "2.16.0"
@@ -42,7 +42,7 @@ junit = { group = "junit", name = "junit", version.ref = "junit4" }
 mockito = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }
 
 kotlinx-coroutines = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core-jvm", version.ref = "kotlinxCoroutines" }
-bouncycastle = { group = "org.bouncycastle", name = "bcprov-jdk15on", version.ref = "bouncycastle" }
+bouncycastle = { group = "org.bouncycastle", name = "bcprov-jdk18on", version.ref = "bouncycastle" }
 jjwt-impl = { group = "io.jsonwebtoken", name = "jjwt-impl", version.ref = "jsonwebtoken" }
 jjwt-jackson = { group = "io.jsonwebtoken", name = "jjwt-jackson", version.ref = "jsonwebtoken" }
 jjwt-api = { group = "io.jsonwebtoken", name = "jjwt-api", version.ref = "jsonwebtoken" }
