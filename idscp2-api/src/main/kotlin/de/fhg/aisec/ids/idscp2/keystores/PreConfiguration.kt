@@ -28,8 +28,8 @@ import java.security.cert.PKIXBuilderParameters
 import java.security.cert.PKIXParameters
 import java.security.cert.X509CertSelector
 import java.security.cert.X509Certificate
-import java.util.Collections
 import java.util.Date
+import java.util.concurrent.ConcurrentHashMap
 import javax.net.ssl.KeyManager
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.TrustManagerFactory
@@ -43,7 +43,7 @@ import kotlin.io.path.absolutePathString
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
 object PreConfiguration {
-    private val TRUST_MANAGERS = Collections.synchronizedMap(mutableMapOf<String, X509ExtendedTrustManager>())
+    private val TRUST_MANAGERS = ConcurrentHashMap<String, X509ExtendedTrustManager>()
 
     /*
      * Get a secure X509ExtendedTrustManager for the SslContext

@@ -1,6 +1,6 @@
 /*-
  * ========================LICENSE_START=================================
- * idscp2-api
+ * idscp2-core
  * %%
  * Copyright (C) 2021 Fraunhofer AISEC
  * %%
@@ -17,11 +17,12 @@
  * limitations under the License.
  * =========================LICENSE_END==================================
  */
-package de.fhg.aisec.ids.idscp2.api.securechannel
+package de.fhg.aisec.ids.idscp2.core.securechannel
 
-import de.fhg.aisec.ids.idscp2.api.FastLatch
 import de.fhg.aisec.ids.idscp2.api.drivers.SecureChannelEndpoint
 import de.fhg.aisec.ids.idscp2.api.fsm.ScFsmListener
+import de.fhg.aisec.ids.idscp2.api.securechannel.SecureChannelListener
+import de.fhg.aisec.ids.idscp2.core.FastLatch
 import org.slf4j.LoggerFactory
 import java.security.cert.X509Certificate
 

@@ -22,12 +22,13 @@ package de.fhg.aisec.ids.camel.idscp2.server
 import de.fhg.aisec.ids.camel.idscp2.ListenerManager
 import de.fhg.aisec.ids.idscp2.api.Idscp2EndpointListener
 import de.fhg.aisec.ids.idscp2.api.configuration.Idscp2Configuration
-import de.fhg.aisec.ids.idscp2.api.server.Idscp2Server
-import de.fhg.aisec.ids.idscp2.api.server.Idscp2ServerFactory
 import de.fhg.aisec.ids.idscp2.applayer.AppLayerConnection
+import de.fhg.aisec.ids.idscp2.core.forEachResilient
+import de.fhg.aisec.ids.idscp2.core.server.Idscp2Server
+import de.fhg.aisec.ids.idscp2.core.server.Idscp2ServerFactory
 import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTLSDriver
 import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
-import java.util.Collections
+import org.slf4j.LoggerFactory
 
 class CamelIdscp2Server(
     serverConfiguration: Idscp2Configuration,
@@ -36,7 +37,7 @@ class CamelIdscp2Server(
 ) :
     Idscp2EndpointListener<AppLayerConnection> {
     private val server: Idscp2Server<AppLayerConnection>
-    val listeners: MutableSet<Idscp2EndpointListener<AppLayerConnection>> = Collections.synchronizedSet(HashSet())
+    private val listeners = LinkedHashSet<Idscp2EndpointListener<AppLayerConnection>>()
 
     init {
         val serverFactory = Idscp2ServerFactory(
@@ -57,12 +58,30 @@ class CamelIdscp2Server(
                 }
             }
         }
-        listeners.forEach { it.onConnection(connection) }
+        synchronized(listeners) {
+            listeners.forEachResilient(log) { it.onConnection(connection) }
+        }
+    }
+
+    fun addEndpointListener(listener: Idscp2EndpointListener<AppLayerConnection>) {
+        synchronized(listeners) {
+            listeners += listener
+        }
+    }
+
+    fun removeEndpointListener(listener: Idscp2EndpointListener<AppLayerConnection>) {
+        synchronized(listeners) {
+            listeners -= listener
+        }
     }
 
     val allConnections: Collection<AppLayerConnection> = server.allConnections
 
     fun terminate() {
         server.terminate()
+    }
+
+    companion object {
+        private val log = LoggerFactory.getLogger(CamelIdscp2Server::class.java)
     }
 }

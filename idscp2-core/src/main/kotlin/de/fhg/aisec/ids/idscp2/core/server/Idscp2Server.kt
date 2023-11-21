@@ -1,6 +1,6 @@
 /*-
  * ========================LICENSE_START=================================
- * idscp2-api
+ * idscp2-core
  * %%
  * Copyright (C) 2021 Fraunhofer AISEC
  * %%
@@ -17,15 +17,16 @@
  * limitations under the License.
  * =========================LICENSE_END==================================
  */
-package de.fhg.aisec.ids.idscp2.api.server
+package de.fhg.aisec.ids.idscp2.core.server
 
 import de.fhg.aisec.ids.idscp2.api.Idscp2EndpointListener
 import de.fhg.aisec.ids.idscp2.api.connection.Idscp2Connection
 import de.fhg.aisec.ids.idscp2.api.connection.Idscp2ConnectionAdapter
 import de.fhg.aisec.ids.idscp2.api.drivers.SecureServer
+import de.fhg.aisec.ids.idscp2.api.server.ServerConnectionListener
+import de.fhg.aisec.ids.idscp2.core.forEachResilient
 import org.slf4j.LoggerFactory
 import java.util.Collections
-import java.util.HashSet
 
 /**
  * An IDSCP2 Server that has the control about the underlying secure server and caches all active
@@ -37,7 +38,7 @@ class Idscp2Server<CC : Idscp2Connection>(
     private val secureServer: SecureServer,
     private val endpointListener: Idscp2EndpointListener<CC>
 ) : ServerConnectionListener<CC> {
-    private val connections = Collections.synchronizedSet(HashSet<CC>())
+    private val connections = LinkedHashSet<CC>()
 
     /**
      * Terminate the IDSCP2 server, the secure server and close all connections
@@ -47,12 +48,19 @@ class Idscp2Server<CC : Idscp2Connection>(
             LOG.info("Terminating IDSCP2 server {}", this.toString())
         }
 
-        for (connection in connections) {
-            connection.close()
+        // Iterate over copy to prevent ConcurrentModificationExceptions from changes during iteration.
+        val copyList: List<CC>
+        synchronized(connections) {
+            copyList = ArrayList(connections)
+        }
+        copyList.forEachResilient(LOG) {
             if (LOG.isDebugEnabled) {
-                LOG.debug("Idscp connection with id {} has been closed", connection.id)
+                LOG.debug("Closing IDSCP2 connection {}...", it.id)
             }
-            connections.remove(connection)
+            it.close()
+        }
+        synchronized(connections) {
+            connections.clear()
         }
         secureServer.safeStop()
     }
@@ -65,12 +73,16 @@ class Idscp2Server<CC : Idscp2Connection>(
         // register close listener for unregister connection from the server on closure
         connection.addConnectionListener(object : Idscp2ConnectionAdapter() {
             override fun onClose() {
-                connections.remove(connection)
+                synchronized(connections) {
+                    connections.remove(connection)
+                }
             }
         })
 
         // add connection to server connections
-        connections.add(connection)
+        synchronized(connections) {
+            connections.add(connection)
+        }
 
         // notify user aboout new connection
         endpointListener.onConnection(connection)

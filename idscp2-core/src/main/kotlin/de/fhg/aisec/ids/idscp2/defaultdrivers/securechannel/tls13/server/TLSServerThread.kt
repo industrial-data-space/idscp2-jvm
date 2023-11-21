@@ -19,15 +19,15 @@
  */
 package de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.server
 
-import de.fhg.aisec.ids.idscp2.api.FastLatch
 import de.fhg.aisec.ids.idscp2.api.configuration.Idscp2Configuration
 import de.fhg.aisec.ids.idscp2.api.connection.Idscp2Connection
 import de.fhg.aisec.ids.idscp2.api.drivers.SecureChannelEndpoint
 import de.fhg.aisec.ids.idscp2.api.error.Idscp2Exception
 import de.fhg.aisec.ids.idscp2.api.fsm.FSM
-import de.fhg.aisec.ids.idscp2.api.securechannel.SecureChannel
 import de.fhg.aisec.ids.idscp2.api.securechannel.SecureChannelListener
+import de.fhg.aisec.ids.idscp2.core.FastLatch
 import de.fhg.aisec.ids.idscp2.core.fsm.AsyncIdscp2Factory
+import de.fhg.aisec.ids.idscp2.core.securechannel.SecureChannel
 import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
 import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.TLSSessionVerificationHelper
 import org.slf4j.LoggerFactory
@@ -57,7 +57,10 @@ class TLSServerThread<CC : Idscp2Connection> internal constructor(
     private val nativeTlsConfiguration: NativeTlsConfiguration,
     private val serverConfiguration: Idscp2Configuration,
     private val connectionFactory: (FSM, String) -> CC
-) : Thread(), HandshakeCompletedListener, SecureChannelEndpoint, Closeable {
+) : Thread("IDSCP2-Server-Worker-${nativeTlsConfiguration.host}:${nativeTlsConfiguration.serverPort}"),
+    HandshakeCompletedListener,
+    SecureChannelEndpoint,
+    Closeable {
     @Volatile
     private var running = true
     private val inputStream: DataInputStream

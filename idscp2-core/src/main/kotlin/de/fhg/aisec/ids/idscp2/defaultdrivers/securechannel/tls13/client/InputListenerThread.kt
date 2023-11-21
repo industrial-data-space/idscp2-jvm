@@ -30,7 +30,8 @@ import java.net.SocketTimeoutException
  *
  * @author Leon Beckmann (leon.beckmann@aisec.fraunhofer.de)
  */
-class InputListenerThread(inputStream: InputStream, private var listener: DataAvailableListener) : Thread() {
+class InputListenerThread(name: String, inputStream: InputStream, private var listener: DataAvailableListener) :
+    Thread(name) {
     private val dataInputStream: DataInputStream = DataInputStream(inputStream)
 
     @Volatile

@@ -38,14 +38,15 @@ import de.fhg.aisec.ids.idscp2.api.fsm.ScFsmListener
 import de.fhg.aisec.ids.idscp2.api.fsm.State
 import de.fhg.aisec.ids.idscp2.api.raregistry.RaProverDriverRegistry
 import de.fhg.aisec.ids.idscp2.api.raregistry.RaVerifierDriverRegistry
-import de.fhg.aisec.ids.idscp2.api.securechannel.SecureChannel
 import de.fhg.aisec.ids.idscp2.core.messages.Idscp2MessageHelper
+import de.fhg.aisec.ids.idscp2.core.securechannel.SecureChannel
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpAck
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpData
 import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpMessage
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import java.security.cert.X509Certificate
@@ -413,10 +414,8 @@ class FSMImpl<CC : Idscp2Connection>(
      */
     override fun onError(t: Throwable) {
         // Broadcast the error to the respective listeners when the fsm is not yet locked
-
-        // run in async fire-and-forget coroutine to avoid cycles cause by protocol misuse
         if (!isFsmLocked) {
-            connection.thenAccept { ioScope.launch { it.onError(t) } }
+            connection.thenAccept { it.onError(t) }
         }
 
         // Check for incorrect usage
@@ -693,21 +692,7 @@ class FSMImpl<CC : Idscp2Connection>(
             notifyHandshakeCompleteLock()
         }
 
-        // run in async to avoid cycles caused by protocol misuse
-        connection.thenAccept { ioScope.launch { it.onClose() } }
-    }
-
-    /**
-     * Provide IDSCP2 message to the message listener
-     */
-    private fun notifyIdscpMsgListener(data: ByteArray) {
-        // run in async to avoid cycles caused by protocol misuse
-        connection.thenAccept { connection: Idscp2Connection ->
-            ioScope.launch {
-                LOG.trace("Passing on IDSCP2 data to connection message listener...")
-                connection.onMessage(data)
-            }
-        }
+        connection.thenAccept { it.onClose() }
     }
 
     override val isFsmLocked: Boolean
@@ -759,6 +744,9 @@ class FSMImpl<CC : Idscp2Connection>(
         if (idscpData.alternatingBit != expectedAlternatingBit.asBoolean()) {
             LOG.trace("Received IdscpData with unexpected alternating bit. Could be an old packet replayed. Ignore it.")
         } else {
+            // Forward payload data to upper layer. Make sure that the upper layer handles this asynchronously!
+            connection.thenAccept { it.onMessage(idscpData.data.toByteArray()) }
+
             if (LOG.isTraceEnabled) {
                 LOG.trace("Send IdscpAck with received alternating bit {}", idscpData.alternatingBit)
             }
@@ -769,9 +757,6 @@ class FSMImpl<CC : Idscp2Connection>(
                 LOG.trace("Alternate expected bit from {}", expectedAlternatingBit.asBoolean())
             }
             expectedAlternatingBit.alternate()
-
-            // forward payload data to upper layer
-            notifyIdscpMsgListener(idscpData.data.toByteArray())
         }
     }
 
@@ -782,7 +767,7 @@ class FSMImpl<CC : Idscp2Connection>(
     companion object {
         private val LOG = LoggerFactory.getLogger(FSM::class.java)
         private val ioScope = CoroutineScope(
-            Dispatchers.IO + CoroutineExceptionHandler { _, throwable ->
+            Dispatchers.IO + SupervisorJob() + CoroutineExceptionHandler { _, throwable ->
                 LOG.error("Error in async FSM code", throwable)
             }
         )

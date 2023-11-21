@@ -237,7 +237,7 @@ class Idscp2ServerEndpoint(uri: String?, override val remaining: String, compone
         ).let {
             server = it
             // Add this endpoint to this server's Idscp2EndpointListener set
-            it.listeners += this
+            it.addEndpointListener(this)
         }
     }
 
@@ -247,7 +247,7 @@ class Idscp2ServerEndpoint(uri: String?, override val remaining: String, compone
             LOG.debug("Stopping IDSCP2 server endpoint $endpointUri")
         }
         // Remove this endpoint from the server's Idscp2EndpointListener set
-        server?.let { it.listeners -= this }
+        server?.removeEndpointListener(this)
         idscp2Configuration?.let {
             (component as Idscp2ServerComponent).freeServer(it)
         }

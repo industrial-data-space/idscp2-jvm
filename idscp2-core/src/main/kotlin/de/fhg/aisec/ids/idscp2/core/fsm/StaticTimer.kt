@@ -22,6 +22,7 @@ package de.fhg.aisec.ids.idscp2.core.fsm
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.concurrent.locks.ReentrantLock
@@ -68,6 +69,6 @@ class StaticTimer internal constructor(
     }
 
     companion object {
-        private val scope = CoroutineScope(Dispatchers.IO)
+        private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     }
 }

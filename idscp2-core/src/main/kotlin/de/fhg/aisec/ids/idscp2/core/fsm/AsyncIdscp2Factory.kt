@@ -22,9 +22,10 @@ package de.fhg.aisec.ids.idscp2.core.fsm
 import de.fhg.aisec.ids.idscp2.api.configuration.Idscp2Configuration
 import de.fhg.aisec.ids.idscp2.api.connection.Idscp2Connection
 import de.fhg.aisec.ids.idscp2.api.fsm.FSM
-import de.fhg.aisec.ids.idscp2.api.securechannel.SecureChannel
+import de.fhg.aisec.ids.idscp2.core.securechannel.SecureChannel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import java.util.UUID
@@ -42,7 +43,7 @@ import java.util.concurrent.CompletableFuture
 
 object AsyncIdscp2Factory {
     private val LOG = LoggerFactory.getLogger(AsyncIdscp2Factory::class.java)
-    private val ioScope = CoroutineScope(Dispatchers.IO)
+    private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     fun <CC : Idscp2Connection> initiateIdscp2Connection(
         secureChannel: SecureChannel,

@@ -1,3 +1,4 @@
+import com.diffplug.gradle.spotless.SpotlessApply
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
@@ -36,7 +37,7 @@ allprojects {
         maven("https://gitlab.cc-asp.fraunhofer.de/api/v4/projects/55371/packages/maven")
     }
 
-    val versionRegex = ".*(rc-?[0-9]*|beta)$".toRegex(RegexOption.IGNORE_CASE)
+    val versionRegex = ".*(rc-?[0-9]*|beta[0-9]*)$".toRegex(RegexOption.IGNORE_CASE)
 
     tasks.withType<DependencyUpdatesTask> {
         rejectVersionIf {
@@ -47,6 +48,8 @@ allprojects {
         }
     }
 }
+
+val spotlessApplyAll: Task by tasks.creating
 
 subprojects {
     apply(plugin = "java")
@@ -87,8 +90,34 @@ subprojects {
     dependencies {
         // Logging API
         api(rootProject.libs.slf4j.api)
-        // Kotlin JVM library
-        api(rootProject.libs.kotlin.stdlib)
+        dependencies {
+            val versions = rootProject.libs.versions
+            // Some versions are downgraded for unknown reasons, fix this here
+            val groupPins = mapOf(
+                "org.jetbrains.kotlin" to mapOf(
+                    "*" to versions.kotlin.get()
+                ),
+                "com.google.guava" to mapOf(
+                    "guava" to versions.guava.get()
+                )
+            )
+            // We need to explicitly specify the kotlin version for all kotlin dependencies,
+            // because otherwise something (maybe a plugin) downgrades the kotlin version,
+            // which produces errors in the kotlin compiler. This is really nasty.
+            configurations.all {
+                resolutionStrategy.eachDependency {
+                    groupPins[requested.group]?.let { pins ->
+                        pins["*"]?.let {
+                            // Pin all names when asterisk is set
+                            useVersion(it)
+                        } ?: pins[requested.name]?.let { pin ->
+                            // Pin only for specific names given in map
+                            useVersion(pin)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     tasks.withType<KotlinCompile> {
@@ -209,5 +238,9 @@ subprojects {
  */"""
             ).yearSeparator(" - ")
         }
+    }
+
+    tasks.withType<SpotlessApply> {
+        spotlessApplyAll.dependsOn(this.path)
     }
 }

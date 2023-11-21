@@ -25,8 +25,8 @@ import de.fhg.aisec.ids.idscp2.api.connection.Idscp2Connection
 import de.fhg.aisec.ids.idscp2.api.connection.Idscp2ConnectionAdapter
 import de.fhg.aisec.ids.idscp2.api.raregistry.RaProverDriverRegistry
 import de.fhg.aisec.ids.idscp2.api.raregistry.RaVerifierDriverRegistry
-import de.fhg.aisec.ids.idscp2.api.server.Idscp2ServerFactory
 import de.fhg.aisec.ids.idscp2.core.connection.Idscp2ConnectionImpl
+import de.fhg.aisec.ids.idscp2.core.server.Idscp2ServerFactory
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaProver
 import de.fhg.aisec.ids.idscp2.defaultdrivers.remoteattestation.demo.DemoRaVerifier
 import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTLSDriver

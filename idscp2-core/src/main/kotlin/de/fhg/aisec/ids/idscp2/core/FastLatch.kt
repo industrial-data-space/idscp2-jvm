@@ -1,6 +1,6 @@
 /*-
  * ========================LICENSE_START=================================
- * idscp2-api
+ * idscp2-core
  * %%
  * Copyright (C) 2021 Fraunhofer AISEC
  * %%
@@ -17,7 +17,7 @@
  * limitations under the License.
  * =========================LICENSE_END==================================
  */
-package de.fhg.aisec.ids.idscp2.api
+package de.fhg.aisec.ids.idscp2.core
 
 import org.slf4j.LoggerFactory
 

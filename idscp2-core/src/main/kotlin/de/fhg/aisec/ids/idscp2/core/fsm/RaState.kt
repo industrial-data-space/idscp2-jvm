@@ -23,6 +23,7 @@ import de.fhg.aisec.ids.idscp2.api.fsm.State
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 
@@ -35,7 +36,7 @@ open class RaState : State() {
     companion object {
         private val LOG = LoggerFactory.getLogger(RaState::class.java)
         private val ioScope = CoroutineScope(
-            Dispatchers.IO + CoroutineExceptionHandler { _, throwable ->
+            Dispatchers.IO + SupervisorJob() + CoroutineExceptionHandler { _, throwable ->
                 LOG.error("Error in async RA code", throwable)
             }
         )

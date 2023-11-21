@@ -24,9 +24,9 @@ import de.fhg.aisec.ids.idscp2.api.connection.Idscp2Connection
 import de.fhg.aisec.ids.idscp2.api.drivers.SecureChannelEndpoint
 import de.fhg.aisec.ids.idscp2.api.error.Idscp2Exception
 import de.fhg.aisec.ids.idscp2.api.fsm.FSM
-import de.fhg.aisec.ids.idscp2.api.securechannel.SecureChannel
 import de.fhg.aisec.ids.idscp2.api.securechannel.SecureChannelListener
 import de.fhg.aisec.ids.idscp2.core.fsm.AsyncIdscp2Factory
+import de.fhg.aisec.ids.idscp2.core.securechannel.SecureChannel
 import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
 import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.TLSConstants
 import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.TLSSessionVerificationHelper
@@ -74,7 +74,7 @@ class TLSClient<CC : Idscp2Connection>(
      * the TLS handshake or the IDSCP2 handshake will fail on server side, which
      * will trigger a full connection cleanup.
      */
-    fun connect(hostname: String?, port: Int) {
+    fun connect(hostname: String, port: Int) {
         val sslSocket = clientSocket as SSLSocket?
 
         if (sslSocket == null || sslSocket.isClosed) {
@@ -91,7 +91,8 @@ class TLSClient<CC : Idscp2Connection>(
             dataOutputStream = DataOutputStream(clientSocket.getOutputStream())
 
             // Add inputListener but start it not before handshake is complete
-            inputListenerThread = InputListenerThread(clientSocket.getInputStream(), this)
+            inputListenerThread =
+                InputListenerThread("IDSCP2-Client-Worker-$hostname:$port", clientSocket.getInputStream(), this)
 
             if (LOG.isTraceEnabled) {
                 LOG.trace("Start TLS Handshake")
@@ -120,7 +121,7 @@ class TLSClient<CC : Idscp2Connection>(
      */
     private fun cleanup() {
         if (LOG.isTraceEnabled) {
-            LOG.trace("Cleanup broken TLS connection ..")
+            LOG.trace("Cleanup TLS connection...")
         }
         if (::inputListenerThread.isInitialized) {
             inputListenerThread.safeStop()

@@ -34,9 +34,9 @@ import de.fhg.aisec.ids.idscp2.api.fsm.RaProverFsmListener
 import de.fhg.aisec.ids.idscp2.api.fsm.RaVerifierFsmListener
 import de.fhg.aisec.ids.idscp2.api.raregistry.RaProverDriverRegistry
 import de.fhg.aisec.ids.idscp2.api.raregistry.RaVerifierDriverRegistry
-import de.fhg.aisec.ids.idscp2.api.server.Idscp2Server
-import de.fhg.aisec.ids.idscp2.api.server.Idscp2ServerFactory
 import de.fhg.aisec.ids.idscp2.core.connection.Idscp2ConnectionImpl
+import de.fhg.aisec.ids.idscp2.core.server.Idscp2Server
+import de.fhg.aisec.ids.idscp2.core.server.Idscp2ServerFactory
 import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTLSDriver
 import de.fhg.aisec.ids.idscp2.defaultdrivers.securechannel.tls13.NativeTlsConfiguration
 import org.awaitility.Awaitility.await
@@ -364,8 +364,6 @@ class Idscp2IT {
                 override fun onError(t: Throwable) {
                     Assert.fail(t.stackTraceToString())
                 }
-
-                override fun onClose() {}
             })
             connection.addMessageListener { _: Idscp2Connection, _: ByteArray ->
                 messageLatchClient.countDown()
