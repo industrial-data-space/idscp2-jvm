@@ -37,7 +37,7 @@ allprojects {
         maven("https://gitlab.cc-asp.fraunhofer.de/api/v4/projects/55371/packages/maven")
     }
 
-    val versionRegex = ".*(rc-?[0-9]*|beta[0-9]*)$".toRegex(RegexOption.IGNORE_CASE)
+    val versionRegex = ".*(rc|beta)-?[0-9]*$".toRegex(RegexOption.IGNORE_CASE)
 
     tasks.withType<DependencyUpdatesTask> {
         rejectVersionIf {

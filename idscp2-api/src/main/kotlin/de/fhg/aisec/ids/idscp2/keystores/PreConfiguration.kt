@@ -51,10 +51,7 @@ object PreConfiguration {
      * throws IllegalStateException if number of available X509TrustManager is not one
      * throws RuntimeException of creating TrustManager fails
      */
-    fun getX509ExtTrustManager(
-        trustStorePath: Path,
-        trustStorePassword: CharArray
-    ): X509ExtendedTrustManager {
+    fun getX509ExtTrustManager(trustStorePath: Path, trustStorePassword: CharArray): X509ExtendedTrustManager {
         // Cache constructed TrustManager instances by TrustStore path
         return TRUST_MANAGERS.computeIfAbsent(trustStorePath.absolutePathString()) {
             TrustManagerFactory.getInstance("PKIX").apply {
@@ -95,12 +92,7 @@ object PreConfiguration {
     /**
      * Get a (private) Key from a KeyStore
      */
-    fun getKey(
-        keyStorePath: Path,
-        keyStorePassword: CharArray,
-        keyAlias: String,
-        keyPassword: CharArray
-    ): Key {
+    fun getKey(keyStorePath: Path, keyStorePassword: CharArray, keyAlias: String, keyPassword: CharArray): Key {
         val keyStore = loadKeyStore(keyStorePath, keyStorePassword)
         val key = keyStore.getKey(keyAlias, keyPassword)
         return key ?: throw RuntimeException("No key was found in keystore for given alias")
@@ -110,11 +102,7 @@ object PreConfiguration {
      * Get a X509Certificate from a KeyStore, also checking for accessibility of the
      * corresponding (private) Key.
      */
-    fun getCertificate(
-        keyStorePath: Path,
-        keyStorePassword: CharArray,
-        keyAlias: String
-    ): X509Certificate {
+    fun getCertificate(keyStorePath: Path, keyStorePassword: CharArray, keyAlias: String): X509Certificate {
         val keystore = loadKeyStore(keyStorePath, keyStorePassword)
         val cert = keystore.getCertificate(keyAlias) as X509Certificate
         // Probe key alias

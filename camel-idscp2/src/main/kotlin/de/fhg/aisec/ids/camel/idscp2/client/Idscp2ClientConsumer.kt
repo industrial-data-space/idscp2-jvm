@@ -27,6 +27,11 @@ import de.fhg.aisec.ids.idscp2.applayer.AppLayerConnection
 import de.fhg.aisec.ids.idscp2.applayer.listeners.GenericMessageListener
 import de.fhg.aisec.ids.idscp2.applayer.listeners.IdsMessageListener
 import de.fraunhofer.iais.eis.Message
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.apache.camel.Processor
 import org.apache.camel.support.DefaultConsumer
 import org.slf4j.LoggerFactory
@@ -38,28 +43,64 @@ import java.util.concurrent.CompletableFuture
 class Idscp2ClientConsumer(private val endpoint: Idscp2ClientEndpoint, processor: Processor) :
     DefaultConsumer(endpoint, processor), GenericMessageListener, IdsMessageListener {
     private lateinit var connectionFuture: CompletableFuture<AppLayerConnection>
+    private var retryCount = 0L
 
-    override fun doStart() {
-        super.doStart()
-        connectionFuture = endpoint.makeConnection()
+    private fun connect() {
+        connectionFuture = if (retryCount == 0L) {
+            endpoint.makeConnection()
+        } else {
+            LOG.debug("Resetting connection...")
+            endpoint.resetConnection(connectionFuture)
+        }
         connectionFuture.thenAccept {
+            retryCount = 0
             if (endpoint.useIdsMessages) {
-                it.addIdsMessageListener(this)
+                it.addIdsMessageListener(this@Idscp2ClientConsumer)
             } else {
-                it.addGenericMessageListener(this)
+                it.addGenericMessageListener(this@Idscp2ClientConsumer)
             }
-            // Handle connection errors and closing
             it.addConnectionListener(object : Idscp2ConnectionListener {
                 override fun onError(t: Throwable) {
                     LOG.error("Error in Idscp2ClientConsumer connection", t)
                 }
 
                 override fun onClose() {
-                    stop()
+                    if (!isStoppingOrStopped) {
+                        LOG.debug(
+                            "IDSCP2 client consumer connection {} closed without stop, trying reconnect...",
+                            if (connectionFuture.isDone) connectionFuture.get().id else "<pending>"
+                        )
+                        connect()
+                    }
                 }
             })
             it.unlockMessaging()
         }
+        connectionFuture.exceptionally {
+            if (retryCount == endpoint.maxRetries) {
+                LOG.error("IDSCP2 connection finally failed, invoking error handler...")
+                handleException(it)
+            } else {
+                retryCount += 1
+                LOG.warn(
+                    "Connection failed, do retry # $retryCount/${endpoint.maxRetries} " +
+                        "after ${endpoint.retryDelayMs} ms...",
+                    it
+                )
+                ioScope.launch {
+                    // Sleep for retryDelayMs
+                    delay(endpoint.retryDelayMs)
+                    // Retry connect
+                    connect()
+                }
+            }
+            null
+        }
+    }
+
+    override fun doStart() {
+        super.doStart()
+        connect()
     }
 
     public override fun doStop() {
@@ -151,5 +192,6 @@ class Idscp2ClientConsumer(private val endpoint: Idscp2ClientEndpoint, processor
 
     companion object {
         private val LOG = LoggerFactory.getLogger(Idscp2ClientConsumer::class.java)
+        val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     }
 }

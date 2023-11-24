@@ -28,7 +28,8 @@ package de.fhg.aisec.ids.idscp2.core.fsm
 
 class AlternatingBit(value: Boolean = false) {
     enum class Bit {
-        ZERO, ONE
+        ZERO,
+        ONE
     }
 
     private var bit: Bit

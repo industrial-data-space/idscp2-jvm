@@ -273,6 +273,7 @@ class FSMImpl<CC : Idscp2Connection>(
         // check for incorrect usage
         checkForFsmCycles()
         fsmIsBusy.withLock {
+            @Suppress("DEPRECATION")
             if (Thread.currentThread().id.toString() == currentRaProverId) {
                 feedEvent(e)
             } else {
@@ -307,6 +308,7 @@ class FSMImpl<CC : Idscp2Connection>(
         // check for incorrect usage
         checkForFsmCycles()
         fsmIsBusy.withLock {
+            @Suppress("DEPRECATION")
             if (Thread.currentThread().id.toString() == currentRaVerifierId) {
                 feedEvent(e)
             } else {
@@ -583,6 +585,7 @@ class FSMImpl<CC : Idscp2Connection>(
         raVerifierDriver = RaVerifierDriverRegistry.startRaVerifierDriver(verifierMechanism, this)
         return raVerifierDriver?.let {
             // safe the thread ID
+            @Suppress("DEPRECATION")
             currentRaVerifierId = it.id.toString()
             if (LOG.isTraceEnabled) {
                 LOG.trace("Start verifier_handshake timeout")
@@ -622,6 +625,7 @@ class FSMImpl<CC : Idscp2Connection>(
         raProverDriver = RaProverDriverRegistry.startRaProverDriver(proverMechanism, this)
         return raProverDriver?.let {
             // Save the thread ID
+            @Suppress("DEPRECATION")
             currentRaProverId = it.id.toString()
             if (LOG.isTraceEnabled) {
                 LOG.trace("Start prover_handshake timeout")

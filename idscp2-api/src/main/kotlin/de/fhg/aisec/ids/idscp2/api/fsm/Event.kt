@@ -29,7 +29,8 @@ import de.fhg.aisec.ids.idscp2.messages.IDSCP2.IdscpMessage
  */
 class Event {
     enum class EventType {
-        IDSCP_MESSAGE, INTERNAL_CONTROL_MESSAGE
+        IDSCP_MESSAGE,
+        INTERNAL_CONTROL_MESSAGE
     }
 
     val key: Any?
